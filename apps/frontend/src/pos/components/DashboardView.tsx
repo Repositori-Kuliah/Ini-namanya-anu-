@@ -107,12 +107,15 @@ export const DashboardView: React.FC = () => {
 
   const tunaiTrx = filteredTrx.filter((t) => t.method === 'Tunai');
   const qrisTrx = filteredTrx.filter((t) => t.method === 'QRIS');
+  const debitTrx = filteredTrx.filter((t) => t.method === 'Kartu Debit');
 
   const tunaiTotal = tunaiTrx.reduce((acc, t) => acc + t.total, 0);
   const qrisTotal = qrisTrx.reduce((acc, t) => acc + t.total, 0);
+  const debitTotal = debitTrx.reduce((acc, t) => acc + t.total, 0);
 
   const tunaiPct = totalPenjualan ? Math.round((tunaiTotal / totalPenjualan) * 1000) / 10 : 0;
   const qrisPct = totalPenjualan ? Math.round((qrisTotal / totalPenjualan) * 1000) / 10 : 0;
+  const debitPct = totalPenjualan ? Math.round((debitTotal / totalPenjualan) * 1000) / 10 : 0;
 
   const isToday = dateFrom === todayStr && dateTo === todayStr;
   const dateLabel = isToday
@@ -370,15 +373,22 @@ export const DashboardView: React.FC = () => {
               </div>
             </div>
 
-            {/* Proportion Progress Bar */}
+            {/* Proportion Progress Bar (3 Metode Pembayaran) */}
             <div className="w-full h-3 rounded-full bg-[#f0ede9] overflow-hidden flex my-4">
               <div
                 className="h-full bg-[#58252c] transition-all"
                 style={{ width: `${tunaiPct}%` }}
+                title={`Tunai ${tunaiPct}%`}
+              ></div>
+              <div
+                className="h-full bg-[#994703] transition-all"
+                style={{ width: `${qrisPct}%` }}
+                title={`QRIS ${qrisPct}%`}
               ></div>
               <div
                 className="h-full bg-[#fc934f] transition-all"
-                style={{ width: `${qrisPct}%` }}
+                style={{ width: `${debitPct}%` }}
+                title={`Kartu Debit ${debitPct}%`}
               ></div>
             </div>
 
@@ -388,7 +398,7 @@ export const DashboardView: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-sm bg-[#58252c] inline-block"></span>
                   <span className="text-[#1c1c19] font-medium">
-                    Tunai • {tunaiTrx.length} transaksi ({tunaiPct}%)
+                    Tunai ({tunaiTrx.length} transaksi - {tunaiPct}%)
                   </span>
                 </div>
                 <span className="font-bold text-[#1c1c19] tabular-nums">
@@ -398,13 +408,25 @@ export const DashboardView: React.FC = () => {
 
               <div className="flex items-center justify-between p-2 rounded-xl hover:bg-[#f6f3ee] transition-colors">
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-sm bg-[#fc934f] inline-block"></span>
+                  <span className="w-3 h-3 rounded-sm bg-[#994703] inline-block"></span>
                   <span className="text-[#1c1c19] font-medium">
-                    QRIS • {qrisTrx.length} transaksi ({qrisPct}%)
+                    QRIS ({qrisTrx.length} transaksi - {qrisPct}%)
                   </span>
                 </div>
                 <span className="font-bold text-[#1c1c19] tabular-nums">
                   Rp {qrisTotal.toLocaleString('id-ID')}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between p-2 rounded-xl hover:bg-[#f6f3ee] transition-colors">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-sm bg-[#fc934f] inline-block"></span>
+                  <span className="text-[#1c1c19] font-medium">
+                    Kartu Debit ({debitTrx.length} transaksi - {debitPct}%)
+                  </span>
+                </div>
+                <span className="font-bold text-[#1c1c19] tabular-nums">
+                  Rp {debitTotal.toLocaleString('id-ID')}
                 </span>
               </div>
             </div>

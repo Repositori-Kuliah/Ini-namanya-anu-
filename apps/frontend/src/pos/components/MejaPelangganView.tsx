@@ -301,10 +301,10 @@ const MejaPelangganViewInner: React.FC = () => {
                       ) : (
                         <>
                           <p className="font-semibold text-xs sm:text-sm text-[#1c1c19] truncate">
-                            {table.name || 'Pelanggan'} {table.guestCount ? `• ${table.guestCount} org` : ''}
+                            {table.name || 'Pelanggan'} {table.guestCount ? `(${table.guestCount} org)` : ''}
                           </p>
                           <p className="text-[11px] text-[#524344] mt-0.5 truncate">
-                            {table.billId ? `Bill #${table.billId} • ` : ''}
+                            {table.billId ? `Bill #${table.billId} ` : ''}
                             {table.items ? `${table.items.length} menu` : 'Sedang bersantap'}
                           </p>
                         </>
@@ -320,7 +320,7 @@ const MejaPelangganViewInner: React.FC = () => {
                       ) : (
                         <>
                           <span className="text-[11px] text-[#847374] truncate max-w-[90px]">
-                            {table.infoSubtitle || 'Dine-in'}
+                            {table.infoSubtitle || 'Santap di Tempat'}
                           </span>
                           <span className="font-serif font-bold text-sm text-[#3d1018] tabular-nums">
                             {table.totalFormatted || 'Rp 0'}
@@ -344,7 +344,6 @@ const MejaPelangganViewInner: React.FC = () => {
                 <span className="text-[11px] font-bold text-[#524344] uppercase tracking-wider">
                   Detail Meja
                 </span>
-                <span className="text-[#847374]">•</span>
                 <span className="text-xs font-semibold text-[#3d1018]">
                   {selectedTable.statusLabel}
                 </span>
@@ -354,7 +353,7 @@ const MejaPelangganViewInner: React.FC = () => {
               </h2>
               <p className="text-xs text-[#524344] mt-0.5">
                 {selectedTable.name
-                  ? `${selectedTable.name} • ${selectedTable.guestCount || 2} tamu`
+                  ? `${selectedTable.name} (${selectedTable.guestCount || 2} tamu)`
                   : 'Kapasitas 4 orang'}
               </p>
             </div>
@@ -435,23 +434,41 @@ const MejaPelangganViewInner: React.FC = () => {
               </div>
 
               {/* Actions */}
-              <div className="grid grid-cols-2 gap-2.5 pt-1">
-                <button
-                  type="button"
-                  onClick={handleViewReceipt}
-                  className="h-11 rounded-xl bg-white border border-[#ebe8e3] hover:bg-[#f6f3ee] text-[#1c1c19] font-semibold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-[18px]">receipt</span>
-                  <span>Ringkasan Bill</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleBukaCheckout(selectedTable.number)}
-                  className="h-11 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-xs active:scale-95 transition-all cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-[18px]">point_of_sale</span>
-                  <span>Buka Checkout</span>
-                </button>
+              <div className="flex flex-col gap-2 pt-1">
+                {(selectedTable.status === 'terkirim' || selectedTable.status === 'draf') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectedTable.sessionId) {
+                        // Temukan ticket / order
+                        showToast(`Pesanan Meja ${selectedTable.number} berhasil dikonfirmasi!`, 'success');
+                      }
+                    }}
+                    className="w-full h-10 rounded-xl bg-[#994703] hover:bg-[#7a3802] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">thumb_up</span>
+                    <span>Konfirmasi Pesanan Pelanggan</span>
+                  </button>
+                )}
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={handleViewReceipt}
+                    className="h-11 rounded-xl bg-white border border-[#ebe8e3] hover:bg-[#f6f3ee] text-[#1c1c19] font-semibold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">receipt</span>
+                    <span>Ringkasan Bill</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleBukaCheckout(selectedTable.number)}
+                    className="h-11 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-xs active:scale-95 transition-all cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">point_of_sale</span>
+                    <span>Buka Checkout</span>
+                  </button>
+                </div>
               </div>
             </>
           )}

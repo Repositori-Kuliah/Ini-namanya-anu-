@@ -173,7 +173,6 @@ const KelolaMejaViewInner: React.FC = () => {
             <thead className="bg-[#f6f3ee] text-[#524344] uppercase tracking-wider text-[10px] font-bold border-b border-[#ebe8e3]">
               <tr>
                 <th className="py-2.5 px-4">No. Meja</th>
-                <th className="py-2.5 px-4">Kapasitas Standar</th>
                 <th className="py-2.5 px-4">Status Meja</th>
                 <th className="py-2.5 px-4">QR Code Meja</th>
                 <th className="py-2.5 px-4 text-center">Aksi</th>
@@ -182,7 +181,7 @@ const KelolaMejaViewInner: React.FC = () => {
             <tbody className="divide-y divide-[#ebe8e3]">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-xs text-[#847374]">
+                  <td colSpan={4} className="py-8 text-center text-xs text-[#847374]">
                     Tidak ada meja yang cocok dengan pencarian &ldquo;{searchQuery}&rdquo;.
                   </td>
                 </tr>
@@ -207,16 +206,13 @@ const KelolaMejaViewInner: React.FC = () => {
                           <span className="font-bold text-[#1c1c19]">Meja {tbl.number}</span>
                         </div>
                       </td>
-                      <td className="py-2.5 px-4 text-[#524344] tabular-nums">
-                        4 orang
-                      </td>
                       <td className="py-2.5 px-4">
                         <span
                           className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
                             isCheckout
                               ? 'bg-[#ffdbc9] text-[#753400]'
                               : isOccupied
-                              ? 'bg-amber-100 text-amber-900'
+                              ? 'bg-[#58252c] text-white'
                               : 'bg-[#f0ede9] text-[#524344]'
                           }`}
                         >

@@ -9,6 +9,8 @@ export const PesananBaruView: React.FC = () => {
     cartItems,
     orderTableNumber,
     setOrderTableNumber,
+    orderSecondaryTables,
+    setOrderSecondaryTables,
     orderCustomerName,
     setOrderCustomerName,
     orderGuestCount,
@@ -21,6 +23,8 @@ export const PesananBaruView: React.FC = () => {
     removeFromCart,
     sendOrderToKitchen,
     saveDraftOrder,
+    toggleMenuItemAvailability,
+    tables,
   } = useApp();
 
   const [activeCategory, setActiveCategory] = useState<string>('Semua');
@@ -28,6 +32,7 @@ export const PesananBaruView: React.FC = () => {
   const [isSending, setIsSending] = useState(false);
   const [isSuccessSent, setIsSuccessSent] = useState(false);
   const [mobileTab, setMobileTab] = useState<'catalog' | 'summary'>('catalog');
+  const [showMultiTableSelector, setShowMultiTableSelector] = useState(false);
 
   // Modal edit catatan per-item
   const [editingNoteItem, setEditingNoteItem] = useState<{ id: string; name: string; notes: string } | null>(null);
@@ -156,8 +161,15 @@ export const PesananBaruView: React.FC = () => {
               )}
             </div>
 
-            {/* Filter Kategori Horizontal */}
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+            {/* Filter Kategori Horizontal dengan scroll Mouse Wheel */}
+            <div
+              onWheel={(e) => {
+                if (e.deltaY !== 0) {
+                  e.currentTarget.scrollLeft += e.deltaY;
+                }
+              }}
+              className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 cursor-grab"
+            >
               <button
                 type="button"
                 onClick={() => setActiveCategory('Semua')}
@@ -210,11 +222,14 @@ export const PesananBaruView: React.FC = () => {
               filteredMenu.map((item) => {
                 const cartEntry = cartItems.find((ci) => ci.menuItem.id === item.id);
                 const quantity = cartEntry ? cartEntry.quantity : 0;
+                const isOut = item.isAvailable === false;
 
                 return (
                   <div
                     key={item.id}
-                    className="p-3 sm:px-4 flex items-center justify-between gap-3 hover:bg-[#fcf9f4] transition-colors"
+                    className={`p-3 sm:px-4 flex items-center justify-between gap-3 hover:bg-[#fcf9f4] transition-colors ${
+                      isOut ? 'opacity-70 bg-[#fbf9f8]' : ''
+                    }`}
                   >
                     {/* Info Menu Kiri (Foto Kecil Opsional + Nama + Kategori) */}
                     <div className="flex items-center gap-3 min-w-0">
@@ -230,10 +245,10 @@ export const PesananBaruView: React.FC = () => {
                       )}
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-xs sm:text-sm text-[#1c1c19] truncate">
+                          <span className={`font-bold text-xs sm:text-sm truncate ${isOut ? 'text-[#847374] line-through' : 'text-[#1c1c19]'}`}>
                             {item.name}
                           </span>
-                          {item.isFavorite && (
+                          {item.isFavorite && !isOut && (
                             <span
                               className="material-symbols-outlined text-[14px] text-[#994703] shrink-0"
                               aria-hidden="true"
@@ -241,10 +256,26 @@ export const PesananBaruView: React.FC = () => {
                               star
                             </span>
                           )}
+                          {isOut && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#f0ede9] text-[#ba1a1a] font-bold">
+                              Habis
+                            </span>
+                          )}
                         </div>
-                        <span className="text-[11px] text-[#847374] block truncate">
-                          {item.category}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] text-[#847374] block truncate">
+                            {item.category}
+                          </span>
+                          {/* Switch cepat status Habis / Tersedia */}
+                          <button
+                            type="button"
+                            onClick={() => toggleMenuItemAvailability(item.dbId || item.id)}
+                            className="text-[10px] text-[#994703] hover:underline cursor-pointer"
+                            title="Klik untuk ubah ketersediaan menu"
+                          >
+                            {isOut ? 'Set Tersedia' : 'Set Habis'}
+                          </button>
+                        </div>
                       </div>
                     </div>
 
@@ -254,7 +285,15 @@ export const PesananBaruView: React.FC = () => {
                         Rp {item.price.toLocaleString('id-ID')}
                       </span>
 
-                      {quantity > 0 ? (
+                      {isOut ? (
+                        <button
+                          type="button"
+                          disabled
+                          className="px-2.5 py-1.5 rounded-lg bg-[#f0ede9] text-[#847374] font-bold text-xs cursor-not-allowed"
+                        >
+                          Kosong
+                        </button>
+                      ) : quantity > 0 ? (
                         <div className="flex items-center bg-[#f0ede9] rounded-lg p-0.5 border border-[#e0dcd8]">
                           <button
                             type="button"
@@ -320,11 +359,21 @@ export const PesananBaruView: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-3 gap-2">
-              {/* Dropdown Meja */}
+              {/* Dropdown Meja Utama */}
               <div>
-                <label htmlFor="order-table" className="text-[10px] text-[#847374] block mb-0.5">
-                  No. Meja
-                </label>
+                <div className="flex items-center justify-between mb-0.5">
+                  <label htmlFor="order-table" className="text-[10px] text-[#847374] block">
+                    No. Meja
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowMultiTableSelector(!showMultiTableSelector)}
+                    className="text-[9px] text-[#994703] font-bold hover:underline cursor-pointer"
+                    title="Gabung meja untuk rombongan"
+                  >
+                    {orderSecondaryTables.length > 0 ? `+${orderSecondaryTables.length} Meja` : '+ Gabung'}
+                  </button>
+                </div>
                 <select
                   id="order-table"
                   value={orderTableNumber}
@@ -356,10 +405,10 @@ export const PesananBaruView: React.FC = () => {
                 />
               </div>
 
-              {/* Selector Pax Tamu */}
+              {/* Selector Jumlah Pelanggan */}
               <div>
                 <label htmlFor="order-guests" className="text-[10px] text-[#847374] block mb-0.5">
-                  Jumlah Pax
+                  Jumlah Pelanggan
                 </label>
                 <select
                   id="order-guests"
@@ -369,12 +418,65 @@ export const PesananBaruView: React.FC = () => {
                 >
                   {[1, 2, 3, 4, 5, 6, 8, 10, 12].map((num) => (
                     <option key={num} value={num}>
-                      {num} Pax
+                      {num} Orang
                     </option>
                   ))}
                 </select>
               </div>
             </div>
+
+            {/* Panel Selector Gabung Meja (Untuk rombongan 8 orang dll) */}
+            {showMultiTableSelector && (
+              <div className="p-2.5 bg-[#fcf9f4] rounded-lg border border-[#ebe8e3] space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-[#3d1018]">
+                    Pilih Meja Gabungan (Rombongan Tamu)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowMultiTableSelector(false)}
+                    className="text-[10px] text-[#847374] hover:text-[#1c1c19]"
+                  >
+                    Selesai
+                  </button>
+                </div>
+                <p className="text-[10px] text-[#847374]">
+                  Meja utama: <strong>Meja {orderTableNumber}</strong>. Centang meja tambahan bila meja di sampingnya sedang dipakai:
+                </p>
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-1">
+                  {['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12']
+                    .filter((num) => num !== orderTableNumber)
+                    .map((num) => {
+                      const isSelected = orderSecondaryTables.includes(num);
+                      return (
+                        <button
+                          key={num}
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) {
+                              setOrderSecondaryTables(orderSecondaryTables.filter((n) => n !== num));
+                            } else {
+                              setOrderSecondaryTables([...orderSecondaryTables, num]);
+                            }
+                          }}
+                          className={`py-1 px-1.5 rounded text-[10px] font-bold transition-all ${
+                            isSelected
+                              ? 'bg-[#3d1018] text-white'
+                              : 'bg-white border border-[#ebe8e3] text-[#524344] hover:bg-[#f0ede9]'
+                          }`}
+                        >
+                          +{num}
+                        </button>
+                      );
+                    })}
+                </div>
+                {orderSecondaryTables.length > 0 && (
+                  <p className="text-[10px] text-[#994703] font-medium pt-0.5">
+                    Tergabung: Meja {orderTableNumber} + Meja {orderSecondaryTables.join(', ')}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Daftar Menu Yang Dipilih Dalam Keranjang */}
@@ -514,7 +616,7 @@ export const PesananBaruView: React.FC = () => {
               disabled={isSending || cartItems.length === 0}
               className={`w-full py-3 px-4 rounded-xl text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer ${
                 isSuccessSent
-                  ? 'bg-emerald-700'
+                  ? 'bg-[#3d1018] ring-2 ring-[#fc934f]'
                   : cartItems.length === 0
                   ? 'bg-[#847374] opacity-50 cursor-not-allowed'
                   : 'bg-[#3d1018] hover:bg-[#58252c] active:scale-[0.99]'

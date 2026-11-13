@@ -6,7 +6,7 @@ export const KitchenDisplayView: React.FC = () => {
   const { kitchenTickets, advanceTicketStatus, showToast } = useApp();
 
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [selectedStation, setSelectedStation] = useState('All stations');
+  const [selectedStation, setSelectedStation] = useState('Semua Stasiun');
   const [activeLaneFilter, setActiveLaneFilter] = useState<'new' | 'preparing' | 'ready'>('new');
 
   const playKitchenChime = () => {
@@ -54,7 +54,7 @@ export const KitchenDisplayView: React.FC = () => {
 
   // Filter stasiun dapur
   const stationTickets = kitchenTickets.filter((t) =>
-    selectedStation === 'All stations' ? true : t.station === selectedStation
+    selectedStation === 'Semua Stasiun' ? true : t.station === selectedStation
   );
 
   const newTickets = stationTickets.filter((t) => t.status === 'new');
@@ -86,7 +86,7 @@ export const KitchenDisplayView: React.FC = () => {
           <div className="flex items-start justify-between pb-2 border-b border-[#ebe8e3]">
             <div>
               <span className="text-[10px] font-bold text-[#847374] uppercase tracking-wider block">
-                {ticket.type} • {ticket.ticketNumber}
+                {ticket.type} #{ticket.ticketNumber}
               </span>
               <h3 className="text-2xl sm:text-3xl font-extrabold text-[#1c1c19] tracking-tight leading-none mt-0.5">
                 {ticket.tableNumber}
@@ -101,7 +101,7 @@ export const KitchenDisplayView: React.FC = () => {
                     : isPrep
                     ? 'bg-[#ffdbc9] text-[#753400]'
                     : isReady
-                    ? 'bg-emerald-100 text-emerald-800'
+                    ? 'bg-[#f0ede9] text-[#3d1018]'
                     : 'bg-[#f0ede9] text-[#1c1c19]'
                 }`}
               >
@@ -143,7 +143,7 @@ export const KitchenDisplayView: React.FC = () => {
                 </div>
 
                 {isReady && (
-                  <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded shrink-0">
+                  <span className="text-[11px] font-bold text-[#3d1018] bg-[#f0ede9] px-2 py-0.5 rounded shrink-0">
                     Siap
                   </span>
                 )}
@@ -162,7 +162,7 @@ export const KitchenDisplayView: React.FC = () => {
                 ? 'bg-[#3d1018] hover:bg-[#58252c]'
                 : isPrep
                 ? 'bg-[#994703] hover:bg-[#7a3200]'
-                : 'bg-emerald-700 hover:bg-emerald-800'
+                : 'bg-[#58252c] hover:bg-[#3d1018]'
             }`}
           >
             <span className="material-symbols-outlined text-[18px]">

@@ -40,58 +40,55 @@ export const ThermalReceiptModal: React.FC = () => {
           <span className="material-symbols-outlined text-[18px]" aria-hidden="true">close</span>
         </button>
 
-        {/* Thermal Paper Simulation Container */}
-        <div className="w-full bg-[#fffdfa] border border-[#e5e0d8] p-5 rounded-xl shadow-xs font-mono text-xs text-[#221d1d] flex flex-col gap-3">
+        {/* Thermal Paper Simulation Container (Murni Hitam-Putih Monokrom) */}
+        <div className="w-full bg-white border-2 border-black p-5 rounded-lg shadow-xs font-mono text-xs text-black flex flex-col gap-3">
           {/* Header */}
-          <div className="flex flex-col items-center text-center border-b border-dashed border-[#d8d1c7] pb-3">
-            <div className="w-10 h-10 rounded-lg bg-[#3d1018] text-white flex items-center justify-center font-serif text-lg font-bold mb-1 shadow-xs">
-              G
-            </div>
-            <h3 id="receipt-modal-title" className="font-serif font-bold text-base tracking-wider text-[#3d1018]">
+          <div className="flex flex-col items-center text-center border-b-2 border-dashed border-black pb-3">
+            <h3 id="receipt-modal-title" className="font-bold text-base tracking-wider text-black uppercase">
               RAWON GUSTI
             </h3>
-            <p className="text-[10px] text-[#736b63]">Surabaya, Jawa Timur</p>
-            <p className="text-[9px] text-[#736b63]">Jl. Pemuda No. 45 • Telp: (031) 567-8901</p>
+            <p className="text-[10px] text-black">Surabaya, Jawa Timur</p>
+            <p className="text-[9px] text-black">Jl. Pemuda No. 45 - Telp: (031) 567-8901</p>
             {bill.status === 'lunas' && (
-              <span className="mt-1.5 px-2.5 py-0.5 rounded border border-emerald-600 text-emerald-700 text-[10px] font-bold tracking-widest uppercase">
+              <span className="mt-1.5 px-3 py-0.5 border border-black text-black text-[10px] font-bold tracking-widest uppercase">
                 *** LUNAS ***
               </span>
             )}
           </div>
 
           {/* Meta Info */}
-          <div className="flex flex-col gap-1 border-b border-dashed border-[#d8d1c7] pb-3 text-[11px]">
+          <div className="flex flex-col gap-1 border-b-2 border-dashed border-black pb-3 text-[11px]">
             <div className="flex justify-between">
               <span className="font-bold">Bill: #{bill.billNumber}</span>
               <span className="font-bold">Meja: {bill.tableNumber}</span>
             </div>
-            <div className="flex justify-between text-[#736b63]">
+            <div className="flex justify-between text-black">
               <span>Tamu: {bill.customerName} ({bill.guestCount} org)</span>
               <span>Kasir: {currentUser?.name || bill.waiterName || 'Kasir'}</span>
             </div>
-            <div className="flex justify-between text-[#736b63]">
+            <div className="flex justify-between text-black">
               <span>Waktu: {bill.paidAtTime || `${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' })} ${bill.requestedAt || ''}`}</span>
-              <span>Layanan: Dine-in</span>
+              <span>Layanan: Santap di Tempat</span>
             </div>
           </div>
 
           {/* Items */}
-          <div className="flex flex-col gap-1.5 border-b border-dashed border-[#d8d1c7] pb-3">
+          <div className="flex flex-col gap-1.5 border-b-2 border-dashed border-black pb-3">
             {bill.items.map((item, idx) => (
               <div key={idx} className="flex flex-col">
-                <div className="flex justify-between">
-                  <span className="font-semibold">{item.name}</span>
+                <div className="flex justify-between font-bold">
+                  <span>{item.name}</span>
                 </div>
-                <div className="flex justify-between text-[#736b63] pl-2 text-[10px]">
+                <div className="flex justify-between text-black pl-2 text-[10px]">
                   <span>
                     {item.quantity} x Rp {item.price.toLocaleString('id-ID')}
                   </span>
-                  <span className="text-[#221d1d] font-semibold">
+                  <span className="font-bold">
                     Rp {(item.price * item.quantity).toLocaleString('id-ID')}
                   </span>
                 </div>
                 {item.notes && (
-                  <span className="text-[9px] text-[#994703] pl-2 italic">
+                  <span className="text-[9px] text-black pl-2 italic">
                     *{item.notes}
                   </span>
                 )}
@@ -100,31 +97,31 @@ export const ThermalReceiptModal: React.FC = () => {
           </div>
 
           {/* Financial Totals */}
-          <div className="flex flex-col gap-1 border-b border-dashed border-[#d8d1c7] pb-3 text-[11px]">
-            <div className="flex justify-between text-[#736b63]">
+          <div className="flex flex-col gap-1 border-b-2 border-dashed border-black pb-3 text-[11px]">
+            <div className="flex justify-between text-black">
               <span>Subtotal:</span>
               <span>Rp {bill.subtotal.toLocaleString('id-ID')}</span>
             </div>
-            <div className="flex justify-between text-[#736b63]">
+            <div className="flex justify-between text-black">
               <span>Biaya Layanan (5%):</span>
               <span>Rp {bill.serviceFee.toLocaleString('id-ID')}</span>
             </div>
-            <div className="flex justify-between text-[#736b63]">
+            <div className="flex justify-between text-black">
               <span>Pajak Daerah PB1 (10%):</span>
               <span>Rp {bill.tax.toLocaleString('id-ID')}</span>
             </div>
-            <div className="flex justify-between font-bold text-sm pt-1 border-t border-[#ebe8e3] text-[#3d1018]">
+            <div className="flex justify-between font-bold text-sm pt-1 border-t border-black text-black">
               <span>TOTAL:</span>
               <span>Rp {bill.total.toLocaleString('id-ID')}</span>
             </div>
 
             {bill.cashTendered && (
               <>
-                <div className="flex justify-between text-[#736b63] pt-1">
+                <div className="flex justify-between text-black pt-1">
                   <span>Bayar ({bill.paymentMethod || 'Tunai'}):</span>
                   <span>Rp {bill.cashTendered.toLocaleString('id-ID')}</span>
                 </div>
-                <div className="flex justify-between font-semibold text-[#994703]">
+                <div className="flex justify-between font-bold text-black">
                   <span>Kembalian:</span>
                   <span>Rp {(bill.changeAmount || 0).toLocaleString('id-ID')}</span>
                 </div>

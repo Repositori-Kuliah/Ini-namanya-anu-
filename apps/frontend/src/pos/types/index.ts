@@ -81,11 +81,41 @@ export interface CartItem {
   notes: string;
 }
 
+export interface SplitPaymentDetail {
+  method1: 'Tunai' | 'QRIS' | 'Kartu Debit';
+  amount1: number;
+  method2: 'Tunai' | 'QRIS' | 'Kartu Debit';
+  amount2: number;
+}
+
+export interface StoreSettings {
+  selfOrderEnabled: boolean;       // Sistem pembayaran / order mandiri (jika off: panggil pelayan manual)
+  soundEnabled: boolean;           // Suara aktif / notif ding pesanan & panggilan
+  openHour: string;                // Format "08:00"
+  closeHour: string;               // Format "22:00"
+  forceClose: boolean;             // Tutup sementara (hari libur/khusus)
+  kdsEnabled: boolean;             // Pantau pesanan (KDS) aktif / nonaktif
+  autoInventoryDeduction: boolean; // Fitur stok bahan baku (on: sesuai stok, off: manual)
+}
+
+export interface CashierShift {
+  isOpen: boolean;
+  modalAwal: number;
+  kasMasuk: number;
+  totalLaci: number;
+  openedAt?: string;
+  openedBy?: string;
+  closedAt?: string;
+  physicalCash?: number;
+  cashDifference?: number;
+}
+
 export interface BillItem {
   id: string;
   sessionId?: number;
   billNumber: string;
   tableNumber: string;
+  secondaryTables?: string[];
   customerName: string;
   guestCount: number;
   itemCount: number;
@@ -99,7 +129,8 @@ export interface BillItem {
   waiterName: string;
   openedAtTime: string;
   status: 'minta_checkout' | 'belum_dibayar' | 'lunas';
-  paymentMethod?: 'tunai' | 'qris' | 'debit';
+  paymentMethod?: 'tunai' | 'qris' | 'debit' | 'split';
+  splitDetail?: SplitPaymentDetail;
   cashTendered?: number;
   changeAmount?: number;
   paidAtTime?: string;
@@ -112,9 +143,10 @@ export interface TransactionRecord {
   code: string; // e.g. #A014
   time: string; // e.g. 12:27
   at?: string;  // ISO timestamp for date filtering
-  typeMeja: string; // e.g. Meja 12 or Take away • Rina
+  typeMeja: string; // e.g. Meja 12 atau Meja 01 + Meja 03
   source: 'QR meja' | 'Manual';
-  method: 'Tunai' | 'QRIS' | 'Kartu Debit';
+  method: 'Tunai' | 'QRIS' | 'Kartu Debit' | 'Split Payment';
+  splitDetail?: SplitPaymentDetail;
   subtotal: number;
   tax: number;
   total: number;
@@ -134,7 +166,7 @@ export interface KitchenTicket {
   orderId?: number;
   ticketNumber: string; // #1048
   tableNumber: string; // 12, 08, 02, etc.
-  type: 'Dine in' | 'Take away';
+  type: 'Santap di Tempat' | 'Bawa Pulang';
   waiterName: string;
   elapsedSeconds: number;
   status: 'new' | 'preparing' | 'ready' | 'served';
@@ -156,7 +188,7 @@ export interface RawIngredient {
   minimumStock: number;
   unit: string;
   costPerUnit: number;
-  supplier: string;
+  supplier?: string;
   lastRestocked: string;
   linkedMenuItems: string[];
 }

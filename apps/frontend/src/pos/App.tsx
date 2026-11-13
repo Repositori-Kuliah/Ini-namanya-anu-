@@ -21,6 +21,7 @@ import { KelolaMejaView } from './components/KelolaMejaView';
 import { KitchenDisplayView } from './components/KitchenDisplayView';
 import { LaporanView } from './components/LaporanView';
 import { StaffManagementView } from './components/StaffManagementView';
+import { PengaturanView } from './components/PengaturanView';
 import { ThermalReceiptModal } from './components/ThermalReceiptModal';
 import { QrCodeModal } from './components/QrCodeModal';
 import { supabaseConfigured } from '../lib/supabase';
@@ -77,6 +78,8 @@ const AppContent: React.FC = () => {
         return <StaffManagementView />;
       case 'laporan':
         return <LaporanView />;
+      case 'pengaturan':
+        return <PengaturanView />;
       default:
         return <MejaPelangganView />;
     }

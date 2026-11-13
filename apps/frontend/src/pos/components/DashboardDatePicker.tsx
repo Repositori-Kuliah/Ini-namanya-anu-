@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface DashboardDatePickerProps {
   dateFrom: string;
@@ -7,35 +7,30 @@ interface DashboardDatePickerProps {
   onSelectDate: (dateIso: string) => void;
 }
 
-// Konversi ISO '2026-11-11' ke 8 digit angka murni '11112026'
-const isoToDigits = (iso: string): string => {
+const MONTH_NAMES = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+];
+
+const DAY_NAMES = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+
+// Format ISO string 'YYYY-MM-DD' ke format 'DD/MM/YYYY' bersih tanpa spasi ganjil
+const isoToFormatted = (iso: string): string => {
   if (!iso) return '';
   const parts = iso.split('-');
-  if (parts.length !== 3) return '';
+  if (parts.length !== 3) return iso;
   const [y, m, d] = parts;
-  return `${d.padStart(2, '0')}${m.padStart(2, '0')}${y}`;
+  return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}`;
 };
 
-// Render format mask 'DD / MM / YYYY' dari digit yang diketik
-const renderMask = (digits: string): string => {
-  const d1 = digits[0] || 'D';
-  const d2 = digits[1] || 'D';
-  const m1 = digits[2] || 'M';
-  const m2 = digits[3] || 'M';
-  const y1 = digits[4] || 'Y';
-  const y2 = digits[5] || 'Y';
-  const y3 = digits[6] || 'Y';
-  const y4 = digits[7] || 'Y';
-
-  return `${d1}${d2} / ${m1}${m2} / ${y1}${y2}${y3}${y4}`;
-};
-
-// Parse 8 digit '11112026' ke ISO '2026-11-11'
-const digitsToIso = (digits: string): string | null => {
-  if (digits.length !== 8) return null;
-  const d = parseInt(digits.slice(0, 2), 10);
-  const m = parseInt(digits.slice(2, 4), 10);
-  const y = parseInt(digits.slice(4, 8), 10);
+// Parse 'DD/MM/YYYY' ke 'YYYY-MM-DD'
+const formattedToIso = (formatted: string): string | null => {
+  const clean = formatted.trim();
+  const match = clean.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (!match) return null;
+  const d = parseInt(match[1], 10);
+  const m = parseInt(match[2], 10);
+  const y = parseInt(match[3], 10);
 
   if (m >= 1 && m <= 12 && d >= 1 && d <= 31 && y >= 2000 && y <= 2100) {
     const daysInMonth = new Date(y, m, 0).getDate();
@@ -45,13 +40,6 @@ const digitsToIso = (digits: string): string | null => {
   return null;
 };
 
-const MONTH_NAMES = [
-  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
-];
-
-const DAY_NAMES = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
-
 export const DashboardDatePicker: React.FC<DashboardDatePickerProps> = ({
   dateFrom,
   dateTo,
@@ -60,65 +48,33 @@ export const DashboardDatePicker: React.FC<DashboardDatePickerProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const isSingle = dateFrom === dateTo;
-  const currentIso = isSingle ? dateFrom : dateTo;
 
-  // 8 digit angka murni: misal '11112026', atau '' yang tampil sebagai '-- / -- / ----'
-  const [digits, setDigits] = useState<string>(() => (isSingle ? isoToDigits(dateFrom) : ''));
-  const [isRangeView, setIsRangeView] = useState<boolean>(!isSingle);
+  // Input teks editable bebas: pengguna dapat mengedit bagian Day, Month, atau Year di posisi mana saja
+  const [inputValue, setInputValue] = useState<string>(() => isoToFormatted(dateTo));
 
-  // Bulan dan tahun tampilan kalender popover
+  // Bulan dan tahun popover kalender
   const [viewYear, setViewYear] = useState(() => {
-    const parts = (isSingle ? dateFrom : dateTo).split('-');
+    const parts = dateTo.split('-');
     return parseInt(parts[0], 10) || new Date().getFullYear();
   });
   const [viewMonth, setViewMonth] = useState(() => {
-    const parts = (isSingle ? dateFrom : dateTo).split('-');
+    const parts = dateTo.split('-');
     return (parseInt(parts[1], 10) || (new Date().getMonth() + 1)) - 1;
   });
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Posisi kursor/caret karakter di dalam format mask '-- / -- / ----'
-  // Index: 0 1  2 3 4  5 6  7 8 9  10 11 12 13
-  // Char:  d d  ' / '  m m  ' / '   y  y  y  y
-  const CARET_POSITIONS = [0, 1, 5, 6, 10, 11, 12, 13, 14];
-
-  const updateCaretPosition = (digitCount: number) => {
-    if (!inputRef.current) return;
-    const clampedCount = Math.max(0, Math.min(digitCount, 8));
-    const targetPos = CARET_POSITIONS[clampedCount];
-    requestAnimationFrame(() => {
-      if (inputRef.current && document.activeElement === inputRef.current) {
-        inputRef.current.setSelectionRange(targetPos, targetPos);
-      }
-    });
-  };
-
-  // Sinkronkan posisi garis kursor setiap kali digit berubah saat input aktif
-  useLayoutEffect(() => {
-    if (inputRef.current && document.activeElement === inputRef.current && !isRangeView) {
-      updateCaretPosition(digits.length);
-    }
-  }, [digits, isRangeView]);
-
-  // Sinkronkan saat dateFrom / dateTo berubah dari luar
+  // Sinkronkan saat dateTo berubah dari luar (misal memilih preset 1 Hari, 1 Minggu, 1 Bulan, dsb)
   useEffect(() => {
-    if (dateFrom === dateTo) {
-      setDigits(isoToDigits(dateFrom));
-      setIsRangeView(false);
-      const parts = dateFrom.split('-');
-      if (parts.length === 3) {
-        setViewYear(parseInt(parts[0], 10));
-        setViewMonth(parseInt(parts[1], 10) - 1);
-      }
-    } else {
-      setIsRangeView(true);
-      setDigits(isoToDigits(dateTo));
+    setInputValue(isoToFormatted(dateTo));
+    const parts = dateTo.split('-');
+    if (parts.length === 3) {
+      setViewYear(parseInt(parts[0], 10));
+      setViewMonth(parseInt(parts[1], 10) - 1);
     }
-  }, [dateFrom, dateTo]);
+  }, [dateTo, dateFrom]);
 
-  // Tutup kalender saat klik di luar atau tekan Escape
+  // Tutup kalender saat klik di luar
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -139,99 +95,27 @@ export const DashboardDatePicker: React.FC<DashboardDatePickerProps> = ({
     };
   }, [isOpen]);
 
-  // Mengetik nomor dari kiri ke kanan: tanda '-- / -- / ----' tetap ada dan kursor selalu mengikuti
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Backspace: hapus satu digit terakhir, kursor langsung mundur mengikuti angka yang terhapus
-    if (e.key === 'Backspace') {
-      e.preventDefault();
-      setIsRangeView(false);
-      setDigits((prev) => {
-        const next = prev.slice(0, -1);
-        updateCaretPosition(next.length);
-        return next;
-      });
-      return;
-    }
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInputValue(val);
 
-    // Delete: hapus semua digit sekaligus kembali ke '-- / -- / ----', kursor kembali ke awal
-    if (e.key === 'Delete') {
-      e.preventDefault();
-      setIsRangeView(false);
-      setDigits('');
-      updateCaretPosition(0);
-      return;
-    }
-
-    // Hanya terima input angka 0-9
-    if (/^[0-9]$/.test(e.key)) {
-      e.preventDefault();
-      setIsRangeView(false);
-      setDigits((prev) => {
-        if (prev.length >= 8) return prev; // Maksimal 8 digit (HH/BB/TTTT)
-        const next = prev + e.key;
-        updateCaretPosition(next.length);
-
-        // Jika sudah lengkap 8 digit, langsung periksa dan aktifkan tanggal
-        if (next.length === 8) {
-          const iso = digitsToIso(next);
-          if (iso && iso <= maxDate) {
-            onSelectDate(iso);
-            const parts = iso.split('-');
-            setViewYear(parseInt(parts[0], 10));
-            setViewMonth(parseInt(parts[1], 10) - 1);
-          }
-        }
-        return next;
-      });
-    }
-  };
-
-  // Dukungan paste teks angka
-  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    const pasteText = e.clipboardData.getData('text');
-    const pastedDigits = pasteText.replace(/\D/g, '').slice(0, 8);
-    if (pastedDigits.length > 0) {
-      setIsRangeView(false);
-      setDigits(pastedDigits);
-      updateCaretPosition(pastedDigits.length);
-      if (pastedDigits.length === 8) {
-        const iso = digitsToIso(pastedDigits);
-        if (iso && iso <= maxDate) {
-          onSelectDate(iso);
-        }
-      }
-    }
-  };
-
-  const handleFocus = () => {
-    if (isRangeView) {
-      setIsRangeView(false);
-      const d = isoToDigits(dateTo);
-      setDigits(d);
-      updateCaretPosition(d.length);
-    } else {
-      updateCaretPosition(digits.length);
-    }
-  };
-
-  const handleClick = () => {
-    if (!isRangeView) {
-      updateCaretPosition(digits.length);
+    // Otomatis terapkan jika tanggal valid
+    const iso = formattedToIso(val);
+    if (iso && iso <= maxDate) {
+      onSelectDate(iso);
+      const parts = iso.split('-');
+      setViewYear(parseInt(parts[0], 10));
+      setViewMonth(parseInt(parts[1], 10) - 1);
     }
   };
 
   const handleBlur = () => {
-    // Jika belum lengkap 8 digit atau kosong saat keluar, kembalikan ke tanggal aktif
-    if (digits.length < 8) {
-      setDigits(isoToDigits(currentIso));
+    const iso = formattedToIso(inputValue);
+    if (iso && iso <= maxDate) {
+      onSelectDate(iso);
+      setInputValue(isoToFormatted(iso));
     } else {
-      const iso = digitsToIso(digits);
-      if (iso && iso <= maxDate) {
-        onSelectDate(iso);
-      } else {
-        setDigits(isoToDigits(currentIso));
-      }
+      setInputValue(isoToFormatted(dateTo));
     }
   };
 
@@ -261,24 +145,18 @@ export const DashboardDatePicker: React.FC<DashboardDatePickerProps> = ({
     if (iso > maxDate) return;
 
     onSelectDate(iso);
-    setDigits(`${dayStr}${monthStr}${viewYear}`);
-    setIsRangeView(false);
+    setInputValue(`${dayStr}/${monthStr}/${viewYear}`);
     setIsOpen(false);
   };
 
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const firstDayIndex = new Date(viewYear, viewMonth, 1).getDay();
 
-  // Teks yang ditampilkan dalam input
-  const displayValue = isRangeView
-    ? `${renderMask(isoToDigits(dateFrom))} – ${renderMask(isoToDigits(dateTo))}`
-    : renderMask(digits);
-
   return (
     <div ref={containerRef} className="relative inline-block">
-      {/* Container Kapsul Tanggal (Bersih, Rata, Tanpa Aura, Tanpa Shadow/Ring) */}
+      {/* Container Kapsul Tanggal (Bersih, Rata, Tanpa Spasi Tak Terlihat) */}
       <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#ebe8e3] focus-within:border-[#3d1018] rounded-xl transition-colors">
-        {/* Tombol Kalender Popover (Kiri) */}
+        {/* Tombol Kalender Popover */}
         <button
           type="button"
           onClick={() => setIsOpen((prev) => !prev)}
@@ -290,20 +168,15 @@ export const DashboardDatePicker: React.FC<DashboardDatePickerProps> = ({
           </span>
         </button>
 
-        {/* Input Tanggal dengan Mask Tetap: dihapus jadi '-- / -- / ----' dan kursor selalu mengikuti */}
+        {/* Input Tanggal: Pengguna bebas mengedit Day, Month, atau Year tanpa kendala caret */}
         <input
-          ref={inputRef}
           id="dash-unified-date"
           type="text"
-          inputMode="numeric"
-          value={displayValue}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
+          value={inputValue}
+          onChange={handleInputChange}
           onBlur={handleBlur}
-          onFocus={handleFocus}
-          onClick={handleClick}
-          readOnly={false}
-          className="font-mono tabular-nums text-xs font-bold tracking-wider text-[#1c1c19] text-center bg-transparent outline-none cursor-text w-32 selection:bg-[#3d1018] selection:text-white"
+          placeholder="DD/MM/YYYY"
+          className="font-mono tabular-nums text-xs font-bold tracking-wider text-[#1c1c19] text-center bg-transparent outline-none cursor-text w-28 selection:bg-[#3d1018] selection:text-white"
         />
       </div>
 
@@ -359,26 +232,22 @@ export const DashboardDatePicker: React.FC<DashboardDatePickerProps> = ({
               const day = i + 1;
               const monthStr = String(viewMonth + 1).padStart(2, '0');
               const dayStr = String(day).padStart(2, '0');
-              const dayIso = `${viewYear}-${monthStr}-${dayStr}`;
-
-              const isSelected = isSingle && dayIso === dateFrom;
-              const isToday = dayIso === maxDate;
-              const isFuture = dayIso > maxDate;
+              const cellIso = `${viewYear}-${monthStr}-${dayStr}`;
+              const isSelected = cellIso === dateTo;
+              const isDisabled = cellIso > maxDate;
 
               return (
                 <button
                   key={day}
                   type="button"
-                  disabled={isFuture}
+                  disabled={isDisabled}
                   onClick={() => handleSelectDay(day)}
-                  className={`w-8 h-8 rounded-lg text-xs flex items-center justify-center transition-all cursor-pointer ${
+                  className={`w-8 h-8 rounded-lg text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${
                     isSelected
-                      ? 'bg-[#3d1018] text-white shadow-xs font-bold scale-105'
-                      : isToday
-                      ? 'bg-[#ffdbc9] text-[#753400] font-bold border border-[#fc934f]'
-                      : isFuture
-                      ? 'text-[#d7c2c2] cursor-not-allowed opacity-30'
-                      : 'text-[#1c1c19] hover:bg-[#f6f3ee] font-medium'
+                      ? 'bg-[#3d1018] text-white font-bold shadow-xs'
+                      : isDisabled
+                      ? 'text-[#c5bcb5] cursor-not-allowed opacity-40'
+                      : 'hover:bg-[#f6f3ee] text-[#1c1c19]'
                   }`}
                 >
                   {day}
@@ -393,8 +262,7 @@ export const DashboardDatePicker: React.FC<DashboardDatePickerProps> = ({
               type="button"
               onClick={() => {
                 onSelectDate(maxDate);
-                setDigits(isoToDigits(maxDate));
-                setIsRangeView(false);
+                setInputValue(isoToFormatted(maxDate));
                 setIsOpen(false);
               }}
               className="text-[#994703] font-bold hover:underline cursor-pointer"

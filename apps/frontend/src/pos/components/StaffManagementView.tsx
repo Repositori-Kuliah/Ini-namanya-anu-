@@ -268,11 +268,6 @@ export const StaffManagementView: React.FC = () => {
                           </div>
                           <div>
                             <span className="font-bold text-[#1c1c19] block">{staf.name}</span>
-                            {isCurrent && (
-                              <span className="text-[10px] text-[#3d1018] font-bold tracking-tight">
-                                (Akun Anda Saat Ini)
-                              </span>
-                            )}
                           </div>
                         </div>
                       </td>

@@ -420,7 +420,7 @@ export const LaporanView: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-[#58252c] shrink-0" />
                   <span className="text-[#524344]">
-                    Tunai ({tunaiTrx.length} struk • {tunaiPct}%)
+                    Tunai ({tunaiTrx.length} struk - {tunaiPct}%)
                   </span>
                 </div>
                 <span className="font-semibold text-[#1c1c19] tabular-nums">
@@ -432,7 +432,7 @@ export const LaporanView: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-[#fc934f] shrink-0" />
                   <span className="text-[#524344]">
-                    QRIS ({qrisTrx.length} struk • {qrisPct}%)
+                    QRIS ({qrisTrx.length} struk - {qrisPct}%)
                   </span>
                 </div>
                 <span className="font-semibold text-[#1c1c19] tabular-nums">
@@ -442,9 +442,9 @@ export const LaporanView: React.FC = () => {
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#0284c7] shrink-0" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#994703] shrink-0" />
                   <span className="text-[#524344]">
-                    Kartu Debit ({debitTrx.length} struk • {debitPct}%)
+                    Kartu Debit ({debitTrx.length} struk - {debitPct}%)
                   </span>
                 </div>
                 <span className="font-semibold text-[#1c1c19] tabular-nums">
@@ -466,7 +466,7 @@ export const LaporanView: React.FC = () => {
           <div>
             <h3 className="text-xs font-bold text-[#1c1c19] uppercase tracking-wider">Rincian Transaksi Selesai</h3>
             <span className="text-[11px] text-[#847374]">
-              {startDate === endDate ? formatIDDate(startDate) : `${formatIDDate(startDate)} s/d ${formatIDDate(endDate)}`} • {methodFilter} • {filteredTransactions.length} transaksi
+              {startDate === endDate ? formatIDDate(startDate) : `${formatIDDate(startDate)} s/d ${formatIDDate(endDate)}`}  {methodFilter}  {filteredTransactions.length} transaksi
             </span>
           </div>
         </div>

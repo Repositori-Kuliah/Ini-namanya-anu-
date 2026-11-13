@@ -266,6 +266,7 @@ export const MobileBottomNav: React.FC = () => {
                 { label: 'Kelola Meja', icon: 'deck', view: 'kelola-meja' as AppView },
                 { label: 'Akun Staf & Role', icon: 'badge', view: 'akun-staf-dan-role' as AppView },
                 { label: 'Laporan Transaksi', icon: 'query_stats', view: 'laporan' as AppView },
+                { label: 'Pengaturan', icon: 'settings', view: 'pengaturan' as AppView },
               ].map((m) => (
                 <button
                   key={m.label}
@@ -329,6 +330,7 @@ export const DesktopSidebar: React.FC = () => {
     { label: 'Kelola Meja', icon: 'deck', view: 'kelola-meja' as AppView },
     { label: 'Akun Staf & Role', icon: 'badge', view: 'akun-staf-dan-role' as AppView },
     { label: 'Laporan', icon: 'query_stats', view: 'laporan' as AppView },
+    { label: 'Pengaturan', icon: 'settings', view: 'pengaturan' as AppView },
   ];
 
   const operationalNav = getOperationalNav();
@@ -354,7 +356,7 @@ export const DesktopSidebar: React.FC = () => {
             <span className="font-bold text-sm text-[#ffdadc] leading-tight tracking-wide truncate">
               Rawon Gusti
             </span>
-            <span className="text-[11px] text-[#ffdadc]/70 truncate">Surabaya • Dine-in</span>
+            <span className="text-[11px] text-[#ffdadc]/70 truncate">Surabaya</span>
           </div>
         </div>
 
