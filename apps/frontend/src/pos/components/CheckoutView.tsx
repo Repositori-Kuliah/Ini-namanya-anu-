@@ -13,9 +13,6 @@ export const CheckoutView: React.FC = () => {
     showToast,
     recentReceipts,
     refresh,
-    cashierShift,
-    openCashierShift,
-    closeCashierShift,
     playDingSound,
   } = useApp();
 
@@ -33,86 +30,6 @@ export const CheckoutView: React.FC = () => {
   const [splitMethod1, setSplitMethod1] = useState<'Tunai' | 'QRIS' | 'Kartu Debit'>('Tunai');
   const [splitAmount1, setSplitAmount1] = useState<number>(0);
   const [splitMethod2, setSplitMethod2] = useState<'Tunai' | 'QRIS' | 'Kartu Debit'>('QRIS');
-
-  // Modal Buka & Tutup Kasir State
-  const [showBukaKasirModal, setShowBukaKasirModal] = useState<boolean>(false);
-  const [modalAwalInput, setModalAwalInput] = useState<number>(storeSettings.defaultInitialCash ?? 200000);
-  const [showTutupKasirModal, setShowTutupKasirModal] = useState<boolean>(false);
-  const [showShiftSlipModal, setShowShiftSlipModal] = useState<boolean>(false);
-  const [physicalCashInput, setPhysicalCashInput] = useState<number>(cashierShift.totalLaci);
-  const [shiftClosedSummary, setShiftClosedSummary] = useState<{ difference: number } | null>(null);
-
-  const printThermalSlip = () => {
-    const el = document.getElementById('shift-slip-thermal-content');
-    if (!el) {
-      window.print();
-      return;
-    }
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow?.document;
-    if (!doc) {
-      window.print();
-      return;
-    }
-
-    doc.open();
-    doc.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Slip Rekap Shift Kasir - Rawon Gusti</title>
-          <style>
-            @page { size: 80mm auto; margin: 0; }
-            body {
-              font-family: monospace;
-              font-size: 11px;
-              color: #000;
-              background: #fff;
-              margin: 0;
-              padding: 10px;
-              width: 76mm;
-            }
-            * { box-sizing: border-box; }
-            .text-center { text-align: center; }
-            .font-bold { font-weight: bold; }
-            .uppercase { text-transform: uppercase; }
-            .flex { display: flex; }
-            .justify-between { justify-content: space-between; }
-            .border-b-2 { border-bottom: 2px dashed #000; }
-            .border-t { border-top: 1px solid #000; }
-            .border-b { border-bottom: 1px dotted #000; }
-            .grid { display: grid; }
-            .grid-cols-2 { grid-template-columns: 1fr 1fr; }
-            .gap-4 { gap: 16px; }
-            .h-8 { height: 32px; }
-            .tabular-nums { font-variant-numeric: tabular-nums; }
-          </style>
-        </head>
-        <body>
-          ${el.innerHTML}
-        </body>
-      </html>
-    `);
-    doc.close();
-
-    setTimeout(() => {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-      setTimeout(() => {
-        if (document.body.contains(iframe)) {
-          document.body.removeChild(iframe);
-        }
-      }, 1000);
-    }, 250);
-  };
 
   const filteredBills = bills.filter(
     (b) =>
@@ -189,22 +106,6 @@ export const CheckoutView: React.FC = () => {
     setCashTendered(amount);
   };
 
-  const handleNumpad = (val: string) => {
-    let str = cashTendered.toString();
-    if (str === '0') str = '';
-    str += val;
-    setCashTendered(parseInt(str, 10) || 0);
-  };
-
-  const handleBackspace = () => {
-    const str = cashTendered.toString();
-    if (str.length > 1) {
-      setCashTendered(parseInt(str.slice(0, -1), 10) || 0);
-    } else {
-      setCashTendered(0);
-    }
-  };
-
   const handleExecutePayment = () => {
     if (currentBill.isAllServed === false) {
       showToast('Tidak bisa bayar! Masih ada pesanan di dapur yang belum disajikan.', 'warning');
@@ -258,8 +159,8 @@ export const CheckoutView: React.FC = () => {
 
   return (
     <div className="flex flex-col w-full pb-20 md:pb-8 max-w-[1600px] mx-auto px-4 sm:px-6 pt-3">
-      {/* Header Halaman & Bar Laci Kas Kompak Menyatu */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 mb-4 border-b border-[#ebe8e3]">
+      {/* Header Halaman */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 mb-4 border-b border-[#ebe8e3]">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-[#1c1c19] tracking-tight">
             Checkout &amp; Pembayaran
@@ -269,68 +170,15 @@ export const CheckoutView: React.FC = () => {
           </p>
         </div>
 
-        {/* Status Laci Kas & Aksi Shift Kasir (Menyatu Kompak) */}
-        <div className="flex flex-wrap items-center gap-2">
-          {(storeSettings.enableCashDrawer ?? true) && (
-            <>
-              {/* Kapsul Kompak Status Laci */}
-              <div className="flex items-center gap-2 bg-[#3d1018] text-white px-3 py-1.5 rounded-xl border border-[#58252c] text-xs shadow-xs">
-                <span className="material-symbols-outlined text-[16px] text-[#fc934f]">point_of_sale</span>
-                <div className="flex items-center gap-2.5">
-                  <div>
-                    <span className="text-[10px] text-[#ffdadc]/70 block leading-none">Modal</span>
-                    <span className="font-bold text-white text-xs tabular-nums">
-                      Rp {cashierShift.modalAwal.toLocaleString('id-ID')}
-                    </span>
-                  </div>
-                  <div className="h-4 w-px bg-white/20"></div>
-                  <div>
-                    <span className="text-[10px] text-[#ffdadc]/70 block leading-none">Masuk</span>
-                    <span className="font-bold text-[#fc934f] text-xs tabular-nums">
-                      +{cashierShift.kasMasuk.toLocaleString('id-ID')}
-                    </span>
-                  </div>
-                  <div className="h-4 w-px bg-white/20"></div>
-                  <div>
-                    <span className="text-[10px] text-[#ffdadc]/70 block leading-none">Total Laci</span>
-                    <span className="font-bold text-white text-xs tabular-nums">
-                      Rp {cashierShift.totalLaci.toLocaleString('id-ID')}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  if (cashierShift.isOpen) {
-                    setPhysicalCashInput(cashierShift.totalLaci);
-                    setShowTutupKasirModal(true);
-                  } else {
-                    setModalAwalInput(storeSettings.defaultInitialCash ?? 200000);
-                    setShowBukaKasirModal(true);
-                  }
-                }}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#994703] text-white text-xs font-bold hover:bg-[#b05304] transition-colors cursor-pointer shadow-xs"
-              >
-                <span className="material-symbols-outlined text-[16px]">
-                  {cashierShift.isOpen ? 'lock_clock' : 'key'}
-                </span>
-                <span>{cashierShift.isOpen ? 'Tutup Kasir' : 'Buka Kasir'}</span>
-              </button>
-            </>
-          )}
-
-          <button
-            type="button"
-            onClick={handleManualRefresh}
-            className="flex items-center gap-1 px-2.5 py-2 rounded-xl bg-white border border-[#ebe8e3] text-[#1c1c19] text-xs font-semibold hover:bg-[#f6f3ee] transition-colors cursor-pointer shadow-2xs"
-            aria-label="Segarkan antrean tagihan"
-          >
-            <span className="material-symbols-outlined text-[16px] text-[#3d1018]">sync</span>
-            <span>Segarkan</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={handleManualRefresh}
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-[#ebe8e3] text-[#1c1c19] text-xs font-semibold hover:bg-[#f6f3ee] transition-colors cursor-pointer shadow-2xs self-start sm:self-auto"
+          aria-label="Segarkan antrean tagihan"
+        >
+          <span className="material-symbols-outlined text-[16px] text-[#3d1018]">sync</span>
+          <span>Segarkan Antrean</span>
+        </button>
       </div>
 
       {/* Grid Dua Kolom: KIRI (Antrean Tagihan) & KANAN (Detail Pembayaran) */}
@@ -826,39 +674,51 @@ export const CheckoutView: React.FC = () => {
                         <input
                           type="text"
                           inputMode="numeric"
-                          pattern="[0-9]*"
-                          value={splitAmount1 || ''}
+                          value={splitAmount1 ? splitAmount1.toLocaleString('id-ID') : '0'}
                           onChange={(e) => {
-                            const val = parseInt(e.target.value.replace(/\D/g, ''), 10) || 0;
-                            setSplitAmount1(Math.min(currentBill.total, val));
+                            const raw = parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0;
+                            setSplitAmount1(Math.min(currentBill.total, raw));
                           }}
                           className="w-full bg-transparent text-xs font-bold tabular-nums outline-none text-[#1c1c19]"
-                          placeholder="0"
                         />
                       </div>
 
-                      {/* Tombol Cepat Pecah untuk Mobile/Tablet */}
-                      <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                      {/* Tombol Cepat Pecah */}
+                      <div className="flex items-center gap-1 flex-wrap pt-1">
                         <button
                           type="button"
                           onClick={() => setSplitAmount1(Math.round(currentBill.total / 2))}
-                          className="px-2 py-1 rounded bg-[#f6f3ee] hover:bg-[#ebe8e3] text-xs font-bold text-[#3d1018] cursor-pointer"
+                          className="px-1.5 py-0.5 rounded bg-[#f6f3ee] hover:bg-[#ebe8e3] text-[10px] font-bold text-[#3d1018] cursor-pointer"
                         >
-                          50% (Bagi 2)
+                          50%
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSplitAmount1((prev) => Math.min(currentBill.total, prev + 10000))}
+                          className="px-1.5 py-0.5 rounded bg-[#f6f3ee] hover:bg-[#ebe8e3] text-[10px] font-bold text-[#1c1c19] cursor-pointer"
+                        >
+                          +10rb
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSplitAmount1((prev) => Math.min(currentBill.total, prev + 50000))}
+                          className="px-1.5 py-0.5 rounded bg-[#f6f3ee] hover:bg-[#ebe8e3] text-[10px] font-bold text-[#1c1c19] cursor-pointer"
+                        >
+                          +50rb
                         </button>
                         <button
                           type="button"
                           onClick={() => setSplitAmount1(currentBill.total)}
-                          className="px-2 py-1 rounded bg-[#f6f3ee] hover:bg-[#ebe8e3] text-xs font-bold text-[#994703] cursor-pointer"
+                          className="px-1.5 py-0.5 rounded bg-[#f6f3ee] hover:bg-[#ebe8e3] text-[10px] font-bold text-[#994703] cursor-pointer"
                         >
-                          Semua (100%)
+                          Pas
                         </button>
                         <button
                           type="button"
                           onClick={() => setSplitAmount1(0)}
-                          className="px-2 py-1 rounded bg-[#f6f3ee] hover:bg-red-50 text-xs font-bold text-red-700 cursor-pointer"
+                          className="px-1.5 py-0.5 rounded bg-[#f6f3ee] hover:bg-red-50 text-[10px] font-bold text-red-700 cursor-pointer"
                         >
-                          Reset
+                          C
                         </button>
                       </div>
                     </div>
@@ -892,7 +752,7 @@ export const CheckoutView: React.FC = () => {
                 </div>
               )}
 
-              {/* Tampilan Tunai (Input, Preset, Numpad, Kembalian) */}
+              {/* Tampilan Tunai (Input, Preset, Kembalian) */}
               {paymentMethod === 'Tunai' && (
                 <div className="space-y-2.5 p-3 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3]">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -904,7 +764,8 @@ export const CheckoutView: React.FC = () => {
                       <input
                         id="cash-input"
                         type="text"
-                        value={cashTendered.toLocaleString('id-ID')}
+                        inputMode="numeric"
+                        value={cashTendered ? cashTendered.toLocaleString('id-ID') : '0'}
                         onChange={(e) => {
                           const raw = parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0;
                           setCashTendered(raw);
@@ -934,28 +795,6 @@ export const CheckoutView: React.FC = () => {
                         {amt.toLocaleString('id-ID')}
                       </button>
                     ))}
-                  </div>
-
-                  {/* Numpad Sentuh Cepat */}
-                  <div className="grid grid-cols-4 gap-1 pt-1">
-                    {['1', '2', '3', '000', '4', '5', '6', '00', '7', '8', '9'].map((val) => (
-                      <button
-                        key={val}
-                        type="button"
-                        onClick={() => handleNumpad(val)}
-                        className="h-9 rounded-lg bg-white hover:bg-[#ebe8e3] font-bold text-xs text-[#1c1c19] border border-[#ebe8e3] cursor-pointer active:scale-95 transition-all"
-                      >
-                        {val}
-                      </button>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={handleBackspace}
-                      className="h-9 rounded-lg bg-[#f0ede9] text-[#3d1018] hover:bg-[#e0dcd8] font-bold border border-[#ebe8e3] flex items-center justify-center cursor-pointer active:scale-95 transition-all"
-                      aria-label="Hapus digit"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">backspace</span>
-                    </button>
                   </div>
 
                   {/* Baris Kembalian */}
@@ -1028,445 +867,6 @@ export const CheckoutView: React.FC = () => {
           )}
         </section>
       </div>
-
-      {/* Modal Buka Kasir (Modal Awal Shift) */}
-      {showBukaKasirModal && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4"
-        >
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl border border-[#ebe8e3] space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[#ebe8e3]">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-[#3d1018] text-white flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[18px]">key</span>
-                </div>
-                <h3 className="font-bold text-base text-[#1c1c19]">Buka Kasir (Mulai Shift)</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowBukaKasirModal(false)}
-                className="w-7 h-7 rounded-full bg-[#f0ede9] flex items-center justify-center text-[#524344]"
-              >
-                <span className="material-symbols-outlined text-[16px]">close</span>
-              </button>
-            </div>
-
-            <p className="text-xs text-[#524344] leading-relaxed">
-              Masukkan nominal uang modal awal kasir di dalam laci uang sebelum memulai transaksi hari ini.
-            </p>
-
-            <div>
-              <label className="text-xs font-bold text-[#1c1c19] block mb-1">
-                Modal Awal Kasir:
-              </label>
-              <div className="flex items-center gap-2 bg-[#fcf9f4] border border-[#ebe8e3] rounded-xl px-3 py-2.5">
-                <span className="font-bold text-sm text-[#524344]">Rp</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={modalAwalInput || ''}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value.replace(/\D/g, ''), 10) || 0;
-                    setModalAwalInput(val);
-                  }}
-                  className="w-full bg-transparent font-bold text-base text-[#3d1018] outline-none tabular-nums"
-                  placeholder="200000"
-                />
-              </div>
-
-              {/* Preset Pilihan Cepat Modal */}
-              <div className="flex items-center gap-1.5 flex-wrap pt-2">
-                {[0, 100000, 200000, 500000].map((nominal) => (
-                  <button
-                    key={nominal}
-                    type="button"
-                    onClick={() => setModalAwalInput(nominal)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${
-                      modalAwalInput === nominal
-                        ? 'bg-[#3d1018] text-white border-[#3d1018]'
-                        : 'bg-[#fcf9f4] border-[#ebe8e3] text-[#1c1c19] hover:bg-[#ebe8e3]'
-                    }`}
-                  >
-                    {nominal === 0 ? 'Rp 0 (Tanpa Modal)' : `Rp ${(nominal / 1000).toLocaleString('id-ID')}rb`}
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setModalAwalInput(0)}
-                  className="px-2 py-1 rounded-lg text-xs font-bold bg-[#fcf9f4] border border-[#ebe8e3] text-red-700 hover:bg-red-50 cursor-pointer"
-                >
-                  C
-                </button>
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowBukaKasirModal(false)}
-                className="flex-1 py-2.5 rounded-xl bg-[#f0ede9] text-[#1c1c19] text-xs font-bold cursor-pointer"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  openCashierShift(modalAwalInput);
-                  setShowBukaKasirModal(false);
-                  showToast(`Shift kasir berhasil dibuka dengan modal Rp ${modalAwalInput.toLocaleString('id-ID')}`, 'success');
-                }}
-                className="flex-1 py-2.5 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold cursor-pointer shadow-xs"
-              >
-                Buka Kasir Sekarang
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Tutup Kasir / Rekonsiliasi Uang Fisik */}
-      {showTutupKasirModal && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4"
-        >
-          <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl border border-[#ebe8e3] space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-[#ebe8e3]">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-[#3d1018] text-white flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[18px]">lock_clock</span>
-                </div>
-                <div>
-                  <h3 className="font-bold text-base text-[#1c1c19]">Tutup Kasir &amp; Rekonsiliasi</h3>
-                  <p className="text-[11px] text-[#524344]">Rekap Shift Kasir Hari Ini</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowTutupKasirModal(false);
-                  setShiftClosedSummary(null);
-                }}
-                className="w-7 h-7 rounded-full bg-[#f0ede9] flex items-center justify-center text-[#524344]"
-              >
-                <span className="material-symbols-outlined text-[16px]">close</span>
-              </button>
-            </div>
-
-            {/* Rekap Saldo Sistem */}
-            <div className="grid grid-cols-3 gap-2 text-center p-3 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3] text-xs">
-              <div>
-                <span className="text-[10px] text-[#847374] block">Modal Awal</span>
-                <span className="font-bold text-[#1c1c19] tabular-nums">
-                  Rp {cashierShift.modalAwal.toLocaleString('id-ID')}
-                </span>
-              </div>
-              <div>
-                <span className="text-[10px] text-[#847374] block">Kas Masuk</span>
-                <span className="font-bold text-[#994703] tabular-nums">
-                  +Rp {cashierShift.kasMasuk.toLocaleString('id-ID')}
-                </span>
-              </div>
-              <div>
-                <span className="text-[10px] text-[#847374] block">Total di Laci</span>
-                <span className="font-bold text-[#3d1018] tabular-nums">
-                  Rp {cashierShift.totalLaci.toLocaleString('id-ID')}
-                </span>
-              </div>
-            </div>
-
-            {/* Input Hitung Uang Fisik Kasir */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-[#1c1c19] block">
-                Hitung Uang Fisik di Laci Kasir:
-              </label>
-              <div className="flex items-center gap-2 bg-[#fcf9f4] border border-[#ebe8e3] rounded-xl px-3 py-2.5">
-                <span className="font-bold text-sm text-[#524344]">Rp</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={physicalCashInput || ''}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value.replace(/\D/g, ''), 10) || 0;
-                    setPhysicalCashInput(val);
-                  }}
-                  className="w-full bg-transparent font-bold text-base text-[#3d1018] outline-none tabular-nums"
-                  placeholder="0"
-                />
-              </div>
-
-              {/* Tombol Cepat Rekonsiliasi & Pecahan */}
-              <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                <button
-                  type="button"
-                  onClick={() => setPhysicalCashInput(cashierShift.totalLaci)}
-                  className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[#fcf9f4] border border-[#3d1018] text-[#3d1018] hover:bg-[#3d1018] hover:text-white transition-colors cursor-pointer"
-                >
-                  Pas Sesuai Sistem
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPhysicalCashInput((p) => p + 10000)}
-                  className="px-2 py-1 rounded-lg text-xs font-bold bg-[#fcf9f4] border border-[#ebe8e3] text-[#1c1c19] hover:bg-[#ebe8e3] cursor-pointer"
-                >
-                  +10rb
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPhysicalCashInput((p) => p + 50000)}
-                  className="px-2 py-1 rounded-lg text-xs font-bold bg-[#fcf9f4] border border-[#ebe8e3] text-[#1c1c19] hover:bg-[#ebe8e3] cursor-pointer"
-                >
-                  +50rb
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPhysicalCashInput((p) => p + 100000)}
-                  className="px-2 py-1 rounded-lg text-xs font-bold bg-[#fcf9f4] border border-[#ebe8e3] text-[#1c1c19] hover:bg-[#ebe8e3] cursor-pointer"
-                >
-                  +100rb
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPhysicalCashInput(0)}
-                  className="px-2 py-1 rounded-lg text-xs font-bold bg-[#fcf9f4] border border-[#ebe8e3] text-red-700 hover:bg-red-50 cursor-pointer"
-                >
-                  C
-                </button>
-              </div>
-
-              {/* Status Selisih */}
-              <div className="flex justify-between items-center text-xs pt-1 px-1">
-                <span className="text-[#524344]">Selisih Kas:</span>
-                <span className={`font-bold tabular-nums ${
-                  physicalCashInput - cashierShift.totalLaci === 0
-                    ? 'text-[#3d1018]'
-                    : physicalCashInput - cashierShift.totalLaci > 0
-                    ? 'text-[#994703]'
-                    : 'text-[#ba1a1a]'
-                }`}>
-                  {physicalCashInput - cashierShift.totalLaci === 0
-                    ? 'PAS (Sesuai Sistem)'
-                    : physicalCashInput - cashierShift.totalLaci > 0
-                    ? `LEBIH +Rp ${(physicalCashInput - cashierShift.totalLaci).toLocaleString('id-ID')}`
-                    : `KURANG -Rp ${Math.abs(physicalCashInput - cashierShift.totalLaci).toLocaleString('id-ID')}`}
-                </span>
-              </div>
-            </div>
-
-            {/* Rincian Transaksi Selesai Hari Ini Saja */}
-            <div className="space-y-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#524344] block">
-                Transaksi Selesai Hari Ini ({recentReceipts.length} tagihan)
-              </span>
-              <div className="max-h-40 overflow-y-auto divide-y divide-[#ebe8e3] border border-[#ebe8e3] rounded-xl p-2 text-xs">
-                {recentReceipts.length === 0 ? (
-                  <p className="text-[#847374] italic text-center py-2">Belum ada transaksi selesai hari ini.</p>
-                ) : (
-                  recentReceipts.map((r, i) => (
-                    <div key={i} className="py-1.5 flex justify-between items-center">
-                      <div>
-                        <span className="font-bold text-[#1c1c19] block">{r.billNumber} (Meja {formatTableLabel(r.tableNumber)})</span>
-                        <span className="text-[10px] text-[#847374]">{r.paidAtTime || r.requestedAt} • {(r.paymentMethod || 'Tunai').toUpperCase()}</span>
-                      </div>
-                      <span className="font-bold text-[#3d1018] tabular-nums">
-                        Rp {r.total.toLocaleString('id-ID')}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* Aksi Tutup Kasir & Cetak Rekap */}
-            <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-[#ebe8e3]">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowShiftSlipModal(true);
-                }}
-                className="flex-1 py-2.5 rounded-xl border border-[#ebe8e3] bg-[#fcf9f4] hover:bg-[#f0ede9] text-[#1c1c19] text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[16px]">print</span>
-                <span>Cetak Slip Rekap Shift</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const res = closeCashierShift(physicalCashInput);
-                  setShiftClosedSummary(res);
-                  playDingSound();
-                  showToast('Shift kasir berhasil ditutup dan data rekonsiliasi tersimpan!', 'success');
-                  setShowTutupKasirModal(false);
-                }}
-                className="flex-1 py-2.5 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold cursor-pointer shadow-xs"
-              >
-                Tutup Shift &amp; Simpan
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Cetak Slip Rekap Shift Kasir (Monokrom Hitam Putih Thermal) */}
-      {showShiftSlipModal && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in"
-        >
-          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl relative my-8 flex flex-col items-center">
-            {/* Tombol Tutup */}
-            <button
-              type="button"
-              onClick={() => setShowShiftSlipModal(false)}
-              className="no-print absolute top-4 right-4 w-8 h-8 rounded-full bg-[#f0ede9] hover:bg-[#ebe8e3] flex items-center justify-center text-[#524344] cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[16px]">close</span>
-            </button>
-
-            {/* Slip Thermal Monokrom Hitam Putih */}
-            <div id="shift-slip-thermal-content" className="printable-receipt-area w-full bg-white border-2 border-black p-5 rounded-lg shadow-xs font-mono text-xs text-black flex flex-col gap-3">
-              {/* Header */}
-              <div className="flex flex-col items-center text-center border-b-2 border-dashed border-black pb-3">
-                <h3 className="font-bold text-base tracking-wider uppercase text-black">
-                  RAWON GUSTI
-                </h3>
-                <p className="text-[10px] text-black">Surabaya, Jawa Timur</p>
-                <p className="text-[9px] text-black">Jl. Pemuda No. 45 - Telp: (031) 567-8901</p>
-                <span className="mt-1.5 px-3 py-0.5 border border-black text-black text-[10px] font-bold tracking-widest uppercase">
-                  *** SLIP REKAP SHIFT KASIR ***
-                </span>
-              </div>
-
-              {/* Informasi Shift */}
-              <div className="flex flex-col gap-1 border-b-2 border-dashed border-black pb-3 text-[11px]">
-                <div className="flex justify-between">
-                  <span>Kasir Bertugas:</span>
-                  <span className="font-bold">{currentUser?.name || cashierShift.openedBy || 'Kasir'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Buka Shift:</span>
-                  <span>{cashierShift.openedAt ? new Date(cashierShift.openedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Tutup Shift:</span>
-                  <span>{new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Tanggal:</span>
-                  <span>{new Date().toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
-                </div>
-              </div>
-
-              {/* Rekonsiliasi Kas Laci */}
-              <div className="flex flex-col gap-1 border-b-2 border-dashed border-black pb-3 text-[11px]">
-                <span className="font-bold uppercase tracking-wider mb-0.5">REKONSILIASI KAS LACI</span>
-                <div className="flex justify-between">
-                  <span>Modal Awal:</span>
-                  <span>Rp {cashierShift.modalAwal.toLocaleString('id-ID')}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Kas Masuk (Tunai):</span>
-                  <span>+Rp {cashierShift.kasMasuk.toLocaleString('id-ID')}</span>
-                </div>
-                <div className="flex justify-between font-bold border-t border-dotted border-black pt-1">
-                  <span>Total Laci Sistem:</span>
-                  <span>Rp {cashierShift.totalLaci.toLocaleString('id-ID')}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Hitung Fisik Laci:</span>
-                  <span>Rp {physicalCashInput.toLocaleString('id-ID')}</span>
-                </div>
-                <div className="flex justify-between font-bold">
-                  <span>Selisih Kas:</span>
-                  <span>
-                    {physicalCashInput - cashierShift.totalLaci === 0
-                      ? 'PAS (Rp 0)'
-                      : physicalCashInput - cashierShift.totalLaci > 0
-                      ? `LEBIH (+Rp ${(physicalCashInput - cashierShift.totalLaci).toLocaleString('id-ID')})`
-                      : `KURANG (-Rp ${Math.abs(physicalCashInput - cashierShift.totalLaci).toLocaleString('id-ID')})`}
-                  </span>
-                </div>
-              </div>
-
-              {/* RINCIAN TRANSAKSI SELESAI HARI INI */}
-              <div className="flex flex-col gap-1.5 border-b-2 border-dashed border-black pb-3">
-                <div className="flex justify-between font-bold text-[11px] uppercase tracking-wider">
-                  <span>RINCIAN TRANSAKSI SELESAI HARI INI ({recentReceipts.length})</span>
-                </div>
-                {recentReceipts.length === 0 ? (
-                  <p className="text-[10px] italic py-1 text-center">Belum ada transaksi selesai pada shift ini.</p>
-                ) : (
-                  <div className="flex flex-col gap-2 pt-1 text-[10px]">
-                    {recentReceipts.map((r, i) => (
-                      <div key={i} className="flex flex-col border-b border-dotted border-black pb-1">
-                        <div className="flex justify-between font-bold">
-                          <span>#{r.billNumber} • Meja {formatTableLabel(r.tableNumber)}</span>
-                          <span>Rp {r.total.toLocaleString('id-ID')}</span>
-                        </div>
-                        <div className="flex justify-between text-[9px]">
-                          <span>{r.paidAtTime || r.requestedAt || '-'}</span>
-                          <span className="uppercase font-semibold">[{r.paymentMethod || 'TUNAI'}]</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Ringkasan Omset Shift */}
-              <div className="flex flex-col gap-1 border-b-2 border-dashed border-black pb-3 text-[11px]">
-                <div className="flex justify-between">
-                  <span>Total Transaksi Selesai:</span>
-                  <span className="font-bold">{recentReceipts.length} Bill</span>
-                </div>
-                <div className="flex justify-between font-bold text-sm pt-1 border-t border-black">
-                  <span>TOTAL OMSET SHIFT:</span>
-                  <span>Rp {recentReceipts.reduce((sum, r) => sum + r.total, 0).toLocaleString('id-ID')}</span>
-                </div>
-              </div>
-
-              {/* Tanda Tangan */}
-              <div className="grid grid-cols-2 gap-4 text-center text-[10px] pt-2">
-                <div>
-                  <p>Kasir Bertugas</p>
-                  <div className="h-8"></div>
-                  <p className="border-t border-black font-bold uppercase">({currentUser?.name || cashierShift.openedBy || 'Kasir'})</p>
-                </div>
-                <div>
-                  <p>Supervisor / Admin</p>
-                  <div className="h-8"></div>
-                  <p className="border-t border-black font-bold uppercase">( .................... )</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Tombol Aksi */}
-            <div className="no-print flex gap-2 w-full mt-4">
-              <button
-                type="button"
-                onClick={() => setShowShiftSlipModal(false)}
-                className="flex-1 py-2.5 rounded-xl bg-[#f0ede9] hover:bg-[#ebe8e3] text-[#1c1c19] text-xs font-semibold cursor-pointer"
-              >
-                Tutup
-              </button>
-              <button
-                type="button"
-                onClick={printThermalSlip}
-                className="flex-1 py-2.5 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[16px]">print</span>
-                <span>Cetak Slip Thermal</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

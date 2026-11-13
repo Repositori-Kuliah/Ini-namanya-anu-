@@ -15,8 +15,10 @@ const formatIDDate = (isoStr: string) => {
 };
 
 export const LaporanView: React.FC = () => {
-  const { transactions, showToast, openReceiptModal } = useApp();
+  const { transactions, showToast, openReceiptModal, storeSettings } = useApp();
   const todayStr = today();
+
+  const drawerModal = storeSettings.drawerInitialCash ?? 200000;
 
   const [startDate, setStartDate] = useState(todayStr);
   const [endDate, setEndDate] = useState(todayStr);
@@ -441,12 +443,29 @@ export const LaporanView: React.FC = () => {
 
       {/* Transaction Table */}
       <div className="bg-white rounded-xl border border-[#ebe8e3] overflow-hidden shadow-2xs">
-        <div className="p-3.5 border-b border-[#ebe8e3] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="p-3.5 border-b border-[#ebe8e3] flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div>
             <h3 className="text-xs font-bold text-[#1c1c19] uppercase tracking-wider">Rincian Transaksi Selesai</h3>
             <span className="text-[11px] text-[#847374]">
-              {startDate === endDate ? formatIDDate(startDate) : `${formatIDDate(startDate)} s/d ${formatIDDate(endDate)}`}  {methodFilter}  {filteredTransactions.length} transaksi
+              {startDate === endDate ? formatIDDate(startDate) : `${formatIDDate(startDate)} s/d ${formatIDDate(endDate)}`} • {methodFilter} • {filteredTransactions.length} transaksi
             </span>
+          </div>
+
+          {/* Saldo Kas di Drawer Laci */}
+          <div className="flex items-center gap-3 bg-[#fcf9f4] px-3 py-1.5 rounded-xl border border-[#ebe8e3] text-xs">
+            <div className="flex items-center gap-1.5 text-[#524344]">
+              <span className="material-symbols-outlined text-[17px] text-[#994703]">point_of_sale</span>
+              <span className="font-semibold">Laci Kasir (Drawer):</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[#847374]">Modal: <strong className="text-[#1c1c19]">Rp {drawerModal.toLocaleString('id-ID')}</strong></span>
+              <span className="text-[#c5bcb5]">•</span>
+              <span className="text-[#847374]">Tunai: <strong className="text-[#994703]">+Rp {tunaiTotal.toLocaleString('id-ID')}</strong></span>
+              <span className="text-[#c5bcb5]">•</span>
+              <span className="bg-white px-2 py-0.5 rounded-md border border-[#ebe8e3] font-bold text-[#3d1018] tabular-nums">
+                Total Drawer: Rp {(drawerModal + tunaiTotal).toLocaleString('id-ID')}
+              </span>
+            </div>
           </div>
         </div>
 

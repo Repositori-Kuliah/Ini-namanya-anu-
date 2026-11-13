@@ -232,8 +232,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           enableKitchenDisplay: parsed.enableKitchenDisplay ?? parsed.kdsEnabled ?? true,
           autoInventoryDeduction: parsed.autoInventoryDeduction ?? parsed.enableInventoryTracking ?? true,
           enableInventoryTracking: parsed.enableInventoryTracking ?? parsed.autoInventoryDeduction ?? true,
-          enableCashDrawer: parsed.enableCashDrawer ?? true,
-          defaultInitialCash: parsed.defaultInitialCash ?? 200000,
+          drawerInitialCash: parsed.drawerInitialCash ?? 200000,
         };
       }
     } catch {}
@@ -248,8 +247,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       enableKitchenDisplay: true,
       autoInventoryDeduction: true,
       enableInventoryTracking: true,
-      enableCashDrawer: true,
-      defaultInitialCash: 200000,
+      drawerInitialCash: 200000,
     };
   });
 
@@ -308,43 +306,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [storeSettings.soundEnabled]);
 
-  // Cashier Shift State (Buka Otomatis selama Jam Operasional)
+  // Cashier Shift State (Buka Kasir & Tutup Kasir Laci)
   const [cashierShift, setCashierShift] = useState<CashierShift>(() => {
-    const now = new Date();
-    const curM = now.getHours() * 60 + now.getMinutes();
-    const [oh, om] = (storeSettings.openHour || '08:00').split(':').map((v) => parseInt(v, 10) || 0);
-    const [ch, cm] = (storeSettings.closeHour || '22:00').split(':').map((v) => parseInt(v, 10) || 0);
-    const openM = oh * 60 + om;
-    const closeM = ch * 60 + cm;
-    const isOperating = !storeSettings.forceClose && (openM <= closeM ? (curM >= openM && curM < closeM) : (curM >= openM || curM < closeM));
-    const defaultModal = storeSettings.defaultInitialCash ?? 200000;
-
     try {
       const saved = localStorage.getItem('rg_pos_cashier_shift');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && typeof parsed.isOpen === 'boolean') {
-          // Jika dalam jam operasional dan belum pernah tutup shift permanen hari ini, aktifkan otomatis
-          if (!parsed.isOpen && !parsed.closedAt && isOperating) {
-            return {
-              isOpen: true,
-              modalAwal: defaultModal,
-              kasMasuk: 0,
-              totalLaci: defaultModal,
-              openedAt: new Date().toISOString(),
-              openedBy: 'Kasir',
-            };
-          }
-          return parsed;
-        }
-      }
+      if (saved) return JSON.parse(saved);
     } catch {}
-
     return {
-      isOpen: isOperating,
-      modalAwal: isOperating ? defaultModal : 0,
+      isOpen: false,
+      modalAwal: 0,
       kasMasuk: 0,
-      totalLaci: isOperating ? defaultModal : 0,
+      totalLaci: 0,
       openedAt: new Date().toISOString(),
       openedBy: 'Kasir',
     };

@@ -2,92 +2,184 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { HelpModal } from './Navigation';
 
-interface ScrollTimePickerProps {
+interface RollerWheelProps {
   label: string;
-  value: string; // "HH:MM"
-  onChange: (val: string) => void;
+  value: number;
+  max: number;
+  step?: number;
+  onChange: (val: number) => void;
 }
 
-const ScrollTimePicker: React.FC<ScrollTimePickerProps> = ({ label, value, onChange }) => {
+const RollerWheel: React.FC<RollerWheelProps> = ({ label, value, max, step = 1, onChange }) => {
+  const pad = (n: number) => String(n).padStart(2, '0');
+
+  const prev = (value - step + max) % max;
+  const next = (value + step) % max;
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    if (e.deltaY > 0) {
+      onChange(next);
+    } else {
+      onChange(prev);
+    }
+  };
+
+  const touchStartY = React.useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartY.current === null) return;
+    const currentY = e.touches[0].clientY;
+    const diff = currentY - touchStartY.current;
+    if (Math.abs(diff) > 20) {
+      if (diff > 0) {
+        onChange(prev);
+      } else {
+        onChange(next);
+      }
+      touchStartY.current = currentY;
+    }
+  };
+
+  const handleTouchEnd = () => {
+    touchStartY.current = null;
+  };
+
+  return (
+    <div className="flex flex-col items-center select-none">
+      <span className="text-[10px] font-bold text-[#847374] uppercase tracking-wider mb-0.5">
+        {label}
+      </span>
+
+      {/* Tombol Chevron Atas */}
+      <button
+        type="button"
+        onClick={() => onChange(prev)}
+        className="w-10 h-5 flex items-center justify-center text-[#847374] hover:text-[#3d1018] hover:bg-[#ebe8e3] rounded transition-colors cursor-pointer"
+        aria-label={`Kurang ${label}`}
+      >
+        <span className="material-symbols-outlined text-[16px]">keyboard_arrow_up</span>
+      </button>
+
+      {/* Wadah Silinder Roller Berputar */}
+      <div
+        onWheel={handleWheel}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        className="flex flex-col items-center justify-center py-0.5 w-12 cursor-grab active:cursor-grabbing"
+        title="Scroll roda mouse atau geser ke atas/bawah untuk mengubah"
+      >
+        {/* Angka Sebelumnya */}
+        <button
+          type="button"
+          onClick={() => onChange(prev)}
+          className="text-xs text-[#847374] opacity-40 hover:opacity-100 font-mono py-0.5 transition-opacity cursor-pointer"
+        >
+          {pad(prev)}
+        </button>
+
+        {/* Nilai Aktif Terpilih (Kapsul Burgundy) */}
+        <div className="w-11 h-8 my-0.5 rounded-lg bg-[#3d1018] text-white flex items-center justify-center font-mono font-bold text-sm shadow-xs ring-1 ring-[#3d1018]/20">
+          {pad(value)}
+        </div>
+
+        {/* Angka Sesudahnya */}
+        <button
+          type="button"
+          onClick={() => onChange(next)}
+          className="text-xs text-[#847374] opacity-40 hover:opacity-100 font-mono py-0.5 transition-opacity cursor-pointer"
+        >
+          {pad(next)}
+        </button>
+      </div>
+
+      {/* Tombol Chevron Bawah */}
+      <button
+        type="button"
+        onClick={() => onChange(next)}
+        className="w-10 h-5 flex items-center justify-center text-[#847374] hover:text-[#3d1018] hover:bg-[#ebe8e3] rounded transition-colors cursor-pointer"
+        aria-label={`Tambah ${label}`}
+      >
+        <span className="material-symbols-outlined text-[16px]">keyboard_arrow_down</span>
+      </button>
+    </div>
+  );
+};
+
+interface RollerTimePickerProps {
+  label: string;
+  value: string;
+  onChange: (val: string) => void;
+  presets?: string[];
+}
+
+const RollerTimePicker: React.FC<RollerTimePickerProps> = ({ label, value, onChange, presets }) => {
   const [hStr, mStr] = (value || '08:00').split(':');
-  const selectedH = parseInt(hStr, 10) || 0;
-  const selectedM = parseInt(mStr, 10) || 0;
+  const h = parseInt(hStr, 10) || 0;
+  const m = parseInt(mStr, 10) || 0;
 
-  const hours = Array.from({ length: 24 }, (_, i) => i);
-  const minutes = [0, 15, 30, 45];
-
-  const handleSelectHour = (h: number) => {
-    const formatted = `${String(h).padStart(2, '0')}:${String(selectedM).padStart(2, '0')}`;
+  const handleHourChange = (newH: number) => {
+    const formatted = `${String(newH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     onChange(formatted);
   };
 
-  const handleSelectMinute = (m: number) => {
-    const formatted = `${String(selectedH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  const handleMinuteChange = (newM: number) => {
+    const formatted = `${String(h).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
     onChange(formatted);
   };
 
   return (
     <div className="bg-[#fcf9f4] p-3 rounded-xl border border-[#ebe8e3] flex flex-col justify-between">
-      <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-[#ebe8e3]">
+      <div className="flex items-center justify-between mb-1.5">
         <span className="text-xs font-bold text-[#1c1c19]">{label}</span>
-        <span className="font-mono text-sm font-bold text-[#3d1018] bg-white px-2 py-0.5 rounded border border-[#ebe8e3] tabular-nums">
-          {String(selectedH).padStart(2, '0')}:{String(selectedM).padStart(2, '0')}
+        <span className="font-mono text-sm font-bold text-[#3d1018] tabular-nums bg-white px-2 py-0.5 rounded border border-[#ebe8e3] shadow-2xs">
+          {value}
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        {/* Kolom Scroll Jam (00 - 23) */}
-        <div>
-          <span className="text-[10px] font-bold text-[#847374] block text-center mb-1 uppercase tracking-wider">
-            Jam
-          </span>
-          <div className="h-32 overflow-y-auto rounded-lg border border-[#ebe8e3] bg-white p-1 space-y-1 custom-scrollbar">
-            {hours.map((h) => {
-              const isSelected = h === selectedH;
-              return (
-                <button
-                  key={h}
-                  type="button"
-                  onClick={() => handleSelectHour(h)}
-                  className={`w-full py-1 text-xs font-mono font-bold rounded-md transition-colors cursor-pointer text-center ${
-                    isSelected
-                      ? 'bg-[#3d1018] text-white shadow-2xs'
-                      : 'text-[#1c1c19] hover:bg-[#f6f3ee]'
-                  }`}
-                >
-                  {String(h).padStart(2, '0')}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Kolom Scroll Menit (00, 15, 30, 45) */}
-        <div>
-          <span className="text-[10px] font-bold text-[#847374] block text-center mb-1 uppercase tracking-wider">
-            Menit
-          </span>
-          <div className="h-32 overflow-y-auto rounded-lg border border-[#ebe8e3] bg-white p-1 space-y-1 custom-scrollbar">
-            {minutes.map((m) => {
-              const isSelected = m === selectedM;
-              return (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => handleSelectMinute(m)}
-                  className={`w-full py-1 text-xs font-mono font-bold rounded-md transition-colors cursor-pointer text-center ${
-                    isSelected
-                      ? 'bg-[#3d1018] text-white shadow-2xs'
-                      : 'text-[#1c1c19] hover:bg-[#f6f3ee]'
-                  }`}
-                >
-                  {String(m).padStart(2, '0')}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+      {/* Dual Roller Drums (Jam & Menit) */}
+      <div className="flex items-center justify-center gap-2 bg-white py-1 px-2.5 rounded-xl border border-[#ebe8e3] shadow-2xs">
+        <RollerWheel
+          label="Jam"
+          value={h}
+          max={24}
+          step={1}
+          onChange={handleHourChange}
+        />
+        <div className="text-lg font-bold font-mono text-[#3d1018] self-center pb-2">:</div>
+        <RollerWheel
+          label="Menit"
+          value={m}
+          max={60}
+          step={5}
+          onChange={handleMinuteChange}
+        />
       </div>
+
+      {/* Presets Jam Populer */}
+      {presets && presets.length > 0 && (
+        <div className="flex items-center justify-center gap-1.5 flex-wrap pt-2 mt-2 border-t border-[#ebe8e3]">
+          {presets.map((timeStr) => (
+            <button
+              key={timeStr}
+              type="button"
+              onClick={() => onChange(timeStr)}
+              className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer ${
+                value === timeStr
+                  ? 'bg-[#3d1018] text-white shadow-2xs'
+                  : 'bg-white text-[#524344] hover:bg-[#ebe8e3] border border-[#ebe8e3]'
+              }`}
+            >
+              {timeStr}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -96,28 +188,27 @@ export const PengaturanView: React.FC = () => {
   const {
     storeSettings,
     updateStoreSettings,
-    cashierShift,
     playDingSound,
     showToast,
   } = useApp();
 
   const [openHourInput, setOpenHourInput] = useState(storeSettings.openHour || '08:00');
   const [closeHourInput, setCloseHourInput] = useState(storeSettings.closeHour || '22:00');
-  const [defaultCashInput, setDefaultCashInput] = useState(storeSettings.defaultInitialCash ?? 200000);
+  const [drawerCashInput, setDrawerCashInput] = useState<number>(storeSettings.drawerInitialCash ?? 200000);
   const [showHelpModal, setShowHelpModal] = useState(false);
 
-  const handleSaveHours = (e: React.FormEvent) => {
+  const handleSaveOperational = (e: React.FormEvent) => {
     e.preventDefault();
     updateStoreSettings({
       openHour: openHourInput,
       closeHour: closeHourInput,
+      drawerInitialCash: drawerCashInput,
     });
-    showToast('Jam operasional berhasil disimpan', 'success');
+    showToast('Pengaturan jam operasional & modal awal laci berhasil disimpan', 'success');
   };
 
   const isKdsActive = storeSettings.enableKitchenDisplay ?? storeSettings.kdsEnabled ?? true;
   const isInventoryActive = storeSettings.enableInventoryTracking ?? storeSettings.autoInventoryDeduction ?? true;
-  const isDrawerActive = storeSettings.enableCashDrawer ?? true;
 
   return (
     <div className="flex flex-col w-full pb-24 md:pb-8 max-w-[1540px] mx-auto px-4 sm:px-6 lg:px-8 pt-3 space-y-6">
@@ -128,14 +219,14 @@ export const PengaturanView: React.FC = () => {
             Pengaturan Sistem Outlet
           </h1>
           <p className="text-xs text-[#524344] mt-0.5">
-            Konfigurasi jam kerja, status laci kas, modul fitur restoran, dan suara notifikasi Rawon Gusti.
+            Konfigurasi jam kerja, kontrol modul fitur, notifikasi suara, dan panduan operasional Rawon Gusti.
           </p>
         </div>
       </div>
 
       {/* ================= BARIS 1: OPERASIONAL UTAMA OUTLET (2 KOLOM SEJAJAR BERIMBANG) ================= */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
-        {/* Kartu 1: Jam Buka & Operasional Harian (Scroll Jam) */}
+        {/* Kartu Kiri: Jam Buka & Operasional Harian */}
         <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs flex flex-col justify-between space-y-4">
           <div>
             <div className="flex items-center gap-2.5 pb-2 border-b border-[#ebe8e3]">
@@ -157,7 +248,7 @@ export const PengaturanView: React.FC = () => {
                 <span className="text-[11px] text-[#524344] leading-relaxed block mt-0.5">
                   {storeSettings.forceClose
                     ? 'Outlet tutup sementara. Pemesanan mandiri meja dinonaktifkan.'
-                    : 'Outlet buka normal sesuai jadwal harian.'}
+                    : 'Outlet buka normal sesuai jadwal harian di bawah.'}
                 </span>
               </div>
               <button
@@ -180,19 +271,48 @@ export const PengaturanView: React.FC = () => {
               </button>
             </div>
 
-            {/* Scroll Jam Buka & Jam Tutup */}
-            <form onSubmit={handleSaveHours} className="space-y-3 pt-3">
+            {/* Roller Time Picker Jam Buka & Jam Tutup serta Modal Awal Kasir */}
+            <form onSubmit={handleSaveOperational} className="space-y-3 pt-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <ScrollTimePicker
+                <RollerTimePicker
                   label="Jam Buka Outlet"
                   value={openHourInput}
                   onChange={setOpenHourInput}
+                  presets={['07:00', '08:00', '09:00', '10:00']}
                 />
-                <ScrollTimePicker
+                <RollerTimePicker
                   label="Jam Tutup Outlet"
                   value={closeHourInput}
                   onChange={setCloseHourInput}
+                  presets={['20:00', '21:00', '22:00', '23:00']}
                 />
+              </div>
+
+              {/* Input Modal Awal Kasir di Laci */}
+              <div className="p-3 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="max-w-[65%]">
+                  <label htmlFor="drawer-cash-input" className="font-bold text-xs text-[#1c1c19] block">
+                    Modal Awal Kasir di Laci (Drawer)
+                  </label>
+                  <span className="text-[11px] text-[#524344] block mt-0.5 leading-relaxed">
+                    Nominal kas awal pecahan kecil kembalian. Masuk otomatis ke rekonsiliasi kas di Laporan.
+                  </span>
+                </div>
+                <div className="relative shrink-0 w-full sm:w-44">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#847374]">Rp</span>
+                  <input
+                    id="drawer-cash-input"
+                    type="text"
+                    inputMode="numeric"
+                    value={drawerCashInput.toLocaleString('id-ID')}
+                    onChange={(e) => {
+                      const num = parseInt(e.target.value.replace(/\D/g, ''), 10) || 0;
+                      setDrawerCashInput(num);
+                    }}
+                    className="w-full pl-9 pr-3 py-1.5 bg-white border border-[#ebe8e3] rounded-xl text-xs font-bold text-[#1c1c19] text-right focus:outline-none focus:border-[#3d1018] shadow-2xs"
+                    placeholder="200.000"
+                  />
+                </div>
               </div>
 
               <div className="flex justify-end pt-1">
@@ -200,175 +320,145 @@ export const PengaturanView: React.FC = () => {
                   type="submit"
                   className="px-4 py-2 bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
                 >
-                  Simpan Jam Operasional
+                  Simpan Pengaturan Operasional
                 </button>
               </div>
             </form>
           </div>
         </div>
 
-        {/* Kartu 2: Manajemen Laci Kasir & Shift Kerja (Point of Sale / f_sale) */}
+        {/* Kartu Kanan: Suara & Audio Notifikasi */}
         <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs flex flex-col justify-between space-y-4">
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="flex items-center gap-2.5 pb-2 border-b border-[#ebe8e3]">
               <div className="w-8 h-8 rounded-lg bg-[#3d1018] text-white flex items-center justify-center shadow-xs">
-                <span className="material-symbols-outlined text-[18px]">point_of_sale</span>
+                <span className="material-symbols-outlined text-[18px]">notifications_active</span>
               </div>
               <div>
-                <h2 className="font-bold text-sm text-[#1c1c19]">Manajemen Laci Kasir &amp; Shift</h2>
-                <p className="text-[11px] text-[#524344]">Kendali status saldo kas, tutup kasir, dan modal laci</p>
+                <h2 className="font-bold text-sm text-[#1c1c19]">Suara &amp; Audio Notifikasi</h2>
+                <p className="text-[11px] text-[#524344]">Pengingat nada suara lonceng pesanan baru &amp; rute stasiun</p>
               </div>
             </div>
 
-            {/* Saklar Fitur Laci Kas */}
+            {/* Toggle Saklar Audio Ding */}
             <div className="flex items-center justify-between p-3 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3]">
-              <div className="max-w-[78%]">
-                <span className="font-bold text-xs text-[#1c1c19] block">
-                  Fitur Status Laci Kasir &amp; Tutup Kasir
-                </span>
+              <div className="max-w-[75%]">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-xs text-[#1c1c19]">
+                    Audio Ding Notifikasi
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playDingSound();
+                      showToast('Uji coba suara chime berhasil', 'info');
+                    }}
+                    className="px-2 py-0.5 rounded-md bg-white border border-[#ebe8e3] hover:bg-[#ebe8e3] text-[10px] font-bold text-[#3d1018] cursor-pointer transition-colors shadow-2xs"
+                  >
+                    Uji Coba Suara
+                  </button>
+                </div>
                 <span className="text-[11px] text-[#524344] leading-relaxed block mt-0.5">
-                  {isDrawerActive
-                    ? 'Aktif: Menampilkan bar modal laci kas & tombol Tutup Kasir di bilah Checkout.'
-                    : 'Nonaktif: Mode checkout cepat tanpa pelacakan uang fisik laci kasir.'}
+                  Berbunyi otomatis saat ada tiket pesanan masuk atau panggilan pelayan meja.
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => {
-                  const next = !isDrawerActive;
-                  updateStoreSettings({ enableCashDrawer: next });
-                  showToast(`Fitur laci kasir ${next ? 'diaktifkan' : 'dinonaktifkan'}`);
+                  const next = !storeSettings.soundEnabled;
+                  updateStoreSettings({ soundEnabled: next });
+                  showToast(`Suara notifikasi ${next ? 'diaktifkan' : 'dimatikan'}`);
                 }}
                 className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
-                  isDrawerActive ? 'bg-[#3d1018]' : 'bg-[#e0dcd8]'
+                  storeSettings.soundEnabled ? 'bg-[#3d1018]' : 'bg-[#e0dcd8]'
                 }`}
-                aria-pressed={isDrawerActive}
+                aria-pressed={storeSettings.soundEnabled}
               >
                 <div
                   className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
-                    isDrawerActive ? 'translate-x-6' : 'translate-x-0'
+                    storeSettings.soundEnabled ? 'translate-x-6' : 'translate-x-0'
                   }`}
                 />
               </button>
             </div>
 
-            {/* Pengaturan Modal Awal Kasir Default */}
-            <div className="p-3 bg-[#fcf9f4] rounded-xl border border-[#ebe8e3] space-y-2">
-              <label className="text-xs font-bold text-[#1c1c19] block">
-                Modal Awal Kasir Standar (Rp):
-              </label>
-              <div className="flex items-center gap-2 bg-white border border-[#ebe8e3] rounded-xl px-3 py-2">
-                <span className="text-xs font-bold text-[#524344]">Rp</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={defaultCashInput}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value.replace(/\D/g, ''), 10) || 0;
-                    setDefaultCashInput(val);
-                  }}
-                  className="w-full text-xs font-bold text-[#3d1018] outline-none tabular-nums"
-                  placeholder="200000"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    updateStoreSettings({ defaultInitialCash: defaultCashInput });
-                    showToast(`Modal awal standar diatur ke Rp ${defaultCashInput.toLocaleString('id-ID')}`, 'success');
-                  }}
-                  className="px-3 py-1 bg-[#3d1018] hover:bg-[#58252c] text-white text-[11px] font-bold rounded-lg cursor-pointer transition-colors shrink-0"
-                >
-                  Terapkan
-                </button>
+            {/* Pilihan Area Stasiun Dapur */}
+            <div className="p-3.5 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <span className="font-bold text-xs text-[#1c1c19] block">
+                  Area Dapur / Stasiun Pantau
+                </span>
+                <span className="text-[11px] text-[#524344] block mt-0.5">
+                  Pilih stasiun default untuk pemfilteran tiket dan nada notifikasi.
+                </span>
               </div>
-              <p className="text-[11px] text-[#524344]">
-                Uang receh/kembalian awal yang otomatis terisi saat outlet buka di jam operasional.
-              </p>
+              <select
+                value={storeSettings.soundStation || 'Semua Bagian'}
+                onChange={(e) => {
+                  updateStoreSettings({ soundStation: e.target.value });
+                  showToast(`Area stasiun diatur ke: ${e.target.value}`, 'info');
+                }}
+                className="bg-white border border-[#ebe8e3] rounded-xl px-3 py-2 text-xs font-bold text-[#1c1c19] outline-none cursor-pointer focus:border-[#3d1018]"
+              >
+                <option value="Semua Bagian">Semua Bagian</option>
+                <option value="Dapur Utama (Makanan)">Dapur Utama (Makanan)</option>
+                <option value="Bar Minuman">Bar Minuman</option>
+              </select>
             </div>
 
-            {/* Pratinjau Kapsul Status Laci Kasir */}
-            <div className="p-3 bg-stone-50 rounded-xl border border-[#ebe8e3] space-y-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#847374] block">
-                Pratinjau Status di Halaman Checkout:
+            {/* Status Info Speaker */}
+            <div className="p-3 bg-[#fcf9f4] rounded-xl border border-[#ebe8e3] flex items-center gap-2.5 text-xs text-[#524344]">
+              <span className="material-symbols-outlined text-[18px] text-[#994703]">volume_up</span>
+              <span>
+                Audio sintetis Web Audio API aktif. Suara diputar lokal pada peramban perangkat kasir/dapur tanpa internet tambahan.
               </span>
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-2 bg-[#3d1018] text-white px-3 py-1.5 rounded-xl border border-[#58252c] text-xs shadow-xs">
-                  <span className="material-symbols-outlined text-[16px] text-[#fc934f]">point_of_sale</span>
-                  <div className="flex items-center gap-2.5">
-                    <div>
-                      <span className="text-[10px] text-[#ffdadc]/70 block leading-none">Modal</span>
-                      <span className="font-bold text-white text-xs tabular-nums">
-                        Rp {(cashierShift.modalAwal || defaultCashInput).toLocaleString('id-ID')}
-                      </span>
-                    </div>
-                    <div className="h-4 w-px bg-white/20"></div>
-                    <div>
-                      <span className="text-[10px] text-[#ffdadc]/70 block leading-none">Masuk</span>
-                      <span className="font-bold text-[#fc934f] text-xs tabular-nums">+0</span>
-                    </div>
-                    <div className="h-4 w-px bg-white/20"></div>
-                    <div>
-                      <span className="text-[10px] text-[#ffdadc]/70 block leading-none">Total Laci</span>
-                      <span className="font-bold text-white text-xs tabular-nums">
-                        Rp {(cashierShift.totalLaci || defaultCashInput).toLocaleString('id-ID')}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#994703] text-white text-xs font-bold shadow-xs">
-                  <span className="material-symbols-outlined text-[16px]">lock_clock</span>
-                  <span>Tutup Kasir</span>
-                </div>
-              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ================= BARIS 2: MODUL FITUR RESTORAN & AUDIO (4 KOLOM SEJAJAR 100% SEJEJER) ================= */}
+      {/* ================= BARIS 2: MODUL FITUR OUTLET (3 KOLOM SEJAJAR 100% PERSIS / SEJEJER) ================= */}
       <div>
         <div className="pb-2 mb-3 border-b border-[#ebe8e3]">
           <h2 className="font-bold text-sm text-[#1c1c19] flex items-center gap-2">
             <span className="material-symbols-outlined text-[18px] text-[#994703]">toggle_on</span>
             <span>Kendali Saklar Modul Fitur Restoran</span>
           </h2>
-          <p className="text-[11px] text-[#524344]">Aktifkan atau nonaktifkan fitur sesuai alur operasional cabang</p>
+          <p className="text-[11px] text-[#524344]">Hidupkan atau matikan modul sistem sesuai alur operasional cabang</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">
           {/* Modul 1: Self-Ordering Meja */}
-          <div className="bg-white p-4 rounded-2xl border border-[#ebe8e3] shadow-xs flex flex-col justify-between space-y-3">
+          <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs flex flex-col justify-between space-y-4">
             <div>
-              <div className="flex items-center gap-2 pb-2 border-b border-[#ebe8e3]">
-                <div className="w-7 h-7 rounded-lg bg-[#3d1018] text-white flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[16px]">qr_code_scanner</span>
+              <div className="flex items-center gap-2.5 pb-2 border-b border-[#ebe8e3]">
+                <div className="w-8 h-8 rounded-lg bg-[#3d1018] text-white flex items-center justify-center shadow-xs">
+                  <span className="material-symbols-outlined text-[18px]">qr_code_scanner</span>
                 </div>
                 <div>
-                  <h3 className="font-bold text-xs text-[#1c1c19]">Pemesanan Mandiri</h3>
-                  <p className="text-[10px] text-[#524344]">Self-Ordering QR</p>
+                  <h3 className="font-bold text-sm text-[#1c1c19]">Pemesanan Mandiri Tamu</h3>
+                  <p className="text-[11px] text-[#524344]">Self-Ordering QR Meja</p>
                 </div>
               </div>
 
-              <div className="py-2">
-                <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold mb-1.5 ${
+              <div className="py-3">
+                <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold mb-2 ${
                   storeSettings.selfOrderEnabled
                     ? 'bg-amber-100 text-[#3d1018] border border-amber-200'
                     : 'bg-stone-100 text-[#847374]'
                 }`}>
                   {storeSettings.selfOrderEnabled ? 'Status: Aktif' : 'Status: Nonaktif'}
                 </span>
-                <p className="text-[11px] text-[#524344] leading-relaxed">
+                <p className="text-xs text-[#524344] leading-relaxed">
                   {storeSettings.selfOrderEnabled
-                    ? 'Pelanggan dapat memindai QR di meja untuk memesan dan membayar mandiri.'
-                    : 'Pemesanan digital ditutup; tamu diarahkan memanggil pelayan manual.'}
+                    ? 'Pelanggan dapat memindai stiker QR di meja untuk memesan hidangan dan menyelesaikan pembayaran mandiri.'
+                    : 'Pemesanan digital ditutup; tamu diarahkan memanggil pelayan manual untuk pemesanan di meja.'}
                 </p>
               </div>
             </div>
 
             <div className="pt-2 border-t border-[#ebe8e3] flex items-center justify-between">
-              <span className="text-xs font-bold text-[#1c1c19]">Saklar Modul</span>
+              <span className="text-xs font-bold text-[#1c1c19]">Aktifkan Modul</span>
               <button
                 type="button"
                 onClick={() => {
@@ -376,14 +466,14 @@ export const PengaturanView: React.FC = () => {
                   updateStoreSettings({ selfOrderEnabled: next });
                   showToast(`Self ordering ${next ? 'diaktifkan' : 'dinonaktifkan (mode panggil pelayan)'}`, 'info');
                 }}
-                className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
+                className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
                   storeSettings.selfOrderEnabled ? 'bg-[#3d1018]' : 'bg-[#e0dcd8]'
                 }`}
                 aria-pressed={storeSettings.selfOrderEnabled}
               >
                 <div
                   className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
-                    storeSettings.selfOrderEnabled ? 'translate-x-5' : 'translate-x-0'
+                    storeSettings.selfOrderEnabled ? 'translate-x-6' : 'translate-x-0'
                   }`}
                 />
               </button>
@@ -391,36 +481,36 @@ export const PengaturanView: React.FC = () => {
           </div>
 
           {/* Modul 2: Pantau Pesanan (KDS Dapur) */}
-          <div className="bg-white p-4 rounded-2xl border border-[#ebe8e3] shadow-xs flex flex-col justify-between space-y-3">
+          <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs flex flex-col justify-between space-y-4">
             <div>
-              <div className="flex items-center gap-2 pb-2 border-b border-[#ebe8e3]">
-                <div className="w-7 h-7 rounded-lg bg-[#3d1018] text-white flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[16px]">soup_kitchen</span>
+              <div className="flex items-center gap-2.5 pb-2 border-b border-[#ebe8e3]">
+                <div className="w-8 h-8 rounded-lg bg-[#3d1018] text-white flex items-center justify-center shadow-xs">
+                  <span className="material-symbols-outlined text-[18px]">soup_kitchen</span>
                 </div>
                 <div>
-                  <h3 className="font-bold text-xs text-[#1c1c19]">Pantau Pesanan</h3>
-                  <p className="text-[10px] text-[#524344]">KDS Layar Dapur</p>
+                  <h3 className="font-bold text-sm text-[#1c1c19]">Pantau Pesanan Dapur</h3>
+                  <p className="text-[11px] text-[#524344]">Kitchen Display System (KDS)</p>
                 </div>
               </div>
 
-              <div className="py-2">
-                <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold mb-1.5 ${
+              <div className="py-3">
+                <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold mb-2 ${
                   isKdsActive
                     ? 'bg-amber-100 text-[#3d1018] border border-amber-200'
                     : 'bg-stone-100 text-[#847374]'
                 }`}>
                   {isKdsActive ? 'Status: Aktif' : 'Status: Nonaktif'}
                 </span>
-                <p className="text-[11px] text-[#524344] leading-relaxed">
+                <p className="text-xs text-[#524344] leading-relaxed">
                   {isKdsActive
-                    ? 'Tab Pantau Pesanan tampil di sidebar kasir/dapur untuk antrean memasak.'
-                    : 'Tab disembunyikan jika dapur mengandalkan pesanan manual/cetak langsung.'}
+                    ? 'Tab "Pantau Pesanan" muncul di navigasi samping kasir/dapur untuk memantau tiket antrean memasak secara digital.'
+                    : 'Modul disembunyikan dari sidebar jika dapur memilih alur pesanan manual atau mengandalkan tiket cetak.'}
                 </p>
               </div>
             </div>
 
             <div className="pt-2 border-t border-[#ebe8e3] flex items-center justify-between">
-              <span className="text-xs font-bold text-[#1c1c19]">Saklar Modul</span>
+              <span className="text-xs font-bold text-[#1c1c19]">Aktifkan Modul</span>
               <button
                 type="button"
                 onClick={() => {
@@ -431,14 +521,14 @@ export const PengaturanView: React.FC = () => {
                   });
                   showToast(`Modul Pantau Pesanan (KDS) ${next ? 'diaktifkan' : 'dinonaktifkan'}`);
                 }}
-                className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
+                className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
                   isKdsActive ? 'bg-[#3d1018]' : 'bg-[#e0dcd8]'
                 }`}
                 aria-pressed={isKdsActive}
               >
                 <div
                   className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
-                    isKdsActive ? 'translate-x-5' : 'translate-x-0'
+                    isKdsActive ? 'translate-x-6' : 'translate-x-0'
                   }`}
                 />
               </button>
@@ -446,36 +536,36 @@ export const PengaturanView: React.FC = () => {
           </div>
 
           {/* Modul 3: Pelacakan Stok Bahan Baku Otomatis */}
-          <div className="bg-white p-4 rounded-2xl border border-[#ebe8e3] shadow-xs flex flex-col justify-between space-y-3">
+          <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs flex flex-col justify-between space-y-4">
             <div>
-              <div className="flex items-center gap-2 pb-2 border-b border-[#ebe8e3]">
-                <div className="w-7 h-7 rounded-lg bg-[#3d1018] text-white flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[16px]">inventory</span>
+              <div className="flex items-center gap-2.5 pb-2 border-b border-[#ebe8e3]">
+                <div className="w-8 h-8 rounded-lg bg-[#3d1018] text-white flex items-center justify-center shadow-xs">
+                  <span className="material-symbols-outlined text-[18px]">inventory</span>
                 </div>
                 <div>
-                  <h3 className="font-bold text-xs text-[#1c1c19]">Pelacakan Bahan Baku</h3>
-                  <p className="text-[10px] text-[#524344]">Inventarisasi Otomatis</p>
+                  <h3 className="font-bold text-sm text-[#1c1c19]">Pelacakan Bahan Baku</h3>
+                  <p className="text-[11px] text-[#524344]">Inventarisasi &amp; Restock Bahan</p>
                 </div>
               </div>
 
-              <div className="py-2">
-                <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold mb-1.5 ${
+              <div className="py-3">
+                <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold mb-2 ${
                   isInventoryActive
                     ? 'bg-amber-100 text-[#3d1018] border border-amber-200'
                     : 'bg-stone-100 text-[#847374]'
                 }`}>
                   {isInventoryActive ? 'Status: Aktif' : 'Status: Nonaktif'}
                 </span>
-                <p className="text-[11px] text-[#524344] leading-relaxed">
+                <p className="text-xs text-[#524344] leading-relaxed">
                   {isInventoryActive
-                    ? 'Tab stok bahan tampil di menu & bahan terpotong otomatis saat transaksi.'
-                    : 'Mode manual murni via saklar Habis/Tersedia pada kartu hidangan menu.'}
+                    ? 'Tab "Stok Bahan Baku" aktif di Kelola Menu dan gramasi daging/bumbu terpotong otomatis setiap kali kasir menyelesaikan transaksi.'
+                    : 'Mode manual murni. Tab bahan baku disembunyikan; stok dikontrol kasir lewat tombol "Habis/Tersedia" di menu.'}
                 </p>
               </div>
             </div>
 
             <div className="pt-2 border-t border-[#ebe8e3] flex items-center justify-between">
-              <span className="text-xs font-bold text-[#1c1c19]">Saklar Modul</span>
+              <span className="text-xs font-bold text-[#1c1c19]">Aktifkan Modul</span>
               <button
                 type="button"
                 onClick={() => {
@@ -484,87 +574,16 @@ export const PengaturanView: React.FC = () => {
                     enableInventoryTracking: next,
                     autoInventoryDeduction: next,
                   });
-                  showToast(`Pelacakan Bahan Baku ${next ? 'diaktifkan' : 'dinonaktifkan'}`);
+                  showToast(`Pelacakan Stok Bahan Baku ${next ? 'diaktifkan' : 'dinonaktifkan (mode manual)'}`);
                 }}
-                className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
+                className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
                   isInventoryActive ? 'bg-[#3d1018]' : 'bg-[#e0dcd8]'
                 }`}
                 aria-pressed={isInventoryActive}
               >
                 <div
                   className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
-                    isInventoryActive ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
-          </div>
-
-          {/* Modul 4: Suara & Audio Notifikasi */}
-          <div className="bg-white p-4 rounded-2xl border border-[#ebe8e3] shadow-xs flex flex-col justify-between space-y-3">
-            <div>
-              <div className="flex items-center gap-2 pb-2 border-b border-[#ebe8e3]">
-                <div className="w-7 h-7 rounded-lg bg-[#3d1018] text-white flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[16px]">notifications_active</span>
-                </div>
-                <div>
-                  <h3 className="font-bold text-xs text-[#1c1c19]">Suara Notifikasi</h3>
-                  <p className="text-[10px] text-[#524344]">Audio Chime Pesanan</p>
-                </div>
-              </div>
-
-              <div className="py-2 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                    storeSettings.soundEnabled
-                      ? 'bg-amber-100 text-[#3d1018] border border-amber-200'
-                      : 'bg-stone-100 text-[#847374]'
-                  }`}>
-                    {storeSettings.soundEnabled ? 'Status: Aktif' : 'Status: Nonaktif'}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playDingSound();
-                      showToast('Uji coba suara chime berhasil', 'info');
-                    }}
-                    className="px-2 py-0.5 rounded bg-white border border-[#ebe8e3] text-[10px] font-bold text-[#3d1018] hover:bg-[#ebe8e3] cursor-pointer shadow-2xs"
-                  >
-                    Uji Suara
-                  </button>
-                </div>
-                <select
-                  value={storeSettings.soundStation || 'Semua Bagian'}
-                  onChange={(e) => {
-                    updateStoreSettings({ soundStation: e.target.value });
-                    showToast(`Area stasiun: ${e.target.value}`, 'info');
-                  }}
-                  className="w-full bg-white border border-[#ebe8e3] rounded-lg px-2 py-1 text-[11px] font-bold text-[#1c1c19] outline-none cursor-pointer"
-                >
-                  <option value="Semua Bagian">Semua Bagian</option>
-                  <option value="Dapur Utama (Makanan)">Dapur Utama</option>
-                  <option value="Bar Minuman">Bar Minuman</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="pt-2 border-t border-[#ebe8e3] flex items-center justify-between">
-              <span className="text-xs font-bold text-[#1c1c19]">Saklar Modul</span>
-              <button
-                type="button"
-                onClick={() => {
-                  const next = !storeSettings.soundEnabled;
-                  updateStoreSettings({ soundEnabled: next });
-                  showToast(`Suara notifikasi ${next ? 'diaktifkan' : 'dimatikan'}`);
-                }}
-                className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
-                  storeSettings.soundEnabled ? 'bg-[#3d1018]' : 'bg-[#e0dcd8]'
-                }`}
-                aria-pressed={storeSettings.soundEnabled}
-              >
-                <div
-                  className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
-                    storeSettings.soundEnabled ? 'translate-x-5' : 'translate-x-0'
+                    isInventoryActive ? 'translate-x-6' : 'translate-x-0'
                   }`}
                 />
               </button>
@@ -573,7 +592,7 @@ export const PengaturanView: React.FC = () => {
         </div>
       </div>
 
-      {/* ================= BARIS 3: BANTUAN & PANDUAN OPERASIONAL (FULL-WIDTH) ================= */}
+      {/* ================= BARIS 3: BANTUAN & PANDUAN OPERASIONAL (FULL-WIDTH BOTTOM SECTION) ================= */}
       <div className="bg-white p-6 rounded-2xl border border-[#ebe8e3] shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-[#ebe8e3]">
           <div className="flex items-center gap-3">
@@ -603,7 +622,7 @@ export const PengaturanView: React.FC = () => {
               <span>1. Kasir &amp; Checkout</span>
             </h3>
             <p className="text-[11px] text-[#524344] leading-relaxed">
-              Otomatis buka di jam operasional. Proses pembayaran Tunai, QRIS, Kartu Debit, atau Pecah Pembayaran, serta cetak struk rekap transaksi saat tutup kasir.
+              Mulai shift dengan "Buka Kasir", proses pelunasan Tunai, QRIS, Kartu Debit, atau Pecah Pembayaran, serta cetak struk rekap transaksi saat tutup kasir.
             </p>
           </div>
 
@@ -629,7 +648,7 @@ export const PengaturanView: React.FC = () => {
         </div>
       </div>
 
-      {/* Pop-up Dialog Bantuan Operasional */}
+      {/* Pop-up Dialog Bantuan Operasional (Terpusat) */}
       <HelpModal isOpen={showHelpModal} onClose={() => setShowHelpModal(false)} />
     </div>
   );
