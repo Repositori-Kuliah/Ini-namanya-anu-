@@ -100,6 +100,8 @@ export interface StoreSettings {
   enableKitchenDisplay?: boolean;  // Alias kdsEnabled
   autoInventoryDeduction?: boolean;// Fitur stok bahan baku (on: sesuai stok, off: manual)
   enableInventoryTracking?: boolean; // Alias autoInventoryDeduction
+  enableCashDrawer?: boolean;      // Fitur Laci Kas & Shift Kasir (On: ada bar modal & tutup kasir, Off: checkout langsung tanpa laci)
+  defaultInitialCash?: number;     // Modal awal kasir default (misal 200000)
 }
 
 export interface CashierShift {

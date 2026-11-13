@@ -34,52 +34,84 @@ export const CheckoutView: React.FC = () => {
   const [splitAmount1, setSplitAmount1] = useState<number>(0);
   const [splitMethod2, setSplitMethod2] = useState<'Tunai' | 'QRIS' | 'Kartu Debit'>('QRIS');
 
-  const handleSplitNumpad = (val: string) => {
-    const cur = String(splitAmount1 || 0);
-    const nextStr = cur === '0' ? val : cur + val;
-    const nextNum = parseInt(nextStr, 10) || 0;
-    setSplitAmount1(Math.min(currentBill.total, nextNum));
-  };
-
-  const handleSplitBackspace = () => {
-    const cur = String(splitAmount1 || 0);
-    if (cur.length <= 1) {
-      setSplitAmount1(0);
-    } else {
-      setSplitAmount1(parseInt(cur.slice(0, -1), 10) || 0);
-    }
-  };
-
   // Modal Buka & Tutup Kasir State
   const [showBukaKasirModal, setShowBukaKasirModal] = useState<boolean>(false);
-  const [modalAwalInput, setModalAwalInput] = useState<number>(200000);
+  const [modalAwalInput, setModalAwalInput] = useState<number>(storeSettings.defaultInitialCash ?? 200000);
   const [showTutupKasirModal, setShowTutupKasirModal] = useState<boolean>(false);
   const [showShiftSlipModal, setShowShiftSlipModal] = useState<boolean>(false);
   const [physicalCashInput, setPhysicalCashInput] = useState<number>(cashierShift.totalLaci);
   const [shiftClosedSummary, setShiftClosedSummary] = useState<{ difference: number } | null>(null);
 
-  const handleBukaNumpad = (val: string) => {
-    const cur = String(modalAwalInput || 0);
-    const nextStr = cur === '0' ? val : cur + val;
-    setModalAwalInput(parseInt(nextStr, 10) || 0);
-  };
+  const printThermalSlip = () => {
+    const el = document.getElementById('shift-slip-thermal-content');
+    if (!el) {
+      window.print();
+      return;
+    }
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
 
-  const handleBukaBackspace = () => {
-    const cur = String(modalAwalInput || 0);
-    if (cur.length <= 1) setModalAwalInput(0);
-    else setModalAwalInput(parseInt(cur.slice(0, -1), 10) || 0);
-  };
+    const doc = iframe.contentWindow?.document;
+    if (!doc) {
+      window.print();
+      return;
+    }
 
-  const handlePhysicalCashNumpad = (val: string) => {
-    const cur = String(physicalCashInput || 0);
-    const nextStr = cur === '0' ? val : cur + val;
-    setPhysicalCashInput(parseInt(nextStr, 10) || 0);
-  };
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Slip Rekap Shift Kasir - Rawon Gusti</title>
+          <style>
+            @page { size: 80mm auto; margin: 0; }
+            body {
+              font-family: monospace;
+              font-size: 11px;
+              color: #000;
+              background: #fff;
+              margin: 0;
+              padding: 10px;
+              width: 76mm;
+            }
+            * { box-sizing: border-box; }
+            .text-center { text-align: center; }
+            .font-bold { font-weight: bold; }
+            .uppercase { text-transform: uppercase; }
+            .flex { display: flex; }
+            .justify-between { justify-content: space-between; }
+            .border-b-2 { border-bottom: 2px dashed #000; }
+            .border-t { border-top: 1px solid #000; }
+            .border-b { border-bottom: 1px dotted #000; }
+            .grid { display: grid; }
+            .grid-cols-2 { grid-template-columns: 1fr 1fr; }
+            .gap-4 { gap: 16px; }
+            .h-8 { height: 32px; }
+            .tabular-nums { font-variant-numeric: tabular-nums; }
+          </style>
+        </head>
+        <body>
+          ${el.innerHTML}
+        </body>
+      </html>
+    `);
+    doc.close();
 
-  const handlePhysicalCashBackspace = () => {
-    const cur = String(physicalCashInput || 0);
-    if (cur.length <= 1) setPhysicalCashInput(0);
-    else setPhysicalCashInput(parseInt(cur.slice(0, -1), 10) || 0);
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 1000);
+    }, 250);
   };
 
   const filteredBills = bills.filter(
@@ -239,51 +271,55 @@ export const CheckoutView: React.FC = () => {
 
         {/* Status Laci Kas & Aksi Shift Kasir (Menyatu Kompak) */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Kapsul Kompak Status Laci */}
-          <div className="flex items-center gap-2 bg-[#3d1018] text-white px-3 py-1.5 rounded-xl border border-[#58252c] text-xs shadow-xs">
-            <span className="material-symbols-outlined text-[16px] text-[#fc934f]">point_of_sale</span>
-            <div className="flex items-center gap-2.5">
-              <div>
-                <span className="text-[10px] text-[#ffdadc]/70 block leading-none">Modal</span>
-                <span className="font-bold text-white text-xs tabular-nums">
-                  Rp {cashierShift.modalAwal.toLocaleString('id-ID')}
-                </span>
+          {(storeSettings.enableCashDrawer ?? true) && (
+            <>
+              {/* Kapsul Kompak Status Laci */}
+              <div className="flex items-center gap-2 bg-[#3d1018] text-white px-3 py-1.5 rounded-xl border border-[#58252c] text-xs shadow-xs">
+                <span className="material-symbols-outlined text-[16px] text-[#fc934f]">point_of_sale</span>
+                <div className="flex items-center gap-2.5">
+                  <div>
+                    <span className="text-[10px] text-[#ffdadc]/70 block leading-none">Modal</span>
+                    <span className="font-bold text-white text-xs tabular-nums">
+                      Rp {cashierShift.modalAwal.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                  <div className="h-4 w-px bg-white/20"></div>
+                  <div>
+                    <span className="text-[10px] text-[#ffdadc]/70 block leading-none">Masuk</span>
+                    <span className="font-bold text-[#fc934f] text-xs tabular-nums">
+                      +{cashierShift.kasMasuk.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                  <div className="h-4 w-px bg-white/20"></div>
+                  <div>
+                    <span className="text-[10px] text-[#ffdadc]/70 block leading-none">Total Laci</span>
+                    <span className="font-bold text-white text-xs tabular-nums">
+                      Rp {cashierShift.totalLaci.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="h-4 w-px bg-white/20"></div>
-              <div>
-                <span className="text-[10px] text-[#ffdadc]/70 block leading-none">Masuk</span>
-                <span className="font-bold text-[#fc934f] text-xs tabular-nums">
-                  +{cashierShift.kasMasuk.toLocaleString('id-ID')}
-                </span>
-              </div>
-              <div className="h-4 w-px bg-white/20"></div>
-              <div>
-                <span className="text-[10px] text-[#ffdadc]/70 block leading-none">Total Laci</span>
-                <span className="font-bold text-white text-xs tabular-nums">
-                  Rp {cashierShift.totalLaci.toLocaleString('id-ID')}
-                </span>
-              </div>
-            </div>
-          </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              if (cashierShift.isOpen) {
-                setPhysicalCashInput(cashierShift.totalLaci);
-                setShowTutupKasirModal(true);
-              } else {
-                setModalAwalInput(200000);
-                setShowBukaKasirModal(true);
-              }
-            }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#994703] text-white text-xs font-bold hover:bg-[#b05304] transition-colors cursor-pointer shadow-xs"
-          >
-            <span className="material-symbols-outlined text-[16px]">
-              {cashierShift.isOpen ? 'lock_clock' : 'key'}
-            </span>
-            <span>{cashierShift.isOpen ? 'Tutup Kasir' : 'Buka Kasir'}</span>
-          </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (cashierShift.isOpen) {
+                    setPhysicalCashInput(cashierShift.totalLaci);
+                    setShowTutupKasirModal(true);
+                  } else {
+                    setModalAwalInput(storeSettings.defaultInitialCash ?? 200000);
+                    setShowBukaKasirModal(true);
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#994703] text-white text-xs font-bold hover:bg-[#b05304] transition-colors cursor-pointer shadow-xs"
+              >
+                <span className="material-symbols-outlined text-[16px]">
+                  {cashierShift.isOpen ? 'lock_clock' : 'key'}
+                </span>
+                <span>{cashierShift.isOpen ? 'Tutup Kasir' : 'Buka Kasir'}</span>
+              </button>
+            </>
+          )}
 
           <button
             type="button"
@@ -788,71 +824,41 @@ export const CheckoutView: React.FC = () => {
                       <div className="flex items-center gap-1.5 bg-[#fcf9f4] border border-[#ebe8e3] rounded px-2 py-1">
                         <span className="text-xs font-bold text-[#847374]">Rp</span>
                         <input
-                          type="number"
-                          value={splitAmount1}
-                          onChange={(e) => setSplitAmount1(Math.min(currentBill.total, parseInt(e.target.value, 10) || 0))}
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={splitAmount1 || ''}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value.replace(/\D/g, ''), 10) || 0;
+                            setSplitAmount1(Math.min(currentBill.total, val));
+                          }}
                           className="w-full bg-transparent text-xs font-bold tabular-nums outline-none text-[#1c1c19]"
+                          placeholder="0"
                         />
                       </div>
 
-                      {/* Tombol Cepat Pecah / Sentuh untuk Mobile/Tablet */}
-                      <div className="flex items-center gap-1 flex-wrap pt-1">
+                      {/* Tombol Cepat Pecah untuk Mobile/Tablet */}
+                      <div className="flex items-center gap-1.5 flex-wrap pt-1">
                         <button
                           type="button"
                           onClick={() => setSplitAmount1(Math.round(currentBill.total / 2))}
-                          className="px-1.5 py-0.5 rounded bg-[#f6f3ee] hover:bg-[#ebe8e3] text-[10px] font-bold text-[#3d1018] cursor-pointer"
+                          className="px-2 py-1 rounded bg-[#f6f3ee] hover:bg-[#ebe8e3] text-xs font-bold text-[#3d1018] cursor-pointer"
                         >
-                          50%
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSplitAmount1((prev) => Math.min(currentBill.total, prev + 10000))}
-                          className="px-1.5 py-0.5 rounded bg-[#f6f3ee] hover:bg-[#ebe8e3] text-[10px] font-bold text-[#1c1c19] cursor-pointer"
-                        >
-                          +10rb
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSplitAmount1((prev) => Math.min(currentBill.total, prev + 50000))}
-                          className="px-1.5 py-0.5 rounded bg-[#f6f3ee] hover:bg-[#ebe8e3] text-[10px] font-bold text-[#1c1c19] cursor-pointer"
-                        >
-                          +50rb
+                          50% (Bagi 2)
                         </button>
                         <button
                           type="button"
                           onClick={() => setSplitAmount1(currentBill.total)}
-                          className="px-1.5 py-0.5 rounded bg-[#f6f3ee] hover:bg-[#ebe8e3] text-[10px] font-bold text-[#994703] cursor-pointer"
+                          className="px-2 py-1 rounded bg-[#f6f3ee] hover:bg-[#ebe8e3] text-xs font-bold text-[#994703] cursor-pointer"
                         >
-                          Pas
+                          Semua (100%)
                         </button>
                         <button
                           type="button"
                           onClick={() => setSplitAmount1(0)}
-                          className="px-1.5 py-0.5 rounded bg-[#f6f3ee] hover:bg-red-50 text-[10px] font-bold text-red-700 cursor-pointer"
+                          className="px-2 py-1 rounded bg-[#f6f3ee] hover:bg-red-50 text-xs font-bold text-red-700 cursor-pointer"
                         >
-                          C
-                        </button>
-                      </div>
-
-                      {/* Keypad Angka Sentuh Khusus Tablet / Layar Sentuh */}
-                      <div className="grid grid-cols-4 gap-1 pt-1.5">
-                        {['1', '2', '3', '000', '4', '5', '6', '00', '7', '8', '9'].map((val) => (
-                          <button
-                            key={val}
-                            type="button"
-                            onClick={() => handleSplitNumpad(val)}
-                            className="h-7 rounded bg-[#f6f3ee] hover:bg-[#ebe8e3] font-bold text-[11px] text-[#1c1c19] border border-[#ebe8e3] cursor-pointer active:scale-95 transition-all"
-                          >
-                            {val}
-                          </button>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={handleSplitBackspace}
-                          className="h-7 rounded bg-[#f0ede9] text-[#3d1018] hover:bg-[#e0dcd8] font-bold border border-[#ebe8e3] flex items-center justify-center cursor-pointer active:scale-95 transition-all"
-                          aria-label="Hapus digit"
-                        >
-                          <span className="material-symbols-outlined text-[14px]">backspace</span>
+                          Reset
                         </button>
                       </div>
                     </div>
@@ -1058,10 +1064,16 @@ export const CheckoutView: React.FC = () => {
               <div className="flex items-center gap-2 bg-[#fcf9f4] border border-[#ebe8e3] rounded-xl px-3 py-2.5">
                 <span className="font-bold text-sm text-[#524344]">Rp</span>
                 <input
-                  type="number"
-                  value={modalAwalInput}
-                  onChange={(e) => setModalAwalInput(parseInt(e.target.value, 10) || 0)}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={modalAwalInput || ''}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value.replace(/\D/g, ''), 10) || 0;
+                    setModalAwalInput(val);
+                  }}
                   className="w-full bg-transparent font-bold text-base text-[#3d1018] outline-none tabular-nums"
+                  placeholder="200000"
                 />
               </div>
 
@@ -1087,28 +1099,6 @@ export const CheckoutView: React.FC = () => {
                   className="px-2 py-1 rounded-lg text-xs font-bold bg-[#fcf9f4] border border-[#ebe8e3] text-red-700 hover:bg-red-50 cursor-pointer"
                 >
                   C
-                </button>
-              </div>
-
-              {/* Keypad Layar Sentuh untuk Tablet & Mobile */}
-              <div className="grid grid-cols-4 gap-1.5 pt-2">
-                {['1', '2', '3', '000', '4', '5', '6', '00', '7', '8', '9'].map((val) => (
-                  <button
-                    key={val}
-                    type="button"
-                    onClick={() => handleBukaNumpad(val)}
-                    className="h-10 rounded-xl bg-[#fcf9f4] hover:bg-[#ebe8e3] font-bold text-xs text-[#1c1c19] border border-[#ebe8e3] cursor-pointer active:scale-95 transition-all shadow-2xs"
-                  >
-                    {val}
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={handleBukaBackspace}
-                  className="h-10 rounded-xl bg-[#f0ede9] text-[#3d1018] hover:bg-[#e0dcd8] font-bold border border-[#ebe8e3] flex items-center justify-center cursor-pointer active:scale-95 transition-all shadow-2xs"
-                  aria-label="Hapus digit"
-                >
-                  <span className="material-symbols-outlined text-[18px]">backspace</span>
                 </button>
               </div>
             </div>
@@ -1197,10 +1187,16 @@ export const CheckoutView: React.FC = () => {
               <div className="flex items-center gap-2 bg-[#fcf9f4] border border-[#ebe8e3] rounded-xl px-3 py-2.5">
                 <span className="font-bold text-sm text-[#524344]">Rp</span>
                 <input
-                  type="number"
-                  value={physicalCashInput}
-                  onChange={(e) => setPhysicalCashInput(parseInt(e.target.value, 10) || 0)}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={physicalCashInput || ''}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value.replace(/\D/g, ''), 10) || 0;
+                    setPhysicalCashInput(val);
+                  }}
                   className="w-full bg-transparent font-bold text-base text-[#3d1018] outline-none tabular-nums"
+                  placeholder="0"
                 />
               </div>
 
@@ -1240,28 +1236,6 @@ export const CheckoutView: React.FC = () => {
                   className="px-2 py-1 rounded-lg text-xs font-bold bg-[#fcf9f4] border border-[#ebe8e3] text-red-700 hover:bg-red-50 cursor-pointer"
                 >
                   C
-                </button>
-              </div>
-
-              {/* Keypad Layar Sentuh Tablet/Mobile */}
-              <div className="grid grid-cols-4 gap-1.5 pt-1.5">
-                {['1', '2', '3', '000', '4', '5', '6', '00', '7', '8', '9'].map((val) => (
-                  <button
-                    key={val}
-                    type="button"
-                    onClick={() => handlePhysicalCashNumpad(val)}
-                    className="h-9 rounded-xl bg-[#fcf9f4] hover:bg-[#ebe8e3] font-bold text-xs text-[#1c1c19] border border-[#ebe8e3] cursor-pointer active:scale-95 transition-all shadow-2xs"
-                  >
-                    {val}
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={handlePhysicalCashBackspace}
-                  className="h-9 rounded-xl bg-[#f0ede9] text-[#3d1018] hover:bg-[#e0dcd8] font-bold border border-[#ebe8e3] flex items-center justify-center cursor-pointer active:scale-95 transition-all shadow-2xs"
-                  aria-label="Hapus digit"
-                >
-                  <span className="material-symbols-outlined text-[16px]">backspace</span>
                 </button>
               </div>
 
@@ -1356,7 +1330,7 @@ export const CheckoutView: React.FC = () => {
             </button>
 
             {/* Slip Thermal Monokrom Hitam Putih */}
-            <div className="printable-receipt-area w-full bg-white border-2 border-black p-5 rounded-lg shadow-xs font-mono text-xs text-black flex flex-col gap-3">
+            <div id="shift-slip-thermal-content" className="printable-receipt-area w-full bg-white border-2 border-black p-5 rounded-lg shadow-xs font-mono text-xs text-black flex flex-col gap-3">
               {/* Header */}
               <div className="flex flex-col items-center text-center border-b-2 border-dashed border-black pb-3">
                 <h3 className="font-bold text-base tracking-wider uppercase text-black">
@@ -1377,7 +1351,7 @@ export const CheckoutView: React.FC = () => {
                 </div>
                 <div className="flex justify-between">
                   <span>Buka Shift:</span>
-                  <span>{new Date(cashierShift.openedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                  <span>{cashierShift.openedAt ? new Date(cashierShift.openedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Tutup Shift:</span>
@@ -1483,7 +1457,7 @@ export const CheckoutView: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => window.print()}
+                onClick={printThermalSlip}
                 className="flex-1 py-2.5 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px]">print</span>
