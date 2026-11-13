@@ -1,13 +1,20 @@
 {
-  "name": "rawon-gusti-fokus",
+  "name": "rawon-gusti-monorepo",
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "vite --port=3000 --host=0.0.0.0",
-    "build": "vite build",
-    "preview": "vite preview --port=3000 --host=0.0.0.0",
-    "lint": "tsc --noEmit"
+    "dev": "npm run dev --workspace=@rawon-gusti/frontend",
+    "dev:backend": "npm run dev --workspace=@rawon-gusti/backend",
+    "build": "npm run build --workspace=@rawon-gusti/frontend",
+    "build:all": "npm run build --workspaces",
+    "preview": "npm run preview --workspace=@rawon-gusti/frontend",
+    "lint": "npm run lint --workspace=@rawon-gusti/frontend",
+    "test": "node supabase/tests/security_and_lifecycle.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
