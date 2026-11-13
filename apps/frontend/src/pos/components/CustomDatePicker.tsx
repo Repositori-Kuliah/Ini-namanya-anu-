@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 export interface CustomDatePickerProps {
   id?: string;
@@ -9,50 +9,20 @@ export interface CustomDatePickerProps {
   className?: string;
 }
 
-// Konversi ISO '2026-11-12' ke 8 digit angka murni '12112026'
-const isoToDigits = (iso: string): string => {
-  if (!iso) return '';
-  const parts = iso.split('-');
-  if (parts.length !== 3) return '';
-  const [y, m, d] = parts;
-  return `${d.padStart(2, '0')}${m.padStart(2, '0')}${y}`;
-};
-
-// Render format mask 'DD / MM / YYYY' dari digit yang diketik
-const renderMask = (digits: string): string => {
-  const d1 = digits[0] || 'D';
-  const d2 = digits[1] || 'D';
-  const m1 = digits[2] || 'M';
-  const m2 = digits[3] || 'M';
-  const y1 = digits[4] || 'Y';
-  const y2 = digits[5] || 'Y';
-  const y3 = digits[6] || 'Y';
-  const y4 = digits[7] || 'Y';
-
-  return `${d1}${d2} / ${m1}${m2} / ${y1}${y2}${y3}${y4}`;
-};
-
-// Parse 8 digit '12112026' ke ISO '2026-11-12'
-const digitsToIso = (digits: string): string | null => {
-  if (digits.length !== 8) return null;
-  const d = parseInt(digits.slice(0, 2), 10);
-  const m = parseInt(digits.slice(2, 4), 10);
-  const y = parseInt(digits.slice(4, 8), 10);
-
-  if (m >= 1 && m <= 12 && d >= 1 && d <= 31 && y >= 2000 && y <= 2100) {
-    const daysInMonth = new Date(y, m, 0).getDate();
-    const clampedDay = Math.min(d, daysInMonth);
-    return `${y}-${String(m).padStart(2, '0')}-${String(clampedDay).padStart(2, '0')}`;
-  }
-  return null;
-};
-
 const MONTH_NAMES = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
   'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
 ];
 
 const DAY_NAMES = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+
+const isoToDisplay = (iso: string): string => {
+  if (!iso) return '';
+  const parts = iso.split('-');
+  if (parts.length !== 3) return iso;
+  const [y, m, d] = parts;
+  return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}`;
+};
 
 export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
   id,
@@ -63,7 +33,6 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
   className = '',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [digits, setDigits] = useState<string>(() => isoToDigits(value));
 
   const [viewYear, setViewYear] = useState(() => {
     const parts = (value || '').split('-');
@@ -75,29 +44,8 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
   });
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const CARET_POSITIONS = [0, 1, 5, 6, 10, 11, 12, 13, 14];
-
-  const updateCaretPosition = (digitCount: number) => {
-    if (!inputRef.current) return;
-    const clampedCount = Math.max(0, Math.min(digitCount, 8));
-    const targetPos = CARET_POSITIONS[clampedCount];
-    requestAnimationFrame(() => {
-      if (inputRef.current && document.activeElement === inputRef.current) {
-        inputRef.current.setSelectionRange(targetPos, targetPos);
-      }
-    });
-  };
-
-  useLayoutEffect(() => {
-    if (inputRef.current && document.activeElement === inputRef.current) {
-      updateCaretPosition(digits.length);
-    }
-  }, [digits]);
 
   useEffect(() => {
-    setDigits(isoToDigits(value));
     const parts = (value || '').split('-');
     if (parts.length === 3) {
       setViewYear(parseInt(parts[0], 10));
@@ -125,86 +73,6 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
     };
   }, [isOpen]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace') {
-      e.preventDefault();
-      setDigits((prev) => {
-        const next = prev.slice(0, -1);
-        updateCaretPosition(next.length);
-        return next;
-      });
-      return;
-    }
-
-    if (e.key === 'Delete') {
-      e.preventDefault();
-      setDigits('');
-      updateCaretPosition(0);
-      return;
-    }
-
-    if (/^[0-9]$/.test(e.key)) {
-      e.preventDefault();
-      setDigits((prev) => {
-        if (prev.length >= 8) return prev;
-        const next = prev + e.key;
-        updateCaretPosition(next.length);
-
-        if (next.length === 8) {
-          const iso = digitsToIso(next);
-          if (iso) {
-            if (min && iso < min) return prev;
-            if (max && iso > max) return prev;
-            onChange(iso);
-            const parts = iso.split('-');
-            setViewYear(parseInt(parts[0], 10));
-            setViewMonth(parseInt(parts[1], 10) - 1);
-          }
-        }
-        return next;
-      });
-    }
-  };
-
-  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    const pasteText = e.clipboardData.getData('text');
-    const pastedDigits = pasteText.replace(/\D/g, '').slice(0, 8);
-    if (pastedDigits.length > 0) {
-      setDigits(pastedDigits);
-      updateCaretPosition(pastedDigits.length);
-      if (pastedDigits.length === 8) {
-        const iso = digitsToIso(pastedDigits);
-        if (iso) {
-          if (min && iso < min) return;
-          if (max && iso > max) return;
-          onChange(iso);
-        }
-      }
-    }
-  };
-
-  const handleFocus = () => {
-    updateCaretPosition(digits.length);
-  };
-
-  const handleClick = () => {
-    updateCaretPosition(digits.length);
-  };
-
-  const handleBlur = () => {
-    if (digits.length < 8) {
-      setDigits(isoToDigits(value));
-    } else {
-      const iso = digitsToIso(digits);
-      if (iso && (!min || iso >= min) && (!max || iso <= max)) {
-        onChange(iso);
-      } else {
-        setDigits(isoToDigits(value));
-      }
-    }
-  };
-
   const handlePrevMonth = () => {
     if (viewMonth === 0) {
       setViewMonth(11);
@@ -228,55 +96,46 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
     const dayStr = String(day).padStart(2, '0');
     const iso = `${viewYear}-${monthStr}-${dayStr}`;
 
-    if (min && iso < min) return;
     if (max && iso > max) return;
+    if (min && iso < min) return;
 
     onChange(iso);
-    setDigits(`${dayStr}${monthStr}${viewYear}`);
     setIsOpen(false);
   };
 
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const firstDayIndex = new Date(viewYear, viewMonth, 1).getDay();
 
-  return (
-    <div ref={containerRef} className={`relative w-full ${className}`}>
-      {/* Container Kapsul Tanggal (Bersih, Rata, Tanpa Aura, Sesuai Desain Dashboard) */}
-      <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-[#ebe8e3] focus-within:border-[#3d1018] rounded-xl transition-colors w-full">
-        {/* Tombol Kalender Popover (Kiri) */}
-        <button
-          type="button"
-          onClick={() => setIsOpen((prev) => !prev)}
-          aria-label="Tampilkan kalender"
-          className="text-[#7d7571] hover:text-[#3d1018] flex items-center justify-center shrink-0 transition-colors cursor-pointer focus-visible:outline-none"
-        >
-          <span className="material-symbols-outlined text-[17px]">
-            {isOpen ? 'expand_less' : 'calendar_month'}
-          </span>
-        </button>
+  const todayIso = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' });
 
-        <input
-          ref={inputRef}
-          id={id}
-          type="text"
-          inputMode="numeric"
-          value={renderMask(digits)}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          onBlur={handleBlur}
-          onFocus={handleFocus}
-          onClick={handleClick}
-          className="font-mono tabular-nums text-xs font-bold tracking-wider text-[#1c1c19] text-center bg-transparent outline-none cursor-text flex-1 min-w-0 selection:bg-[#3d1018] selection:text-white"
-        />
-      </div>
+  return (
+    <div ref={containerRef} className={`relative inline-block ${className}`}>
+      {/* Tombol Pemilih Tanggal (DD/MM/YYYY) */}
+      <button
+        id={id}
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 px-3 py-1.5 bg-white border border-[#ebe8e3] hover:border-[#3d1018] rounded-xl text-xs font-bold text-[#1c1c19] transition-all cursor-pointer shadow-2xs focus-visible:outline-none focus:border-[#3d1018]"
+        aria-label="Pilih tanggal laporan"
+      >
+        <span className="material-symbols-outlined text-[17px] text-[#994703]">
+          calendar_month
+        </span>
+        <span className="font-mono tracking-wider tabular-nums">
+          {isoToDisplay(value)}
+        </span>
+        <span className="material-symbols-outlined text-[15px] text-[#847374]">
+          {isOpen ? 'expand_less' : 'expand_more'}
+        </span>
+      </button>
 
       {/* Popover Kalender Visual */}
       {isOpen && (
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Pemilih Tanggal Kalender"
-          className="absolute left-0 top-full mt-2 z-50 bg-white rounded-2xl p-4 shadow-xl border border-[#ebe8e3] w-72 animate-in fade-in zoom-in-95 duration-150"
+          aria-label="Kalender Pemilih Tanggal"
+          className="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 z-50 bg-white rounded-2xl p-4 shadow-xl border border-[#ebe8e3] w-72 animate-in fade-in zoom-in-95 duration-150"
         >
           {/* Header Kalender */}
           <div className="flex items-center justify-between pb-3 mb-2 border-b border-[#f0ede9]">
@@ -322,26 +181,26 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
               const day = i + 1;
               const monthStr = String(viewMonth + 1).padStart(2, '0');
               const dayStr = String(day).padStart(2, '0');
-              const dayIso = `${viewYear}-${monthStr}-${dayStr}`;
+              const cellIso = `${viewYear}-${monthStr}-${dayStr}`;
 
-              const isSelected = dayIso === value;
-              const isToday = max ? dayIso === max : false;
-              const isOut = (min && dayIso < min) || (max && dayIso > max);
+              const isSelected = cellIso === value;
+              const isToday = cellIso === todayIso;
+              const isDisabled = (max && cellIso > max) || (min && cellIso < min);
 
               return (
                 <button
                   key={day}
                   type="button"
-                  disabled={Boolean(isOut)}
+                  disabled={Boolean(isDisabled)}
                   onClick={() => handleSelectDay(day)}
-                  className={`w-8 h-8 rounded-lg text-xs flex items-center justify-center transition-all cursor-pointer ${
+                  className={`w-8 h-8 rounded-lg text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${
                     isSelected
-                      ? 'bg-[#3d1018] text-white shadow-xs font-bold scale-105'
+                      ? 'bg-[#3d1018] text-white font-bold shadow-xs'
                       : isToday
                       ? 'bg-[#ffdbc9] text-[#753400] font-bold border border-[#fc934f]'
-                      : isOut
-                      ? 'text-[#d7c2c2] cursor-not-allowed opacity-30'
-                      : 'text-[#1c1c19] hover:bg-[#f6f3ee] font-medium'
+                      : isDisabled
+                      ? 'text-[#c5bcb5] cursor-not-allowed opacity-40'
+                      : 'hover:bg-[#f6f3ee] text-[#1c1c19]'
                   }`}
                 >
                   {day}
@@ -355,9 +214,8 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
             <button
               type="button"
               onClick={() => {
-                const todayIso = max || new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' });
-                onChange(todayIso);
-                setDigits(isoToDigits(todayIso));
+                const target = max && todayIso > max ? max : todayIso;
+                onChange(target);
                 setIsOpen(false);
               }}
               className="text-[#994703] font-bold hover:underline cursor-pointer"

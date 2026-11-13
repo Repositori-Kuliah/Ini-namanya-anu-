@@ -368,10 +368,12 @@ export const PesananBaruView: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowMultiTableSelector(!showMultiTableSelector)}
-                    className="text-[9px] text-[#994703] font-bold hover:underline cursor-pointer"
+                    className="text-[9px] text-[#994703] font-bold cursor-pointer"
                     title="Gabung meja untuk rombongan"
                   >
-                    {orderSecondaryTables.length > 0 ? `+${orderSecondaryTables.length} Meja` : '+ Gabung'}
+                    {showMultiTableSelector
+                      ? (orderSecondaryTables.length > 0 ? `-${orderSecondaryTables.length} Meja` : '- Gabung')
+                      : (orderSecondaryTables.length > 0 ? `+${orderSecondaryTables.length} Meja` : '+ Gabung')}
                   </button>
                 </div>
                 <select
@@ -428,18 +430,9 @@ export const PesananBaruView: React.FC = () => {
             {/* Panel Selector Gabung Meja (Untuk rombongan 8 orang dll) */}
             {showMultiTableSelector && (
               <div className="p-2.5 bg-[#fcf9f4] rounded-lg border border-[#ebe8e3] space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-[#3d1018]">
-                    Pilih Meja Gabungan (Rombongan Tamu)
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setShowMultiTableSelector(false)}
-                    className="text-[10px] text-[#847374] hover:text-[#1c1c19]"
-                  >
-                    Selesai
-                  </button>
-                </div>
+                <span className="text-[10px] font-bold text-[#3d1018] block">
+                  Pilih Meja Gabungan (Rombongan Tamu)
+                </span>
                 <p className="text-[10px] text-[#847374]">
                   Meja utama: <strong>Meja {orderTableNumber}</strong>. Centang meja tambahan bila meja di sampingnya sedang dipakai:
                 </p>

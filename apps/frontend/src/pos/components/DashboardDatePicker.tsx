@@ -14,30 +14,12 @@ const MONTH_NAMES = [
 
 const DAY_NAMES = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
-// Format ISO string 'YYYY-MM-DD' ke format 'DD/MM/YYYY' bersih tanpa spasi ganjil
-const isoToFormatted = (iso: string): string => {
+const isoToDisplay = (iso: string): string => {
   if (!iso) return '';
   const parts = iso.split('-');
   if (parts.length !== 3) return iso;
   const [y, m, d] = parts;
   return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}`;
-};
-
-// Parse 'DD/MM/YYYY' ke 'YYYY-MM-DD'
-const formattedToIso = (formatted: string): string | null => {
-  const clean = formatted.trim();
-  const match = clean.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-  if (!match) return null;
-  const d = parseInt(match[1], 10);
-  const m = parseInt(match[2], 10);
-  const y = parseInt(match[3], 10);
-
-  if (m >= 1 && m <= 12 && d >= 1 && d <= 31 && y >= 2000 && y <= 2100) {
-    const daysInMonth = new Date(y, m, 0).getDate();
-    const clampedDay = Math.min(d, daysInMonth);
-    return `${y}-${String(m).padStart(2, '0')}-${String(clampedDay).padStart(2, '0')}`;
-  }
-  return null;
 };
 
 export const DashboardDatePicker: React.FC<DashboardDatePickerProps> = ({
@@ -47,34 +29,26 @@ export const DashboardDatePicker: React.FC<DashboardDatePickerProps> = ({
   onSelectDate,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const isSingle = dateFrom === dateTo;
 
-  // Input teks editable bebas: pengguna dapat mengedit bagian Day, Month, atau Year di posisi mana saja
-  const [inputValue, setInputValue] = useState<string>(() => isoToFormatted(dateTo));
-
-  // Bulan dan tahun popover kalender
   const [viewYear, setViewYear] = useState(() => {
-    const parts = dateTo.split('-');
+    const parts = (dateTo || '').split('-');
     return parseInt(parts[0], 10) || new Date().getFullYear();
   });
   const [viewMonth, setViewMonth] = useState(() => {
-    const parts = dateTo.split('-');
+    const parts = (dateTo || '').split('-');
     return (parseInt(parts[1], 10) || (new Date().getMonth() + 1)) - 1;
   });
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Sinkronkan saat dateTo berubah dari luar (misal memilih preset 1 Hari, 1 Minggu, 1 Bulan, dsb)
   useEffect(() => {
-    setInputValue(isoToFormatted(dateTo));
-    const parts = dateTo.split('-');
+    const parts = (dateTo || '').split('-');
     if (parts.length === 3) {
       setViewYear(parseInt(parts[0], 10));
       setViewMonth(parseInt(parts[1], 10) - 1);
     }
   }, [dateTo, dateFrom]);
 
-  // Tutup kalender saat klik di luar
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -94,30 +68,6 @@ export const DashboardDatePicker: React.FC<DashboardDatePickerProps> = ({
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setInputValue(val);
-
-    // Otomatis terapkan jika tanggal valid
-    const iso = formattedToIso(val);
-    if (iso && iso <= maxDate) {
-      onSelectDate(iso);
-      const parts = iso.split('-');
-      setViewYear(parseInt(parts[0], 10));
-      setViewMonth(parseInt(parts[1], 10) - 1);
-    }
-  };
-
-  const handleBlur = () => {
-    const iso = formattedToIso(inputValue);
-    if (iso && iso <= maxDate) {
-      onSelectDate(iso);
-      setInputValue(isoToFormatted(iso));
-    } else {
-      setInputValue(isoToFormatted(dateTo));
-    }
-  };
 
   const handlePrevMonth = () => {
     if (viewMonth === 0) {
@@ -142,10 +92,9 @@ export const DashboardDatePicker: React.FC<DashboardDatePickerProps> = ({
     const dayStr = String(day).padStart(2, '0');
     const iso = `${viewYear}-${monthStr}-${dayStr}`;
 
-    if (iso > maxDate) return;
+    if (maxDate && iso > maxDate) return;
 
     onSelectDate(iso);
-    setInputValue(`${dayStr}/${monthStr}/${viewYear}`);
     setIsOpen(false);
   };
 
@@ -154,31 +103,24 @@ export const DashboardDatePicker: React.FC<DashboardDatePickerProps> = ({
 
   return (
     <div ref={containerRef} className="relative inline-block">
-      {/* Container Kapsul Tanggal (Bersih, Rata, Tanpa Spasi Tak Terlihat) */}
-      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#ebe8e3] focus-within:border-[#3d1018] rounded-xl transition-colors">
-        {/* Tombol Kalender Popover */}
-        <button
-          type="button"
-          onClick={() => setIsOpen((prev) => !prev)}
-          aria-label="Tampilkan kalender"
-          className="text-[#7d7571] hover:text-[#3d1018] flex items-center justify-center shrink-0 transition-colors cursor-pointer focus-visible:outline-none"
-        >
-          <span className="material-symbols-outlined text-[17px]">
-            {isOpen ? 'expand_less' : 'calendar_month'}
-          </span>
-        </button>
-
-        {/* Input Tanggal: Pengguna bebas mengedit Day, Month, atau Year tanpa kendala caret */}
-        <input
-          id="dash-unified-date"
-          type="text"
-          value={inputValue}
-          onChange={handleInputChange}
-          onBlur={handleBlur}
-          placeholder="DD/MM/YYYY"
-          className="font-mono tabular-nums text-xs font-bold tracking-wider text-[#1c1c19] text-center bg-transparent outline-none cursor-text w-28 selection:bg-[#3d1018] selection:text-white"
-        />
-      </div>
+      {/* Tombol Kalender Kapsul Bersih (DD/MM/YYYY) */}
+      <button
+        id="dash-unified-date"
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 px-3 py-1.5 bg-white border border-[#ebe8e3] hover:border-[#3d1018] rounded-xl text-xs font-bold text-[#1c1c19] transition-all cursor-pointer shadow-2xs focus-visible:outline-none focus:border-[#3d1018]"
+        aria-label="Pilih tanggal dashboard"
+      >
+        <span className="material-symbols-outlined text-[17px] text-[#994703]">
+          calendar_month
+        </span>
+        <span className="font-mono tracking-wider tabular-nums">
+          {isoToDisplay(dateTo)}
+        </span>
+        <span className="material-symbols-outlined text-[15px] text-[#847374]">
+          {isOpen ? 'expand_less' : 'expand_more'}
+        </span>
+      </button>
 
       {/* Popover Kalender Visual */}
       {isOpen && (
@@ -233,7 +175,9 @@ export const DashboardDatePicker: React.FC<DashboardDatePickerProps> = ({
               const monthStr = String(viewMonth + 1).padStart(2, '0');
               const dayStr = String(day).padStart(2, '0');
               const cellIso = `${viewYear}-${monthStr}-${dayStr}`;
+
               const isSelected = cellIso === dateTo;
+              const isToday = cellIso === maxDate;
               const isDisabled = cellIso > maxDate;
 
               return (
@@ -245,6 +189,8 @@ export const DashboardDatePicker: React.FC<DashboardDatePickerProps> = ({
                   className={`w-8 h-8 rounded-lg text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${
                     isSelected
                       ? 'bg-[#3d1018] text-white font-bold shadow-xs'
+                      : isToday
+                      ? 'bg-[#ffdbc9] text-[#753400] font-bold border border-[#fc934f]'
                       : isDisabled
                       ? 'text-[#c5bcb5] cursor-not-allowed opacity-40'
                       : 'hover:bg-[#f6f3ee] text-[#1c1c19]'
@@ -262,7 +208,6 @@ export const DashboardDatePicker: React.FC<DashboardDatePickerProps> = ({
               type="button"
               onClick={() => {
                 onSelectDate(maxDate);
-                setInputValue(isoToFormatted(maxDate));
                 setIsOpen(false);
               }}
               className="text-[#994703] font-bold hover:underline cursor-pointer"

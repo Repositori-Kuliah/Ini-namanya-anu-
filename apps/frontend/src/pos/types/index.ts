@@ -72,6 +72,7 @@ export interface MenuItem {
   isAvailable: boolean;
   isFavorite?: boolean;
   isSignature?: boolean;
+  isRecommended?: boolean;
   portionsSold?: number;
 }
 
@@ -91,11 +92,14 @@ export interface SplitPaymentDetail {
 export interface StoreSettings {
   selfOrderEnabled: boolean;       // Sistem pembayaran / order mandiri (jika off: panggil pelayan manual)
   soundEnabled: boolean;           // Suara aktif / notif ding pesanan & panggilan
+  soundStation?: string;           // Filter area stasiun suara (Semua Bagian / Dapur Utama / Bar Minuman)
   openHour: string;                // Format "08:00"
   closeHour: string;               // Format "22:00"
   forceClose: boolean;             // Tutup sementara (hari libur/khusus)
-  kdsEnabled: boolean;             // Pantau pesanan (KDS) aktif / nonaktif
-  autoInventoryDeduction: boolean; // Fitur stok bahan baku (on: sesuai stok, off: manual)
+  kdsEnabled?: boolean;            // Pantau pesanan (KDS) aktif / nonaktif
+  enableKitchenDisplay?: boolean;  // Alias kdsEnabled
+  autoInventoryDeduction?: boolean;// Fitur stok bahan baku (on: sesuai stok, off: manual)
+  enableInventoryTracking?: boolean; // Alias autoInventoryDeduction
 }
 
 export interface CashierShift {

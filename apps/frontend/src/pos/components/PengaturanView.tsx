@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { HelpModal } from './Navigation';
 
 export const PengaturanView: React.FC = () => {
   const {
@@ -11,6 +12,7 @@ export const PengaturanView: React.FC = () => {
 
   const [openHourInput, setOpenHourInput] = useState(storeSettings.openHour || '08:00');
   const [closeHourInput, setCloseHourInput] = useState(storeSettings.closeHour || '22:00');
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
   const handleSaveHours = (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,6 +23,9 @@ export const PengaturanView: React.FC = () => {
     showToast('Jam operasional berhasil disimpan', 'success');
   };
 
+  const isKdsActive = storeSettings.enableKitchenDisplay ?? storeSettings.kdsEnabled ?? true;
+  const isInventoryActive = storeSettings.enableInventoryTracking ?? storeSettings.autoInventoryDeduction ?? true;
+
   return (
     <div className="flex flex-col w-full pb-24 md:pb-8 max-w-[1540px] mx-auto px-4 sm:px-6 lg:px-8 pt-3 space-y-6">
       {/* Header Halaman */}
@@ -30,15 +35,15 @@ export const PengaturanView: React.FC = () => {
             Pengaturan Sistem Outlet
           </h1>
           <p className="text-xs text-[#524344] mt-0.5">
-            Konfigurasi operasional, kontrol self-ordering, suara notifikasi, dan panduan kerja restoran.
+            Konfigurasi operasional, kontrol self-ordering, modul sistem, dan suara notifikasi restoran.
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Kolom Kiri: Pengaturan Fitur & Operasional (7 Kolom) */}
+        {/* Kolom Kiri: Pengaturan Operasional & Modul (7 Kolom) */}
         <div className="lg:col-span-7 space-y-4">
-          {/* Card 1: Self Ordering & Force Close */}
+          {/* Card 1: Self Ordering Sendiri */}
           <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs space-y-4">
             <div className="flex items-center gap-2.5 pb-2 border-b border-[#ebe8e3]">
               <div className="w-8 h-8 rounded-lg bg-[#3d1018] text-white flex items-center justify-center">
@@ -51,14 +56,14 @@ export const PengaturanView: React.FC = () => {
             </div>
 
             {/* Toggle Saklar Self Order */}
-            <div className="flex items-center justify-between p-3 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3]">
+            <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3]">
               <div className="max-w-[80%]">
                 <span className="font-bold text-xs text-[#1c1c19] block">
                   Pesanan Mandiri Tamu (Self-Ordering)
                 </span>
                 <span className="text-[11px] text-[#524344] leading-relaxed block mt-0.5">
                   {storeSettings.selfOrderEnabled
-                    ? 'Aktif: Pelanggan dapat langsung memesan dari QR meja.'
+                    ? 'Aktif: Pelanggan dapat langsung memesan makanan dari QR meja.'
                     : 'Nonaktif: Pelanggan diarahkan memanggil pelayan manual.'}
                 </span>
               </div>
@@ -81,9 +86,22 @@ export const PengaturanView: React.FC = () => {
                 />
               </button>
             </div>
+          </div>
 
-            {/* Toggle Saklar Force Close */}
-            <div className="flex items-center justify-between p-3 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3]">
+          {/* Card 2: Jam Operasional Disatukan dengan Force Close */}
+          <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs space-y-4">
+            <div className="flex items-center gap-2.5 pb-2 border-b border-[#ebe8e3]">
+              <div className="w-8 h-8 rounded-lg bg-[#3d1018] text-white flex items-center justify-center">
+                <span className="material-symbols-outlined text-[18px]">schedule</span>
+              </div>
+              <div>
+                <h2 className="font-bold text-sm text-[#1c1c19]">Jam Buka &amp; Operasional Harian</h2>
+                <p className="text-[11px] text-[#524344]">Jadwal buka outlet dan kontrol tutup sementara (force close)</p>
+              </div>
+            </div>
+
+            {/* Toggle Saklar Force Close (Disatukan di Card Ini) */}
+            <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3]">
               <div className="max-w-[80%]">
                 <span className="font-bold text-xs text-[#1c1c19] block">
                   Tutup Sementara Outlet (Force Close)
@@ -91,7 +109,7 @@ export const PengaturanView: React.FC = () => {
                 <span className="text-[11px] text-[#524344] leading-relaxed block mt-0.5">
                   {storeSettings.forceClose
                     ? 'Outlet sedang ditutup sementara (hari libur/khusus). Tamu tidak dapat memesan.'
-                    : 'Outlet buka normal sesuai jadwal harian.'}
+                    : 'Outlet buka normal sesuai jadwal jam operasional harian.'}
                 </span>
               </div>
               <button
@@ -102,7 +120,7 @@ export const PengaturanView: React.FC = () => {
                   showToast(`Status outlet: ${next ? 'Tutup Sementara' : 'Buka Normal'}`, next ? 'warning' : 'success');
                 }}
                 className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
-                  storeSettings.forceClose ? 'bg-[#ba1a1a]' : 'bg-[#e0dcd8]'
+                  storeSettings.forceClose ? 'bg-[#994703]' : 'bg-[#e0dcd8]'
                 }`}
                 aria-pressed={storeSettings.forceClose}
               >
@@ -113,21 +131,9 @@ export const PengaturanView: React.FC = () => {
                 />
               </button>
             </div>
-          </div>
 
-          {/* Card 2: Jam Operasional */}
-          <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs space-y-4">
-            <div className="flex items-center gap-2.5 pb-2 border-b border-[#ebe8e3]">
-              <div className="w-8 h-8 rounded-lg bg-[#3d1018] text-white flex items-center justify-center">
-                <span className="material-symbols-outlined text-[18px]">schedule</span>
-              </div>
-              <div>
-                <h2 className="font-bold text-sm text-[#1c1c19]">Jam Buka &amp; Operasional Harian</h2>
-                <p className="text-[11px] text-[#524344]">Di luar rentang jam ini self-ordering otomatis mati</p>
-              </div>
-            </div>
-
-            <form onSubmit={handleSaveHours} className="space-y-3">
+            {/* Form Jam Operasional */}
+            <form onSubmit={handleSaveHours} className="space-y-3 pt-1">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-bold text-[#1c1c19] block mb-1">
@@ -156,7 +162,7 @@ export const PengaturanView: React.FC = () => {
               <div className="flex justify-end pt-1">
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold cursor-pointer transition-colors shadow-xs"
+                  className="px-4 py-2 bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
                 >
                   Simpan Jam Operasional
                 </button>
@@ -164,20 +170,20 @@ export const PengaturanView: React.FC = () => {
             </form>
           </div>
 
-          {/* Card 3: Notifikasi Suara & KDS */}
+          {/* Card 3: Suara Notifikasi & Pilihan Area Bagian */}
           <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs space-y-4">
             <div className="flex items-center gap-2.5 pb-2 border-b border-[#ebe8e3]">
               <div className="w-8 h-8 rounded-lg bg-[#3d1018] text-white flex items-center justify-center">
                 <span className="material-symbols-outlined text-[18px]">notifications_active</span>
               </div>
               <div>
-                <h2 className="font-bold text-sm text-[#1c1c19]">Suara Notifikasi &amp; Pantau Pesanan</h2>
-                <p className="text-[11px] text-[#524344]">Peringatan audio pesanan masuk dan layar dapur KDS</p>
+                <h2 className="font-bold text-sm text-[#1c1c19]">Suara &amp; Audio Notifikasi</h2>
+                <p className="text-[11px] text-[#524344]">Peringatan suara pesanan masuk dan filter bagian dapur</p>
               </div>
             </div>
 
-            {/* Suara Ding */}
-            <div className="flex items-center justify-between p-3 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3]">
+            {/* Toggle Audio Ding */}
+            <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3]">
               <div className="max-w-[75%]">
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-xs text-[#1c1c19]">
@@ -185,10 +191,13 @@ export const PengaturanView: React.FC = () => {
                   </span>
                   <button
                     type="button"
-                    onClick={playDingSound}
-                    className="text-[10px] text-[#994703] font-bold hover:underline cursor-pointer"
+                    onClick={() => {
+                      playDingSound();
+                      showToast('Uji coba suara chime berhasil', 'info');
+                    }}
+                    className="px-2 py-0.5 rounded-md bg-[#ebe8e3] hover:bg-[#d7c2c2] text-[10px] font-bold text-[#3d1018] cursor-pointer transition-colors"
                   >
-                    (Uji Coba Suara)
+                    Uji Coba Suara
                   </button>
                 </div>
                 <span className="text-[11px] text-[#524344] leading-relaxed block mt-0.5">
@@ -200,7 +209,7 @@ export const PengaturanView: React.FC = () => {
                 onClick={() => {
                   const next = !storeSettings.soundEnabled;
                   updateStoreSettings({ soundEnabled: next });
-                  showToast(`Suara notifikasi ${next ? 'diaktifkan' : 'dimatikan'}`, 'info');
+                  showToast(`Suara notifikasi ${next ? 'diaktifkan' : 'dimatikan'}`);
                 }}
                 className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
                   storeSettings.soundEnabled ? 'bg-[#3d1018]' : 'bg-[#e0dcd8]'
@@ -215,65 +224,102 @@ export const PengaturanView: React.FC = () => {
               </button>
             </div>
 
-            {/* KDS (Pantau Pesanan) */}
-            <div className="flex items-center justify-between p-3 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3]">
+            {/* Pilihan Area Stasiun Dapur (Dipindah dari KDS ke Pengaturan) */}
+            <div className="p-3.5 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <span className="font-bold text-xs text-[#1c1c19] block">
+                  Area Dapur / Stasiun Pantau
+                </span>
+                <span className="text-[11px] text-[#524344] block mt-0.5">
+                  Pilih stasiun default untuk pemfilteran tiket dan notifikasi.
+                </span>
+              </div>
+              <select
+                value={storeSettings.soundStation || 'Semua Bagian'}
+                onChange={(e) => {
+                  updateStoreSettings({ soundStation: e.target.value });
+                  showToast(`Area stasiun diatur ke: ${e.target.value}`, 'info');
+                }}
+                className="bg-white border border-[#ebe8e3] rounded-xl px-3 py-1.5 text-xs font-bold text-[#1c1c19] outline-none cursor-pointer focus:border-[#3d1018]"
+              >
+                <option value="Semua Bagian">Semua Bagian</option>
+                <option value="Dapur Utama (Makanan)">Dapur Utama (Makanan)</option>
+                <option value="Bar Minuman">Bar Minuman</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Card 4: Modul & Fitur Sistem (KDS Dapur & Stok Bahan Baku) */}
+          <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs space-y-4">
+            <div className="flex items-center gap-2.5 pb-2 border-b border-[#ebe8e3]">
+              <div className="w-8 h-8 rounded-lg bg-[#3d1018] text-white flex items-center justify-center">
+                <span className="material-symbols-outlined text-[18px]">tune</span>
+              </div>
+              <div>
+                <h2 className="font-bold text-sm text-[#1c1c19]">Modul &amp; Fitur Sistem</h2>
+                <p className="text-[11px] text-[#524344]">Kendali visibilitas alur tiket dapur dan pelacakan inventori</p>
+              </div>
+            </div>
+
+            {/* Toggle Saklar KDS Dapur (Pantau Pesanan) */}
+            <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3]">
               <div className="max-w-[80%]">
                 <span className="font-bold text-xs text-[#1c1c19] block">
                   Pantau Pesanan (KDS Dapur)
                 </span>
                 <span className="text-[11px] text-[#524344] leading-relaxed block mt-0.5">
-                  {storeSettings.kdsEnabled
-                    ? 'Aktif: Tiket dapur dimonitor interaktif lewat layar KDS.'
-                    : 'Nonaktif: Dapur menggunakan alur pesanan manual/cetak langsung.'}
+                  {isKdsActive
+                    ? 'Aktif: Menu Pantau Pesanan muncul di navigasi & tiket dapur berjalan secara digital.'
+                    : 'Nonaktif: Dapur menggunakan alur pesanan manual/cetak langsung (menu Pantau Pesanan disembunyikan dari sidebar).'}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => {
-                  const next = !storeSettings.kdsEnabled;
-                  updateStoreSettings({ kdsEnabled: next });
-                  showToast(`Pantau Pesanan KDS ${next ? 'diaktifkan' : 'dinonaktifkan'}`, 'info');
+                  const next = !isKdsActive;
+                  updateStoreSettings({ enableKitchenDisplay: next, kdsEnabled: next });
+                  showToast(`Pantau Pesanan KDS ${next ? 'diaktifkan (muncul di sidebar)' : 'dinonaktifkan (disembunyikan dari sidebar)'}`, 'info');
                 }}
                 className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
-                  storeSettings.kdsEnabled ? 'bg-[#3d1018]' : 'bg-[#e0dcd8]'
+                  isKdsActive ? 'bg-[#3d1018]' : 'bg-[#e0dcd8]'
                 }`}
-                aria-pressed={storeSettings.kdsEnabled}
+                aria-pressed={isKdsActive}
               >
                 <div
                   className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
-                    storeSettings.kdsEnabled ? 'translate-x-6' : 'translate-x-0'
+                    isKdsActive ? 'translate-x-6' : 'translate-x-0'
                   }`}
                 />
               </button>
             </div>
 
-            {/* Mode Stok Bahan Baku Otomatis */}
-            <div className="flex items-center justify-between p-3 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3]">
+            {/* Toggle Saklar Pelacakan Stok Bahan Baku Otomatis */}
+            <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3]">
               <div className="max-w-[80%]">
                 <span className="font-bold text-xs text-[#1c1c19] block">
                   Pelacakan Stok Bahan Baku Otomatis
                 </span>
                 <span className="text-[11px] text-[#524344] leading-relaxed block mt-0.5">
-                  {storeSettings.autoInventoryDeduction
-                    ? 'On: Pengurangan stok bahan baku berjalan otomatis berdasarkan porsi terjual.'
-                    : 'Off: Mode manual murni melalui saklar Tersedia / Habis di katalog menu.'}
+                  {isInventoryActive
+                    ? 'Aktif: Bagian Kelola Bahan Makanan / Stok Bahan Baku tampil di menu Kelola Menu.'
+                    : 'Nonaktif: Mode manual murni melalui saklar Tersedia / Habis di katalog menu (bagian stok bahan baku disembunyikan).'}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => {
-                  const next = !storeSettings.autoInventoryDeduction;
-                  updateStoreSettings({ autoInventoryDeduction: next });
-                  showToast(`Stok bahan baku otomatis: ${next ? 'Aktif' : 'Manual'}`, 'info');
+                  const next = !isInventoryActive;
+                  updateStoreSettings({ enableInventoryTracking: next, autoInventoryDeduction: next });
+                  showToast(`Pelacakan bahan baku ${next ? 'diaktifkan (bagian stok tampil di Kelola Menu)' : 'dinonaktifkan (katalog manual murni)'}`, 'info');
                 }}
                 className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
-                  storeSettings.autoInventoryDeduction ? 'bg-[#3d1018]' : 'bg-[#e0dcd8]'
+                  isInventoryActive ? 'bg-[#3d1018]' : 'bg-[#e0dcd8]'
                 }`}
-                aria-pressed={storeSettings.autoInventoryDeduction}
+                aria-pressed={isInventoryActive}
               >
                 <div
                   className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
-                    storeSettings.autoInventoryDeduction ? 'translate-x-6' : 'translate-x-0'
+                    isInventoryActive ? 'translate-x-6' : 'translate-x-0'
                   }`}
                 />
               </button>
@@ -281,55 +327,42 @@ export const PengaturanView: React.FC = () => {
           </div>
         </div>
 
-        {/* Kolom Kanan: Bantuan & Panduan Operasional Restoran (5 Kolom) */}
+        {/* Kolom Kanan: Panduan & Bantuan Operasional (5 Kolom) */}
         <div className="lg:col-span-5 space-y-4">
           <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs space-y-4">
-            <div className="flex items-center gap-2 pb-2 border-b border-[#ebe8e3]">
+            <div className="flex items-center gap-2.5 pb-2 border-b border-[#ebe8e3]">
               <div className="w-8 h-8 rounded-lg bg-[#3d1018] text-white flex items-center justify-center">
-                <span className="material-symbols-outlined text-[18px]">help</span>
+                <span className="material-symbols-outlined text-[18px]">menu_book</span>
               </div>
               <div>
-                <h2 className="font-bold text-sm text-[#1c1c19]">
-                  Bantuan &amp; Panduan Operasional
-                </h2>
-                <p className="text-[11px] text-[#524344]">Standar operasional POS Rawon Gusti</p>
+                <h2 className="font-bold text-sm text-[#1c1c19]">Bantuan &amp; Panduan Operasional</h2>
+                <p className="text-[11px] text-[#524344]">Petunjuk kerja per divisi outlet Rawon Gusti</p>
               </div>
             </div>
 
-            <div className="space-y-3 text-xs text-[#524344] leading-relaxed">
-              <div className="p-3.5 bg-[#fcf9f4] rounded-xl border border-[#ebe8e3]">
-                <h3 className="font-bold text-[#3d1018] flex items-center gap-1.5 mb-1.5 text-xs">
-                  <span className="material-symbols-outlined text-[16px]">point_of_sale</span>
-                  <span>1. Peran Kasir POS</span>
-                </h3>
-                <p>
-                  Kasir mengelola layanan santap di tempat pada <strong>Meja &amp; Pelanggan</strong>, pembuatan <strong>Pesanan Baru</strong>, pencatatan pembayaran (Tunai, QRIS, Kartu Debit, atau Pecah Bayar), cetak struk termal monokrom, serta modal awal dan rekonsiliasi kas pada <strong>Buka/Tutup Kasir</strong> di tab Checkout.
-                </p>
-              </div>
-
-              <div className="p-3.5 bg-[#fcf9f4] rounded-xl border border-[#ebe8e3]">
-                <h3 className="font-bold text-[#3d1018] flex items-center gap-1.5 mb-1.5 text-xs">
-                  <span className="material-symbols-outlined text-[16px]">skillet</span>
-                  <span>2. Peran Dapur &amp; Bar</span>
-                </h3>
-                <p>
-                  Dapur dan bar memantau tiket pesanan pelanggan pada stasiun <strong>Dapur Utama (Makanan)</strong> dan <strong>Bar Minuman</strong> melalui alur penyajian <strong>Baru ➔ Dimasak ➔ Siap Diantar</strong>.
-                </p>
-              </div>
-
-              <div className="p-3.5 bg-[#fcf9f4] rounded-xl border border-[#ebe8e3]">
-                <h3 className="font-bold text-[#3d1018] flex items-center gap-1.5 mb-1.5 text-xs">
-                  <span className="material-symbols-outlined text-[16px]">admin_panel_settings</span>
-                  <span>3. Peran Admin Outlet</span>
-                </h3>
-                <p>
-                  Admin memiliki otorisasi penuh: analisis <strong>Dashboard Penjualan</strong>, katalog <strong>Kelola Menu</strong> dengan toggle cepat Habis/Tersedia, pendaftaran <strong>Kelola Meja</strong> nomor dan kode QR, pengoperasian <strong>Akun Staf</strong>, audit <strong>Laporan Transaksi</strong>, serta kendali <strong>Pengaturan Outlet</strong>.
-                </p>
-              </div>
+            <div className="p-4 bg-[#fcf9f4] rounded-xl border border-[#ebe8e3] space-y-2">
+              <h3 className="font-bold text-xs text-[#3d1018] flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[16px]">info</span>
+                <span>Pusat Bantuan Staf</span>
+              </h3>
+              <p className="text-xs text-[#524344] leading-relaxed">
+                Panduan operasional lengkap untuk kasir, dapur, dan administrator outlet kini disajikan dalam bentuk jendela pop-up interaktif agar tidak memblokir ruang kerja.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowHelpModal(true)}
+                className="w-full mt-2 py-2.5 px-4 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">help</span>
+                <span>Buka Pop-up Panduan Lengkap</span>
+              </button>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Pop-up Dialog Bantuan Operasional (Terpusat, Pop-up Modal) */}
+      <HelpModal isOpen={showHelpModal} onClose={() => setShowHelpModal(false)} />
     </div>
   );
 };

@@ -32,6 +32,8 @@ const KelolaMenuViewInner: React.FC = () => {
   const [newCategory, setNewCategory] = useState<string>(menuCategories[0] || 'Menu Nusantara');
   const [newPrice, setNewPrice] = useState('25000');
   const [newDescription, setNewDescription] = useState('');
+  const [newImage, setNewImage] = useState('');
+  const [newIsRecommended, setNewIsRecommended] = useState(false);
 
   // Modal Edit Menu
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
@@ -39,7 +41,8 @@ const KelolaMenuViewInner: React.FC = () => {
   const [editCategory, setEditCategory] = useState('');
   const [editPrice, setEditPrice] = useState('');
   const [editDescription, setEditDescription] = useState('');
-  const [editIsAvailable, setEditIsAvailable] = useState(true);
+  const [editImage, setEditImage] = useState('');
+  const [editIsRecommended, setEditIsRecommended] = useState(false);
 
   // --- State Stok Bahan Baku ---
   const [searchStockQuery, setSearchStockQuery] = useState('');
@@ -115,7 +118,8 @@ const KelolaMenuViewInner: React.FC = () => {
     setEditCategory(item.category);
     setEditPrice(item.price.toString());
     setEditDescription(item.description || '');
-    setEditIsAvailable(item.isAvailable);
+    setEditImage(item.image || '');
+    setEditIsRecommended(Boolean(item.isRecommended || item.isFavorite));
   };
 
   const handleSaveEdit = (e: React.FormEvent) => {
@@ -133,7 +137,9 @@ const KelolaMenuViewInner: React.FC = () => {
       category: editCategory,
       price: priceNum,
       description: editDescription.trim(),
-      isAvailable: editIsAvailable,
+      image: editImage.trim() || editingItem.image || '/logo-rawon.png',
+      isRecommended: editIsRecommended,
+      isFavorite: editIsRecommended,
     };
 
     updateMenuItem(updated);
@@ -170,9 +176,10 @@ const KelolaMenuViewInner: React.FC = () => {
       category: newCategory,
       price: priceNum,
       description: newDescription.trim(),
-      image: '/logo-rawon.png',
+      image: newImage.trim() || '/logo-rawon.png',
       isAvailable: true,
-      isFavorite: false,
+      isFavorite: newIsRecommended,
+      isRecommended: newIsRecommended,
     };
 
     addMenuItem(newItem);
@@ -180,6 +187,8 @@ const KelolaMenuViewInner: React.FC = () => {
     setNewName('');
     setNewPrice('25000');
     setNewDescription('');
+    setNewImage('');
+    setNewIsRecommended(false);
     showToast(`Menu "${newItem.name}" berhasil ditambahkan!`, 'success');
   };
 
@@ -452,19 +461,6 @@ const KelolaMenuViewInner: React.FC = () => {
                                   >
                                     <span className="material-symbols-outlined text-[15px] text-[#524344]">edit</span>
                                     <span>Edit Menu</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenMenuActionId(null);
-                                      handleToggleAvailability(item);
-                                    }}
-                                    className="w-full px-3 py-1.5 text-xs font-medium text-[#1c1c19] hover:bg-[#f6f3ee] flex items-center gap-2 cursor-pointer"
-                                  >
-                                    <span className="material-symbols-outlined text-[15px] text-[#994703]">
-                                      {item.isAvailable ? 'unpublished' : 'check_circle'}
-                                    </span>
-                                    <span>{item.isAvailable ? 'Tandai Habis' : 'Tandai Tersedia'}</span>
                                   </button>
                                 </div>
                                 <div className="py-1">
@@ -764,6 +760,27 @@ const KelolaMenuViewInner: React.FC = () => {
                   className="w-full px-3 py-2 bg-[#fcf9f4] rounded-lg border border-[#ebe8e3] outline-none resize-none focus:border-[#3d1018]"
                 />
               </div>
+
+              <div>
+                <label className="font-bold text-[#1c1c19] block mb-1">URL Foto / Gambar Hidangan</label>
+                <input
+                  type="text"
+                  value={newImage}
+                  onChange={(e) => setNewImage(e.target.value)}
+                  placeholder="https://... atau /assets/... (Opsional)"
+                  className="w-full px-3 py-2 bg-[#fcf9f4] rounded-lg border border-[#ebe8e3] outline-none focus:border-[#3d1018]"
+                />
+              </div>
+
+              <label className="flex items-center gap-2 cursor-pointer pt-1">
+                <input
+                  type="checkbox"
+                  checked={newIsRecommended}
+                  onChange={(e) => setNewIsRecommended(e.target.checked)}
+                  className="w-4 h-4 rounded text-[#3d1018] accent-[#3d1018] cursor-pointer"
+                />
+                <span className="font-semibold text-[#1c1c19]">Rekomendasi Makanan (Tandai Menu Unggulan)</span>
+              </label>
             </div>
 
             <div className="flex gap-2 pt-2 border-t border-[#ebe8e3]">
@@ -861,14 +878,25 @@ const KelolaMenuViewInner: React.FC = () => {
                 />
               </div>
 
+              <div>
+                <label className="font-bold text-[#1c1c19] block mb-1">URL Foto / Gambar Hidangan</label>
+                <input
+                  type="text"
+                  value={editImage}
+                  onChange={(e) => setEditImage(e.target.value)}
+                  placeholder="https://... atau /assets/... (Opsional)"
+                  className="w-full px-3 py-2 bg-[#fcf9f4] rounded-lg border border-[#ebe8e3] outline-none focus:border-[#3d1018]"
+                />
+              </div>
+
               <label className="flex items-center gap-2 cursor-pointer pt-1">
                 <input
                   type="checkbox"
-                  checked={editIsAvailable}
-                  onChange={(e) => setEditIsAvailable(e.target.checked)}
+                  checked={editIsRecommended}
+                  onChange={(e) => setEditIsRecommended(e.target.checked)}
                   className="w-4 h-4 rounded text-[#3d1018] accent-[#3d1018] cursor-pointer"
                 />
-                <span className="font-semibold text-[#1c1c19]">Menu siap disajikan (Tersedia)</span>
+                <span className="font-semibold text-[#1c1c19]">Rekomendasi Makanan (Tandai Menu Unggulan)</span>
               </label>
             </div>
 

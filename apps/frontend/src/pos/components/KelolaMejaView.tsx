@@ -192,19 +192,8 @@ const KelolaMejaViewInner: React.FC = () => {
 
                   return (
                     <tr key={tbl.id} className="hover:bg-[#fcf9f4] transition-colors">
-                      <td className="py-2.5 px-4">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
-                              isOccupied
-                                ? 'bg-[#ffdadc] text-[#3d1018]'
-                                : 'bg-[#f0ede9] text-[#1c1c19]'
-                            }`}
-                          >
-                            {tbl.number}
-                          </div>
-                          <span className="font-bold text-[#1c1c19]">Meja {tbl.number}</span>
-                        </div>
+                      <td className="py-2.5 px-4 font-bold text-[#1c1c19] text-sm tabular-nums">
+                        {tbl.number}
                       </td>
                       <td className="py-2.5 px-4">
                         <span

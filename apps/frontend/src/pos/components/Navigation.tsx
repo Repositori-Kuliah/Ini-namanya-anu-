@@ -161,13 +161,15 @@ export const MobileHeader: React.FC = () => {
 };
 
 export const MobileBottomNav: React.FC = () => {
-  const { activeView, setActiveView, currentRole } = useApp();
+  const { activeView, setActiveView, currentRole, storeSettings } = useApp();
   const [mobileAdminOpen, setMobileAdminOpen] = useState(false);
 
   // Role-based mobile navigation tabs
   const getNavItems = (): { label: string; icon: string; view: AppView | 'admin-drawer' }[] => {
     if (currentRole === 'kitchen') {
-      return [{ label: 'Pantau Pesanan', icon: 'skillet', view: 'pantau-pesanan' }];
+      return storeSettings.enableKitchenDisplay
+        ? [{ label: 'Pantau Pesanan', icon: 'skillet', view: 'pantau-pesanan' }]
+        : [];
     }
     if (currentRole === 'kasir') {
       return [
@@ -177,13 +179,16 @@ export const MobileBottomNav: React.FC = () => {
       ];
     }
     // Admin
-    return [
+    const items: { label: string; icon: string; view: AppView | 'admin-drawer' }[] = [
       { label: 'Meja', icon: 'table_restaurant', view: 'meja-dan-pelanggan' },
       { label: 'Pesanan', icon: 'add_shopping_cart', view: 'pesanan-baru' },
       { label: 'Checkout', icon: 'point_of_sale', view: 'checkout' },
-      { label: 'Pantau', icon: 'skillet', view: 'pantau-pesanan' },
-      { label: 'Manajemen', icon: 'apps', view: 'admin-drawer' },
     ];
+    if (storeSettings.enableKitchenDisplay) {
+      items.push({ label: 'Pantau', icon: 'skillet', view: 'pantau-pesanan' });
+    }
+    items.push({ label: 'Manajemen', icon: 'apps', view: 'admin-drawer' });
+    return items;
   };
 
   const navItems = getNavItems();
@@ -300,12 +305,14 @@ export const MobileBottomNav: React.FC = () => {
 };
 
 export const DesktopSidebar: React.FC = () => {
-  const { activeView, setActiveView, logout, currentUser, currentRole, desktopSidebarOpen } = useApp();
+  const { activeView, setActiveView, logout, currentUser, currentRole, desktopSidebarOpen, storeSettings } = useApp();
 
   // Kelompok A: Navigasi Operasional
   const getOperationalNav = () => {
     if (currentRole === 'kitchen') {
-      return [{ label: 'Pantau Pesanan (KDS)', icon: 'skillet', view: 'pantau-pesanan' as AppView }];
+      return storeSettings.enableKitchenDisplay
+        ? [{ label: 'Pantau Pesanan (KDS)', icon: 'skillet', view: 'pantau-pesanan' as AppView }]
+        : [];
     }
     if (currentRole === 'kasir') {
       return [
@@ -315,13 +322,16 @@ export const DesktopSidebar: React.FC = () => {
       ];
     }
     // Admin
-    return [
+    const items = [
       { label: 'Dashboard', icon: 'grid_view', view: 'dashboard' as AppView },
       { label: 'Meja & Pelanggan', icon: 'table_restaurant', view: 'meja-dan-pelanggan' as AppView },
       { label: 'Pesanan Baru', icon: 'add_shopping_cart', view: 'pesanan-baru' as AppView },
       { label: 'Checkout & Bayar', icon: 'point_of_sale', view: 'checkout' as AppView },
-      { label: 'Pantau Pesanan', icon: 'skillet', view: 'pantau-pesanan' as AppView },
     ];
+    if (storeSettings.enableKitchenDisplay) {
+      items.push({ label: 'Pantau Pesanan', icon: 'skillet', view: 'pantau-pesanan' as AppView });
+    }
+    return items;
   };
 
   // Kelompok B: Navigasi Manajemen & Laporan (Khusus Admin)
@@ -510,23 +520,8 @@ export const DesktopHeader: React.FC = () => {
               <span className="font-medium">{getViewTitle()}</span>
             </div>
           </div>
-
-          {/* Bantuan Kanan */}
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setHelpOpen(true)}
-              className="p-2 rounded-lg text-[#524344] hover:bg-[#ebe8e3] hover:text-[#1c1c19] transition-colors cursor-pointer"
-              aria-label="Bantuan operasional"
-            >
-              <span className="material-symbols-outlined text-[18px]">help</span>
-            </button>
-          </div>
         </div>
       </header>
-
-      {/* Global Help Modal */}
-      <HelpModal isOpen={helpOpen} onClose={() => setHelpOpen(false)} />
     </>
   );
 };

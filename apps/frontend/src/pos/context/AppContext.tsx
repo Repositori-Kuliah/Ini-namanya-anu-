@@ -219,22 +219,51 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [storeSettings, setStoreSettings] = useState<StoreSettings>(() => {
     try {
       const saved = localStorage.getItem('rg_pos_store_settings');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          selfOrderEnabled: parsed.selfOrderEnabled ?? true,
+          soundEnabled: parsed.soundEnabled ?? true,
+          soundStation: parsed.soundStation || 'Semua Bagian',
+          openHour: parsed.openHour || '08:00',
+          closeHour: parsed.closeHour || '22:00',
+          forceClose: parsed.forceClose ?? false,
+          kdsEnabled: parsed.kdsEnabled ?? parsed.enableKitchenDisplay ?? true,
+          enableKitchenDisplay: parsed.enableKitchenDisplay ?? parsed.kdsEnabled ?? true,
+          autoInventoryDeduction: parsed.autoInventoryDeduction ?? parsed.enableInventoryTracking ?? true,
+          enableInventoryTracking: parsed.enableInventoryTracking ?? parsed.autoInventoryDeduction ?? true,
+        };
+      }
     } catch {}
     return {
       selfOrderEnabled: true,
       soundEnabled: true,
+      soundStation: 'Semua Bagian',
       openHour: '08:00',
       closeHour: '22:00',
       forceClose: false,
       kdsEnabled: true,
+      enableKitchenDisplay: true,
       autoInventoryDeduction: true,
+      enableInventoryTracking: true,
     };
   });
 
   const updateStoreSettings = useCallback((partial: Partial<StoreSettings>) => {
     setStoreSettings((prev) => {
       const updated = { ...prev, ...partial };
+      if ('kdsEnabled' in partial && !('enableKitchenDisplay' in partial)) {
+        updated.enableKitchenDisplay = partial.kdsEnabled;
+      }
+      if ('enableKitchenDisplay' in partial && !('kdsEnabled' in partial)) {
+        updated.kdsEnabled = partial.enableKitchenDisplay;
+      }
+      if ('autoInventoryDeduction' in partial && !('enableInventoryTracking' in partial)) {
+        updated.enableInventoryTracking = partial.autoInventoryDeduction;
+      }
+      if ('enableInventoryTracking' in partial && !('autoInventoryDeduction' in partial)) {
+        updated.autoInventoryDeduction = partial.enableInventoryTracking;
+      }
       try {
         localStorage.setItem('rg_pos_store_settings', JSON.stringify(updated));
       } catch {}
@@ -926,19 +955,68 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     // 2. Fallback direct insert jika RPC belum ada di remote Supabase
-    if (!success) {
+    if (!success && tbl.dbId) {
       try {
-        const orderNumber = `ORD-${Date.now().toString().slice(-6)}`;
-        const { error } = await supabase.from('orders').insert({
-          order_number: orderNumber,
-          order_source: 'POS',
-          order_status: draft ? 'pending' : 'cooking',
-          total,
-          session_id: tbl.sessionId || 10,
-          note: orderNotePayload,
-        });
-        if (!error) {
-          success = true;
+        let activeSessionId = tbl.sessionId;
+        if (!activeSessionId) {
+          const { data: openSess } = await supabase
+            .from('table_sessions')
+            .select('session_id')
+            .eq('table_id', tbl.dbId)
+            .is('closed_at', null)
+            .maybeSingle();
+
+          if (openSess) {
+            activeSessionId = openSess.session_id;
+          } else {
+            const { data: newSess } = await supabase
+              .from('table_sessions')
+              .insert({
+                table_id: tbl.dbId,
+                guest_count: orderGuestCount || 1,
+                customer_name: orderCustomerName || null,
+              })
+              .select('session_id')
+              .single();
+            if (newSess) {
+              activeSessionId = newSess.session_id;
+            }
+          }
+        }
+
+        if (activeSessionId) {
+          const orderNumber = `P${Date.now().toString().slice(-4)}`;
+          const { data: createdOrder, error: ordErr } = await supabase
+            .from('orders')
+            .insert({
+              order_number: orderNumber,
+              session_id: activeSessionId,
+              order_source: 'staff',
+              order_status: draft ? 'draft' : 'submitted',
+              total,
+              customer_name: orderCustomerName || null,
+              note: kitchenGeneralNote || '',
+            })
+            .select('order_id, order_number')
+            .single();
+
+          if (!ordErr && createdOrder) {
+            success = true;
+            const itemsPayload = cartItems
+              .filter((c) => c.menuItem.dbId)
+              .map((c) => ({
+                order_id: createdOrder.order_id,
+                product_id: c.menuItem.dbId,
+                product_name: c.menuItem.name,
+                unit_price: c.menuItem.price,
+                quantity: c.quantity,
+                subtotal: c.menuItem.price * c.quantity,
+                note: c.notes || null,
+              }));
+            if (itemsPayload.length > 0) {
+              await supabase.from('order_items').insert(itemsPayload);
+            }
+          }
         }
       } catch (e) {
         console.warn('Direct order insert fallback encountered issue, fallback to reactive local order state', e);
@@ -1131,8 +1209,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return data?.category_id as number;
   };
   const productPayload = async (i: MenuItem) => ({
-    name: i.name, price: i.price, description: i.description || null, is_available: i.isAvailable,
-    is_favorite: !!i.isFavorite, is_signature: !!i.isSignature, category_id: await categoryId(i.category),
+    name: i.name,
+    price: i.price,
+    description: i.description || null,
+    is_available: i.isAvailable,
+    is_favorite: !!(i.isFavorite || i.isRecommended),
+    is_recommended: !!(i.isRecommended || i.isFavorite),
+    is_signature: !!i.isSignature,
+    category_id: await categoryId(i.category),
     image_url: i.image && !isPlaceholder(i.image) ? i.image : null,
   });
   const updateMenuItem = async (item: MenuItem) => {

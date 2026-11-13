@@ -185,16 +185,46 @@ export const CheckoutView: React.FC = () => {
 
   return (
     <div className="flex flex-col w-full pb-20 md:pb-8 max-w-[1600px] mx-auto px-4 sm:px-6 pt-3">
-      {/* Header Halaman & Aksi Kasir */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 mb-4 border-b border-[#ebe8e3]">
+      {/* Header Halaman & Bar Laci Kas Kompak Menyatu */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 mb-4 border-b border-[#ebe8e3]">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-[#1c1c19] tracking-tight">
             Checkout &amp; Pembayaran
           </h1>
+          <p className="text-xs text-[#524344] mt-0.5">
+            Penyelesaian transaksi santap di tempat, pelunasan tagihan, dan cetak struk kasir.
+          </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Tombol Buka Kasir / Tutup Kasir */}
+        {/* Status Laci Kas & Aksi Shift Kasir (Menyatu Kompak) */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Kapsul Kompak Status Laci */}
+          <div className="flex items-center gap-2 bg-[#3d1018] text-white px-3 py-1.5 rounded-xl border border-[#58252c] text-xs shadow-xs">
+            <span className="material-symbols-outlined text-[16px] text-[#fc934f]">point_of_sale</span>
+            <div className="flex items-center gap-2.5">
+              <div>
+                <span className="text-[10px] text-[#ffdadc]/70 block leading-none">Modal</span>
+                <span className="font-bold text-white text-xs tabular-nums">
+                  Rp {cashierShift.modalAwal.toLocaleString('id-ID')}
+                </span>
+              </div>
+              <div className="h-4 w-px bg-white/20"></div>
+              <div>
+                <span className="text-[10px] text-[#ffdadc]/70 block leading-none">Masuk</span>
+                <span className="font-bold text-[#fc934f] text-xs tabular-nums">
+                  +{cashierShift.kasMasuk.toLocaleString('id-ID')}
+                </span>
+              </div>
+              <div className="h-4 w-px bg-white/20"></div>
+              <div>
+                <span className="text-[10px] text-[#ffdadc]/70 block leading-none">Total Laci</span>
+                <span className="font-bold text-white text-xs tabular-nums">
+                  Rp {cashierShift.totalLaci.toLocaleString('id-ID')}
+                </span>
+              </div>
+            </div>
+          </div>
+
           <button
             type="button"
             onClick={() => {
@@ -206,7 +236,7 @@ export const CheckoutView: React.FC = () => {
                 setShowBukaKasirModal(true);
               }
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#3d1018] text-white text-xs font-bold hover:bg-[#58252c] transition-colors cursor-pointer shadow-xs"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#994703] text-white text-xs font-bold hover:bg-[#b05304] transition-colors cursor-pointer shadow-xs"
           >
             <span className="material-symbols-outlined text-[16px]">
               {cashierShift.isOpen ? 'lock_clock' : 'key'}
@@ -217,56 +247,12 @@ export const CheckoutView: React.FC = () => {
           <button
             type="button"
             onClick={handleManualRefresh}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-[#ebe8e3] text-[#1c1c19] text-xs font-semibold hover:bg-[#f6f3ee] transition-colors cursor-pointer"
+            className="flex items-center gap-1 px-2.5 py-2 rounded-xl bg-white border border-[#ebe8e3] text-[#1c1c19] text-xs font-semibold hover:bg-[#f6f3ee] transition-colors cursor-pointer shadow-2xs"
             aria-label="Segarkan antrean tagihan"
           >
             <span className="material-symbols-outlined text-[16px] text-[#3d1018]">sync</span>
             <span>Segarkan</span>
           </button>
-        </div>
-      </div>
-
-      {/* Bar Laci Kas Dinamis (Kas Laci Game Bar - Warna Burgundy & Terracotta Sesuai Tema) */}
-      <div className="mb-5 bg-[#3d1018] rounded-2xl p-4 text-white shadow-sm border border-[#58252c]">
-        <div className="flex items-center justify-between pb-2 mb-3 border-b border-white/10">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[18px] text-[#fc934f]">point_of_sale</span>
-            <span className="font-bold text-xs uppercase tracking-wider text-[#ffdadc]">
-              Status Laci Kas Kasir
-            </span>
-          </div>
-          <span className="text-[11px] text-[#ffdadc]/70">
-            Shift Aktif: {cashierShift.openedBy || 'Kasir'}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-3 gap-3 text-center">
-          <div className="bg-[#58252c]/80 rounded-xl p-2.5 border border-white/10">
-            <span className="text-[10px] text-[#ffdadc]/70 block font-semibold uppercase">
-              Modal Awal
-            </span>
-            <span className="text-sm sm:text-base font-bold text-white tabular-nums">
-              Rp {cashierShift.modalAwal.toLocaleString('id-ID')}
-            </span>
-          </div>
-
-          <div className="bg-[#58252c]/80 rounded-xl p-2.5 border border-white/10">
-            <span className="text-[10px] text-[#ffdadc]/70 block font-semibold uppercase">
-              Kas Masuk (Tunai)
-            </span>
-            <span className="text-sm sm:text-base font-bold text-[#fc934f] tabular-nums">
-              +{cashierShift.kasMasuk.toLocaleString('id-ID')}
-            </span>
-          </div>
-
-          <div className="bg-[#994703] rounded-xl p-2.5 border border-white/20">
-            <span className="text-[10px] text-white/80 block font-semibold uppercase">
-              Total Laci Sistem
-            </span>
-            <span className="text-sm sm:text-base font-bold text-white tabular-nums">
-              Rp {cashierShift.totalLaci.toLocaleString('id-ID')}
-            </span>
-          </div>
         </div>
       </div>
 

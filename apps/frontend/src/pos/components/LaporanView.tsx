@@ -25,11 +25,6 @@ export const LaporanView: React.FC = () => {
   const [customRangeTrx, setCustomRangeTrx] = useState<TransactionRecord[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Modal Rekap Tutup Shift Kasir
-  const [shiftModalOpen, setShiftModalOpen] = useState(false);
-  const [modalAwalKas, setModalAwalKas] = useState<number | ''>(200000); // Rp 200.000 modal awal laci
-  const [uangFisikKasir, setUangFisikKasir] = useState<number | ''>('');
-
   const getDaysAgo = (days: number): string => {
     const d = new Date();
     d.setDate(d.getDate() - days);
@@ -146,12 +141,6 @@ export const LaporanView: React.FC = () => {
     showToast('Laporan transaksi berhasil diunduh dalam format CSV', 'success');
   };
 
-  // Tutup Shift Calculation
-  const modalAwalNum = typeof modalAwalKas === 'number' ? modalAwalKas : 0;
-  const totalKasSeharusnya = modalAwalNum + tunaiTotal;
-  const fisikKas = typeof uangFisikKasir === 'number' ? uangFisikKasir : 0;
-  const selisihKas = fisikKas - totalKasSeharusnya;
-
   // Dynamic hourly bucket data from actual transactions
   const hourBuckets = useMemo(() => {
     const buckets = [
@@ -190,16 +179,6 @@ export const LaporanView: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* Tutup Kasir */}
-          <button
-            type="button"
-            onClick={() => setShiftModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-white hover:bg-[#f6f3ee] text-[#1c1c19] border border-[#ebe8e3] transition-colors cursor-pointer shadow-xs"
-          >
-            <span className="material-symbols-outlined text-[16px] text-[#994703]">point_of_sale</span>
-            <span>Tutup Kasir</span>
-          </button>
-
           {/* Ekspor CSV */}
           <button
             type="button"
@@ -580,167 +559,6 @@ export const LaporanView: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Modal Rekap Tutup Shift Kasir (Redesigned) */}
-      {shiftModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-[#ebe8e3] space-y-4">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-[#ebe8e3]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-[#3d1018]/10 text-[#3d1018] flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-[18px]">account_balance_wallet</span>
-                </div>
-                <div>
-                  <h3 className="font-serif font-bold text-base text-[#1c1c19]">Rekonsiliasi &amp; Tutup Kasir</h3>
-                  <p className="text-[11px] text-[#847374]">Pencocokan saldo kas fisik laci vs penjualan sistem</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShiftModalOpen(false)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-[#847374] hover:bg-[#f6f3ee] hover:text-[#1c1c19] cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[18px]">close</span>
-              </button>
-            </div>
-
-            {/* Rekonsiliasi Breakdown Surface */}
-            <div className="rounded-xl border border-[#ebe8e3] bg-[#fcfaf7] divide-y divide-[#ebe8e3] overflow-hidden text-xs">
-              {/* Modal Kas Awal */}
-              <div className="p-3 flex items-center justify-between">
-                <div>
-                  <span className="font-semibold text-[#1c1c19] block">Modal Kas Awal</span>
-                  <span className="text-[10px] text-[#847374]">Saldo uang pecahan laci</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold text-[#847374]">Rp</span>
-                  <input
-                    type="number"
-                    placeholder="0"
-                    value={modalAwalKas}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/^0+(?=\d)/, '');
-                      setModalAwalKas(val === '' ? '' : Number(val));
-                    }}
-                    className="w-28 text-right font-bold text-sm text-[#1c1c19] bg-white border border-[#ebe8e3] rounded-lg px-2.5 py-1 outline-none focus:border-[#3d1018] tabular-nums"
-                  />
-                </div>
-              </div>
-
-              {/* Penjualan Tunai */}
-              <div className="p-3 flex items-center justify-between">
-                <div>
-                  <span className="font-semibold text-[#1c1c19] block">
-                    Penjualan Tunai ({formatIDDate(startDate)})
-                  </span>
-                  <span className="text-[10px] text-[#847374]">
-                    {tunaiTrx.length} transaksi tunai terbayar
-                  </span>
-                </div>
-                <span className="font-bold text-sm text-[#1c1c19] tabular-nums">
-                  Rp {tunaiTotal.toLocaleString('id-ID')}
-                </span>
-              </div>
-
-              {/* Total Kas Seharusnya */}
-              <div className="p-3 bg-[#3d1018]/5 flex items-center justify-between">
-                <span className="font-bold text-xs text-[#3d1018] uppercase tracking-wider">
-                  Total Kas Seharusnya
-                </span>
-                <span className="font-serif font-bold text-base text-[#3d1018] tabular-nums">
-                  Rp {totalKasSeharusnya.toLocaleString('id-ID')}
-                </span>
-              </div>
-            </div>
-
-            {/* Input Fisik Riil Kasir */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-[#1c1c19]">
-                Hitungan Uang Fisik Nyata di Laci
-              </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center font-bold text-sm text-[#847374]">
-                  Rp
-                </span>
-                <input
-                  type="number"
-                  placeholder="Ketik total uang fisik di laci saat ini..."
-                  value={uangFisikKasir}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/^0+(?=\d)/, '');
-                    setUangFisikKasir(val === '' ? '' : Number(val));
-                  }}
-                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-[#ebe8e3] font-bold text-base text-[#1c1c19] outline-none focus:border-[#3d1018] focus:ring-1 focus:ring-[#3d1018] transition tabular-nums bg-white shadow-2xs"
-                />
-              </div>
-            </div>
-
-            {/* Hasil Selisih Status */}
-            {uangFisikKasir !== '' && (
-              <div
-                className={`p-3 rounded-xl border flex items-center justify-between text-xs animate-in fade-in duration-150 ${
-                  selisihKas === 0
-                    ? 'bg-[#fcf9f4] border-[#d8d1c7] text-[#3d1018]'
-                    : selisihKas > 0
-                    ? 'bg-amber-50 border-amber-200 text-amber-900'
-                    : 'bg-rose-50 border-rose-200 text-rose-950'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px]">
-                    {selisihKas === 0 ? 'verified' : selisihKas > 0 ? 'trending_up' : 'warning'}
-                  </span>
-                  <div>
-                    <span className="font-bold block">
-                      {selisihKas === 0
-                        ? 'Kas Seimbang (Balans)'
-                        : selisihKas > 0
-                        ? 'Kas Surplus / Berlebih'
-                        : 'Kas Defisit / Kurang'}
-                    </span>
-                    <span className="text-[10px] opacity-80">
-                      {selisihKas === 0
-                        ? 'Uang fisik di laci sesuai dengan perhitungan sistem'
-                        : selisihKas > 0
-                        ? 'Terdapat kelebihan saldo fisik dibanding sistem'
-                        : 'Uang fisik kurang dari saldo sistem yang tercatat'}
-                    </span>
-                  </div>
-                </div>
-                <span className="font-bold text-sm tabular-nums shrink-0 ml-2">
-                  {selisihKas >= 0
-                    ? `+Rp ${selisihKas.toLocaleString('id-ID')}`
-                    : `-Rp ${Math.abs(selisihKas).toLocaleString('id-ID')}`}
-                </span>
-              </div>
-            )}
-
-            {/* Modal Actions */}
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#ebe8e3]">
-              <button
-                type="button"
-                onClick={() => setShiftModalOpen(false)}
-                className="px-3.5 py-2 rounded-xl text-xs font-semibold text-[#524344] hover:bg-[#f6f3ee] cursor-pointer transition-colors"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  window.print();
-                  showToast('Slip tutup kasir dicetak', 'success');
-                  setShiftModalOpen(false);
-                }}
-                className="px-4 py-2 rounded-xl bg-[#3d1018] text-white text-xs font-semibold hover:bg-[#58252c] transition flex items-center gap-1.5 cursor-pointer shadow-xs"
-              >
-                <span className="material-symbols-outlined text-[16px]">print</span>
-                <span>Cetak Slip Rekap Kasir</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

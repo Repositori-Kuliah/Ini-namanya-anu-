@@ -3,11 +3,12 @@ import { useApp } from '../context/AppContext';
 import { KitchenTicket } from '../types';
 
 export const KitchenDisplayView: React.FC = () => {
-  const { kitchenTickets, advanceTicketStatus, showToast } = useApp();
+  const { kitchenTickets, advanceTicketStatus, showToast, storeSettings } = useApp();
 
-  const [soundEnabled, setSoundEnabled] = useState(true);
-  const [selectedStation, setSelectedStation] = useState('Semua Stasiun');
   const [activeLaneFilter, setActiveLaneFilter] = useState<'new' | 'preparing' | 'ready'>('new');
+
+  const soundEnabled = storeSettings.soundEnabled !== false;
+  const selectedStation = storeSettings.soundStation || 'Semua Bagian';
 
   const playKitchenChime = () => {
     if (!soundEnabled) return;
@@ -196,44 +197,9 @@ export const KitchenDisplayView: React.FC = () => {
           <h1 className="text-xl sm:text-2xl font-bold text-[#1c1c19] tracking-tight">
             Pantau Pesanan
           </h1>
-        </div>
-
-        {/* Pengaturan Suara & Stasiun Dapur */}
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setSoundEnabled(!soundEnabled);
-              showToast(`Suara bel dapur: ${!soundEnabled ? 'Aktif' : 'Mati'}`);
-            }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors cursor-pointer ${
-              soundEnabled
-                ? 'bg-white border-[#ebe8e3] text-[#1c1c19] hover:bg-[#f6f3ee]'
-                : 'bg-[#f0ede9] border-[#ebe8e3] text-[#847374]'
-            }`}
-            aria-label="Tombol pengatur suara notifikasi dapur"
-          >
-            <span className="material-symbols-outlined text-[16px]">
-              {soundEnabled ? 'volume_up' : 'volume_off'}
-            </span>
-            <span>{soundEnabled ? 'Suara Aktif' : 'Senyap'}</span>
-          </button>
-
-          <div className="relative">
-            <select
-              value={selectedStation}
-              onChange={(e) => setSelectedStation(e.target.value)}
-              className="appearance-none bg-white border border-[#ebe8e3] rounded-lg px-3 py-1.5 pr-8 text-xs font-semibold text-[#1c1c19] cursor-pointer outline-none hover:bg-[#f6f3ee] transition-colors focus:border-[#3d1018]"
-              aria-label="Pilih stasiun dapur"
-            >
-              <option value="All stations">Semua Bagian</option>
-              <option value="Dapur Utama (Makanan)">Dapur Utama (Makanan)</option>
-              <option value="Bar Minuman">Bar Minuman</option>
-            </select>
-            <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-[#847374] text-[16px] pointer-events-none">
-              expand_more
-            </span>
-          </div>
+          <p className="text-xs text-[#524344] mt-0.5">
+            Layar tiket dapur (KDS) terhubung langsung dengan alur penyajian pesanan pelanggan.
+          </p>
         </div>
       </div>
 
