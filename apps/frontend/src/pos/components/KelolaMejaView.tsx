@@ -158,7 +158,7 @@ const KelolaMejaViewInner: React.FC = () => {
 
       {/* Tabel Meja Compact */}
       <div className="bg-white rounded-xl border border-[#ebe8e3] shadow-xs">
-        <div className="overflow-x-auto overflow-y-visible">
+        <div className="overflow-x-auto pb-10">
           <table className="w-full text-left text-xs border-collapse">
             <thead className="bg-[#f6f3ee] text-[#524344] uppercase tracking-wider text-[10px] font-bold border-b border-[#ebe8e3]">
               <tr>
@@ -179,7 +179,7 @@ const KelolaMejaViewInner: React.FC = () => {
                 filtered.map((tbl, idx) => {
                   const isOccupied = tbl.status !== 'kosong';
                   const isCheckout = tbl.status === 'checkout';
-                  const isBottomRow = idx >= filtered.length - 2;
+                  const isBottomRow = idx >= Math.max(1, filtered.length - 4);
 
                   return (
                     <tr key={tbl.id} className="hover:bg-[#fcf9f4] transition-colors">

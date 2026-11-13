@@ -392,12 +392,7 @@ export const PengaturanView: React.FC = () => {
               <span className="material-symbols-outlined text-[20px]">point_of_sale</span>
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="font-bold text-sm text-[#1c1c19]">Modal Awal Kasir di Laci (Cash Drawer)</h2>
-                <span className="bg-amber-100 text-[#3d1018] text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200">
-                  Tersinkronisasi Otomatis ke Laporan
-                </span>
-              </div>
+              <h2 className="font-bold text-sm text-[#1c1c19]">Modal Awal Kasir di Laci (Cash Drawer)</h2>
               <p className="text-xs text-[#524344] mt-0.5 max-w-xl">
                 Nominal kas awal pecahan kecil kembalian di laci kasir. Otomatis masuk sebagai modal awal pada Rincian Transaksi Selesai di Laporan Transaksi.
               </p>

@@ -389,7 +389,7 @@ const KelolaMenuViewInner: React.FC = () => {
 
         {/* Tabel Menu Compact */}
         <div className="bg-white rounded-xl border border-[#ebe8e3] shadow-xs">
-          <div className="overflow-x-auto overflow-y-visible">
+          <div className="overflow-x-auto pb-10">
             <table className="w-full text-left text-xs border-collapse">
               <thead className="bg-[#f6f3ee] text-[#524344] uppercase tracking-wider text-[10px] font-bold border-b border-[#ebe8e3]">
                 <tr>
@@ -409,7 +409,7 @@ const KelolaMenuViewInner: React.FC = () => {
                   </tr>
                 ) : (
                   filteredMenuItems.map((item, idx) => {
-                    const isBottomRow = idx >= filteredMenuItems.length - 2;
+                    const isBottomRow = idx >= Math.max(1, filteredMenuItems.length - 4);
                     return (
                       <tr key={item.id} className="hover:bg-[#fcf9f4] transition-colors">
                         <td className="py-2.5 px-4">
