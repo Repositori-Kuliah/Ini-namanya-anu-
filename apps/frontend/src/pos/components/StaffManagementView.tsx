@@ -290,12 +290,7 @@ export const StaffManagementView: React.FC = () => {
                         </span>
                       </td>
                       <td className="py-3 px-4">
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              staf.active ? 'bg-[#3d1018]' : 'bg-[#c5bcb5]'
-                            }`}
-                          />
+                        <div className="flex items-center">
                           <span
                             className={`text-xs font-semibold ${
                               staf.active ? 'text-[#1c1c19]' : 'text-[#847374]'

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { MenuItem, RawIngredient } from '../types';
 
@@ -34,6 +34,9 @@ const KelolaMenuViewInner: React.FC = () => {
   const [newDescription, setNewDescription] = useState('');
   const [newImage, setNewImage] = useState('');
   const [newIsRecommended, setNewIsRecommended] = useState(false);
+  const [isDraggingNew, setIsDraggingNew] = useState(false);
+  const [showNewUrlInput, setShowNewUrlInput] = useState(false);
+  const fileInputNewRef = useRef<HTMLInputElement>(null);
 
   // Modal Edit Menu
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
@@ -43,6 +46,23 @@ const KelolaMenuViewInner: React.FC = () => {
   const [editDescription, setEditDescription] = useState('');
   const [editImage, setEditImage] = useState('');
   const [editIsRecommended, setEditIsRecommended] = useState(false);
+  const [isDraggingEdit, setIsDraggingEdit] = useState(false);
+  const [showEditUrlInput, setShowEditUrlInput] = useState(false);
+  const fileInputEditRef = useRef<HTMLInputElement>(null);
+
+  const handleImageFile = (file: File, setter: (url: string) => void) => {
+    if (!file.type.startsWith('image/')) {
+      showToast('Harap pilih file gambar (JPG, PNG, WebP)');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (typeof e.target?.result === 'string') {
+        setter(e.target.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   // --- State Stok Bahan Baku ---
   const [searchStockQuery, setSearchStockQuery] = useState('');
@@ -762,14 +782,81 @@ const KelolaMenuViewInner: React.FC = () => {
               </div>
 
               <div>
-                <label className="font-bold text-[#1c1c19] block mb-1">URL Foto / Gambar Hidangan</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="font-bold text-[#1c1c19] text-xs">Foto / Gambar Hidangan</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewUrlInput(!showNewUrlInput)}
+                    className="text-[11px] text-[#994703] hover:underline font-semibold cursor-pointer"
+                  >
+                    {showNewUrlInput ? 'Gunakan Upload File' : 'Gunakan Tautan URL'}
+                  </button>
+                </div>
+
                 <input
-                  type="text"
-                  value={newImage}
-                  onChange={(e) => setNewImage(e.target.value)}
-                  placeholder="https://... atau /assets/... (Opsional)"
-                  className="w-full px-3 py-2 bg-[#fcf9f4] rounded-lg border border-[#ebe8e3] outline-none focus:border-[#3d1018]"
+                  ref={fileInputNewRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) handleImageFile(e.target.files[0], setNewImage);
+                  }}
                 />
+
+                {showNewUrlInput ? (
+                  <input
+                    type="text"
+                    value={newImage}
+                    onChange={(e) => setNewImage(e.target.value)}
+                    placeholder="https://... atau /assets/... (Opsional)"
+                    className="w-full px-3 py-2 bg-[#fcf9f4] rounded-lg border border-[#ebe8e3] text-xs outline-none focus:border-[#3d1018]"
+                  />
+                ) : newImage ? (
+                  <div className="relative rounded-xl overflow-hidden border border-[#ebe8e3] bg-stone-100 h-28 flex items-center justify-center group">
+                    <img src={newImage} alt="Preview Menu" className="h-full w-full object-cover" />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity">
+                      <button
+                        type="button"
+                        onClick={() => fileInputNewRef.current?.click()}
+                        className="px-2.5 py-1 rounded-md bg-white text-xs font-bold text-[#1c1c19] hover:bg-stone-100 cursor-pointer shadow"
+                      >
+                        Ganti Foto
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewImage('')}
+                        className="px-2.5 py-1 rounded-md bg-red-600 text-xs font-bold text-white hover:bg-red-700 cursor-pointer shadow"
+                      >
+                        Hapus
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setIsDraggingNew(true);
+                    }}
+                    onDragLeave={() => setIsDraggingNew(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDraggingNew(false);
+                      if (e.dataTransfer.files?.[0]) handleImageFile(e.dataTransfer.files[0], setNewImage);
+                    }}
+                    onClick={() => fileInputNewRef.current?.click()}
+                    className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${
+                      isDraggingNew
+                        ? 'border-[#3d1018] bg-[#3d1018]/5'
+                        : 'border-[#ebe8e3] hover:border-[#994703] bg-[#fcf9f4]'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-2xl text-[#994703] block mb-1">
+                      cloud_upload
+                    </span>
+                    <p className="text-xs font-bold text-[#1c1c19]">Tarik &amp; lepas gambar hidangan di sini</p>
+                    <p className="text-[11px] text-[#847374] mt-0.5">atau klik untuk memilih file dari komputer</p>
+                  </div>
+                )}
               </div>
 
               <label className="flex items-center gap-2 cursor-pointer pt-1">
@@ -879,14 +966,81 @@ const KelolaMenuViewInner: React.FC = () => {
               </div>
 
               <div>
-                <label className="font-bold text-[#1c1c19] block mb-1">URL Foto / Gambar Hidangan</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="font-bold text-[#1c1c19] text-xs">Foto / Gambar Hidangan</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowEditUrlInput(!showEditUrlInput)}
+                    className="text-[11px] text-[#994703] hover:underline font-semibold cursor-pointer"
+                  >
+                    {showEditUrlInput ? 'Gunakan Upload File' : 'Gunakan Tautan URL'}
+                  </button>
+                </div>
+
                 <input
-                  type="text"
-                  value={editImage}
-                  onChange={(e) => setEditImage(e.target.value)}
-                  placeholder="https://... atau /assets/... (Opsional)"
-                  className="w-full px-3 py-2 bg-[#fcf9f4] rounded-lg border border-[#ebe8e3] outline-none focus:border-[#3d1018]"
+                  ref={fileInputEditRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) handleImageFile(e.target.files[0], setEditImage);
+                  }}
                 />
+
+                {showEditUrlInput ? (
+                  <input
+                    type="text"
+                    value={editImage}
+                    onChange={(e) => setEditImage(e.target.value)}
+                    placeholder="https://... atau /assets/... (Opsional)"
+                    className="w-full px-3 py-2 bg-[#fcf9f4] rounded-lg border border-[#ebe8e3] text-xs outline-none focus:border-[#3d1018]"
+                  />
+                ) : editImage ? (
+                  <div className="relative rounded-xl overflow-hidden border border-[#ebe8e3] bg-stone-100 h-28 flex items-center justify-center group">
+                    <img src={editImage} alt="Preview Menu" className="h-full w-full object-cover" />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity">
+                      <button
+                        type="button"
+                        onClick={() => fileInputEditRef.current?.click()}
+                        className="px-2.5 py-1 rounded-md bg-white text-xs font-bold text-[#1c1c19] hover:bg-stone-100 cursor-pointer shadow"
+                      >
+                        Ganti Foto
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditImage('')}
+                        className="px-2.5 py-1 rounded-md bg-red-600 text-xs font-bold text-white hover:bg-red-700 cursor-pointer shadow"
+                      >
+                        Hapus
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setIsDraggingEdit(true);
+                    }}
+                    onDragLeave={() => setIsDraggingEdit(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDraggingEdit(false);
+                      if (e.dataTransfer.files?.[0]) handleImageFile(e.dataTransfer.files[0], setEditImage);
+                    }}
+                    onClick={() => fileInputEditRef.current?.click()}
+                    className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${
+                      isDraggingEdit
+                        ? 'border-[#3d1018] bg-[#3d1018]/5'
+                        : 'border-[#ebe8e3] hover:border-[#994703] bg-[#fcf9f4]'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-2xl text-[#994703] block mb-1">
+                      cloud_upload
+                    </span>
+                    <p className="text-xs font-bold text-[#1c1c19]">Tarik &amp; lepas gambar hidangan di sini</p>
+                    <p className="text-[11px] text-[#847374] mt-0.5">atau klik untuk memilih file dari komputer</p>
+                  </div>
+                )}
               </div>
 
               <label className="flex items-center gap-2 cursor-pointer pt-1">

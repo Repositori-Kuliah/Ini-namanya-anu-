@@ -311,10 +311,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (saved) return JSON.parse(saved);
     } catch {}
     return {
-      isOpen: true,
-      modalAwal: 200000,
+      isOpen: false,
+      modalAwal: 0,
       kasMasuk: 0,
-      totalLaci: 200000,
+      totalLaci: 0,
       openedAt: new Date().toISOString(),
       openedBy: 'Kasir',
     };

@@ -112,16 +112,6 @@ const KelolaMejaViewInner: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={handlePrintAllQr}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-[#ebe8e3] hover:bg-[#f6f3ee] text-[#1c1c19] text-xs font-semibold transition-colors cursor-pointer"
-            aria-label="Cetak semua stiker QR meja"
-          >
-            <span className="material-symbols-outlined text-[16px] text-[#994703]">print</span>
-            <span>Cetak Semua QR</span>
-          </button>
-
-          <button
-            type="button"
             onClick={() => setShowAddModal(true)}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
           >

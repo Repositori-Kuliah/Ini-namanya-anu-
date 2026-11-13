@@ -41,7 +41,7 @@ export const ThermalReceiptModal: React.FC = () => {
         </button>
 
         {/* Thermal Paper Simulation Container (Murni Hitam-Putih Monokrom) */}
-        <div className="w-full bg-white border-2 border-black p-5 rounded-lg shadow-xs font-mono text-xs text-black flex flex-col gap-3">
+        <div className="printable-receipt-area w-full bg-white border-2 border-black p-5 rounded-lg shadow-xs font-mono text-xs text-black flex flex-col gap-3">
           {/* Header */}
           <div className="flex flex-col items-center text-center border-b-2 border-dashed border-black pb-3">
             <h3 id="receipt-modal-title" className="font-bold text-base tracking-wider text-black uppercase">
