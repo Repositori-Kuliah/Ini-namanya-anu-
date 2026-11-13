@@ -1213,11 +1213,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const productPayload = async (i: MenuItem) => ({
     name: i.name,
     price: i.price,
-    description: i.description || null,
     is_available: i.isAvailable,
-    is_favorite: !!(i.isFavorite || i.isRecommended),
     is_recommended: !!(i.isRecommended || i.isFavorite),
-    is_signature: !!i.isSignature,
     category_id: await categoryId(i.category),
     image_url: i.image && !isPlaceholder(i.image) ? i.image : null,
   });

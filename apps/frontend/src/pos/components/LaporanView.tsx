@@ -143,32 +143,165 @@ export const LaporanView: React.FC = () => {
     showToast('Laporan transaksi berhasil diunduh dalam format CSV', 'success');
   };
 
-  // Dynamic hourly bucket data from actual transactions
-  const hourBuckets = useMemo(() => {
-    const buckets = [
-      { label: '10:00–11:00', start: 10, end: 11, amount: 0 },
-      { label: '11:00–12:00', start: 11, end: 12, amount: 0 },
-      { label: '12:00–13:00', start: 12, end: 13, amount: 0 },
-      { label: '13:00–14:00', start: 13, end: 14, amount: 0 },
-      { label: '14:00–15:00', start: 14, end: 15, amount: 0 },
-      { label: '17:00–20:00', start: 17, end: 20, amount: 0 },
+  // Dynamic Trend Buckets:
+  // - Hari ini (startDate === endDate): Sesuai jam operasional outlet
+  // - Minggu ini (diffDays <= 7): 7 Hari
+  // - Bulan ini (diffDays <= 31): Mingguan (Mg 1 s/d Mg 5)
+  // - Tahun ini (diffDays > 31): Bulanan (Januari s/d Desember)
+  const trendBuckets = useMemo(() => {
+    const diffDays = Math.max(
+      1,
+      Math.round(
+        (new Date(endDate).getTime() - new Date(startDate).getTime()) /
+          (1000 * 60 * 60 * 24)
+      ) + 1
+    );
+
+    const isDayMode = startDate === endDate;
+    const isWeekMode = !isDayMode && diffDays <= 7;
+    const isMonthMode = !isDayMode && diffDays > 7 && diffDays <= 31;
+
+    if (isDayMode) {
+      // 1. Sesuai jam operasional
+      const openH =
+        parseInt((storeSettings?.openHour || '08:00').split(':')[0], 10) || 8;
+      const closeH =
+        parseInt((storeSettings?.closeHour || '22:00').split(':')[0], 10) || 22;
+      const startH = Math.min(openH, 20);
+      const endH = Math.max(closeH, startH + 4);
+
+      const step = 2;
+      const buckets: { label: string; start: number; end: number; amount: number }[] = [];
+      for (let h = startH; h < endH; h += step) {
+        const nextH = Math.min(h + step, endH);
+        buckets.push({
+          label: `${String(h).padStart(2, '0')}:00–${String(nextH).padStart(2, '0')}:00`,
+          start: h,
+          end: nextH,
+          amount: 0,
+        });
+      }
+
+      filteredTransactions.forEach((t) => {
+        const dt = t.at ? new Date(t.at) : null;
+        if (dt) {
+          const hour = Number(
+            dt.toLocaleTimeString('id-ID', {
+              hour: '2-digit',
+              hour12: false,
+              timeZone: 'Asia/Jakarta',
+            })
+          );
+          const match = buckets.find((b) => hour >= b.start && hour < b.end);
+          if (match) {
+            match.amount += t.total;
+          } else if (hour < startH && buckets.length > 0) {
+            buckets[0].amount += t.total;
+          } else if (hour >= endH && buckets.length > 0) {
+            buckets[buckets.length - 1].amount += t.total;
+          }
+        }
+      });
+      return buckets;
+    }
+
+    if (isWeekMode) {
+      // 2. 7 Hari
+      const buckets: { label: string; dateStr: string; amount: number }[] = [];
+      const cur = new Date(startDate);
+      const end = new Date(endDate);
+      while (cur <= end && buckets.length < 7) {
+        const yyyy = cur.getFullYear();
+        const mm = String(cur.getMonth() + 1).padStart(2, '0');
+        const dd = String(cur.getDate()).padStart(2, '0');
+        const dStr = `${yyyy}-${mm}-${dd}`;
+        const dayName = cur.toLocaleDateString('id-ID', { weekday: 'short' });
+        buckets.push({
+          label: `${dayName} ${dd}`,
+          dateStr: dStr,
+          amount: 0,
+        });
+        cur.setDate(cur.getDate() + 1);
+      }
+
+      filteredTransactions.forEach((t) => {
+        const dStr = t.at
+          ? new Date(t.at).toLocaleDateString('sv-SE', {
+              timeZone: 'Asia/Jakarta',
+            })
+          : '';
+        const match = buckets.find((b) => b.dateStr === dStr);
+        if (match) {
+          match.amount += t.total;
+        }
+      });
+      return buckets;
+    }
+
+    if (isMonthMode) {
+      // 3. Cukup minggu saja (Minggu 1 s/d Minggu 5)
+      const buckets = [
+        { label: 'Mg 1 (1–7)', startDay: 1, endDay: 7, amount: 0 },
+        { label: 'Mg 2 (8–14)', startDay: 8, endDay: 14, amount: 0 },
+        { label: 'Mg 3 (15–21)', startDay: 15, endDay: 21, amount: 0 },
+        { label: 'Mg 4 (22–28)', startDay: 22, endDay: 28, amount: 0 },
+        { label: 'Mg 5 (29–31)', startDay: 29, endDay: 31, amount: 0 },
+      ];
+
+      filteredTransactions.forEach((t) => {
+        const dt = t.at ? new Date(t.at) : null;
+        if (dt) {
+          const day = dt.getDate();
+          const match = buckets.find(
+            (b) => day >= b.startDay && day <= b.endDay
+          );
+          if (match) {
+            match.amount += t.total;
+          }
+        }
+      });
+      return buckets;
+    }
+
+    // 4. Per Bulan (Januari s/d Desember)
+    const monthNames = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Ags',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
     ];
+    const buckets = monthNames.map((name) => ({
+      label: name,
+      amount: 0,
+    }));
+
     filteredTransactions.forEach((t) => {
       const dt = t.at ? new Date(t.at) : null;
       if (dt) {
-        const hour = Number(
-          dt.toLocaleTimeString('id-ID', { hour: '2-digit', hour12: false, timeZone: 'Asia/Jakarta' })
-        );
-        const match = buckets.find((b) => hour >= b.start && hour < b.end);
-        if (match) {
-          match.amount += t.total;
+        const m = dt.getMonth();
+        if (buckets[m]) {
+          buckets[m].amount += t.total;
         }
       }
     });
     return buckets;
-  }, [filteredTransactions]);
+  }, [
+    filteredTransactions,
+    startDate,
+    endDate,
+    storeSettings?.openHour,
+    storeSettings?.closeHour,
+  ]);
 
-  const maxBucket = Math.max(...hourBuckets.map((b) => b.amount), 0);
+  const maxBucket = Math.max(...trendBuckets.map((b) => b.amount), 0);
 
   return (
     <div className="flex flex-col w-full p-4 sm:p-6 lg:p-8 space-y-5 max-w-[1540px] mx-auto pb-28 md:pb-8">
@@ -337,7 +470,7 @@ export const LaporanView: React.FC = () => {
         <div className="lg:col-span-2 bg-white p-4 rounded-xl border border-[#ebe8e3] flex flex-col justify-between">
           <div className="flex items-center justify-between pb-2 border-b border-[#ebe8e3]">
             <div>
-              <h3 className="text-xs font-bold text-[#1c1c19] uppercase tracking-wider">Tren Penjualan Menurut Jam</h3>
+              <h3 className="text-xs font-bold text-[#1c1c19] uppercase tracking-wider">Tren Penjualan</h3>
               <p className="text-[11px] text-[#847374] mt-0.5">
                 Periode: {startDate === endDate ? formatIDDate(startDate) : `${formatIDDate(startDate)} s/d ${formatIDDate(endDate)}`}
               </p>
@@ -349,7 +482,7 @@ export const LaporanView: React.FC = () => {
 
           <div className="pt-6 pb-2">
             <div className="h-40 w-full flex items-end justify-between gap-2 px-2">
-              {hourBuckets.map((bucket, i) => {
+              {trendBuckets.map((bucket, i) => {
                 const heightPx = maxBucket > 0 ? Math.max(6, Math.round((bucket.amount / maxBucket) * 120)) : 4;
                 const hasSales = bucket.amount > 0;
                 return (

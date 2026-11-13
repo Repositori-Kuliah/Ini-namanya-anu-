@@ -9,7 +9,7 @@ const toWIBDate = (iso: string) =>
   new Date(iso).toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' });
 
 export const DashboardView: React.FC = () => {
-  const { transactions, setActiveView, menuItems } = useApp();
+  const { transactions, setActiveView, menuItems, storeSettings } = useApp();
   const todayStr = today();
   const [dateFrom, setDateFrom] = useState(todayStr);
   const [dateTo, setDateTo] = useState(todayStr);
@@ -124,32 +124,168 @@ export const DashboardView: React.FC = () => {
     ? new Date(dateFrom).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
     : `${new Date(dateFrom).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} – ${new Date(dateTo).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
 
-  // Dynamic Hourly Sales Trend from real transactions
-  const hourlyBuckets = useMemo(() => {
-    const buckets = [
-      { label: '10–11', start: 10, end: 11, amount: 0 },
-      { label: '11–12', start: 11, end: 12, amount: 0 },
-      { label: '12–13', start: 12, end: 13, amount: 0 },
-      { label: '13–14', start: 13, end: 14, amount: 0 },
-      { label: '14–15', start: 14, end: 15, amount: 0 },
-      { label: '17–20', start: 17, end: 20, amount: 0 },
+  // Dynamic Sales Trend:
+  // - 1 Hari / Hari ini: Sesuai jam operasional outlet
+  // - 1 Minggu / <= 7 Hari: 7 Hari
+  // - 1 Bulan / <= 31 Hari: Mingguan (Minggu 1, Minggu 2, dst.)
+  // - 1 Tahun / > 31 Hari: Bulanan (Januari s/d Desember)
+  const trendBuckets = useMemo(() => {
+    const diffDays = Math.max(
+      1,
+      Math.round(
+        (new Date(dateTo).getTime() - new Date(dateFrom).getTime()) /
+          (1000 * 60 * 60 * 24)
+      ) + 1
+    );
+
+    const isDayMode =
+      period === '1hari' || (period === 'custom' && dateFrom === dateTo);
+    const isWeekMode =
+      period === '1minggu' ||
+      (period === 'custom' && diffDays > 1 && diffDays <= 7);
+    const isMonthMode =
+      period === '1bulan' ||
+      (period === 'custom' && diffDays > 7 && diffDays <= 31);
+
+    if (isDayMode) {
+      // 1. Sesuai jam operasional (contoh 08:00 - 22:00)
+      const openH =
+        parseInt((storeSettings?.openHour || '08:00').split(':')[0], 10) || 8;
+      const closeH =
+        parseInt((storeSettings?.closeHour || '22:00').split(':')[0], 10) || 22;
+      const startH = Math.min(openH, 20);
+      const endH = Math.max(closeH, startH + 4);
+
+      // Interval 2 jam
+      const step = 2;
+      const buckets: { label: string; start: number; end: number; amount: number }[] = [];
+      for (let h = startH; h < endH; h += step) {
+        const nextH = Math.min(h + step, endH);
+        buckets.push({
+          label: `${String(h).padStart(2, '0')}–${String(nextH).padStart(2, '0')}`,
+          start: h,
+          end: nextH,
+          amount: 0,
+        });
+      }
+
+      filteredTrx.forEach((t) => {
+        const dt = t.at ? new Date(t.at) : null;
+        if (dt) {
+          const hour = Number(
+            dt.toLocaleTimeString('id-ID', {
+              hour: '2-digit',
+              hour12: false,
+              timeZone: 'Asia/Jakarta',
+            })
+          );
+          const match = buckets.find((b) => hour >= b.start && hour < b.end);
+          if (match) {
+            match.amount += t.total;
+          } else if (hour < startH && buckets.length > 0) {
+            buckets[0].amount += t.total;
+          } else if (hour >= endH && buckets.length > 0) {
+            buckets[buckets.length - 1].amount += t.total;
+          }
+        }
+      });
+      return buckets;
+    }
+
+    if (isWeekMode) {
+      // 2. 7 Hari
+      const buckets: { label: string; dateStr: string; amount: number }[] = [];
+      const cur = new Date(dateFrom);
+      const end = new Date(dateTo);
+      while (cur <= end && buckets.length < 7) {
+        const yyyy = cur.getFullYear();
+        const mm = String(cur.getMonth() + 1).padStart(2, '0');
+        const dd = String(cur.getDate()).padStart(2, '0');
+        const dStr = `${yyyy}-${mm}-${dd}`;
+        const dayName = cur.toLocaleDateString('id-ID', { weekday: 'short' });
+        buckets.push({
+          label: `${dayName} ${dd}`,
+          dateStr: dStr,
+          amount: 0,
+        });
+        cur.setDate(cur.getDate() + 1);
+      }
+
+      filteredTrx.forEach((t) => {
+        const dStr = t.at ? toWIBDate(t.at) : '';
+        const match = buckets.find((b) => b.dateStr === dStr);
+        if (match) {
+          match.amount += t.total;
+        }
+      });
+      return buckets;
+    }
+
+    if (isMonthMode) {
+      // 3. Cukup minggu saja (Minggu 1 s/d Minggu 5)
+      const buckets = [
+        { label: 'Mg 1 (1–7)', startDay: 1, endDay: 7, amount: 0 },
+        { label: 'Mg 2 (8–14)', startDay: 8, endDay: 14, amount: 0 },
+        { label: 'Mg 3 (15–21)', startDay: 15, endDay: 21, amount: 0 },
+        { label: 'Mg 4 (22–28)', startDay: 22, endDay: 28, amount: 0 },
+        { label: 'Mg 5 (29–31)', startDay: 29, endDay: 31, amount: 0 },
+      ];
+
+      filteredTrx.forEach((t) => {
+        const dt = t.at ? new Date(t.at) : null;
+        if (dt) {
+          const day = dt.getDate();
+          const match = buckets.find(
+            (b) => day >= b.startDay && day <= b.endDay
+          );
+          if (match) {
+            match.amount += t.total;
+          }
+        }
+      });
+      return buckets;
+    }
+
+    // 4. Per Bulan (Januari s/d Desember)
+    const monthNames = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Ags',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
     ];
+    const buckets = monthNames.map((name) => ({
+      label: name,
+      amount: 0,
+    }));
+
     filteredTrx.forEach((t) => {
       const dt = t.at ? new Date(t.at) : null;
       if (dt) {
-        const hour = Number(
-          dt.toLocaleTimeString('id-ID', { hour: '2-digit', hour12: false, timeZone: 'Asia/Jakarta' })
-        );
-        const match = buckets.find((b) => hour >= b.start && hour < b.end);
-        if (match) {
-          match.amount += t.total;
+        const m = dt.getMonth();
+        if (buckets[m]) {
+          buckets[m].amount += t.total;
         }
       }
     });
     return buckets;
-  }, [filteredTrx]);
+  }, [
+    filteredTrx,
+    period,
+    dateFrom,
+    dateTo,
+    storeSettings?.openHour,
+    storeSettings?.closeHour,
+  ]);
 
-  const maxBucketAmount = Math.max(...hourlyBuckets.map((b) => b.amount), 0);
+  const maxBucketAmount = Math.max(...trendBuckets.map((b) => b.amount), 0);
 
   // Dynamic Best Selling Menu Items from real transactions
   const bestSellers = useMemo(() => {
@@ -317,7 +453,7 @@ export const DashboardView: React.FC = () => {
             {/* Bar Chart Visualization */}
             <div className="mt-6 pt-4 pb-2">
               <div className="h-48 w-full flex items-end justify-between gap-2 sm:gap-4 px-2 sm:px-6">
-                {hourlyBuckets.map((b) => {
+                {trendBuckets.map((b) => {
                   const heightPx =
                     maxBucketAmount > 0
                       ? Math.max(6, Math.round((b.amount / maxBucketAmount) * 140))

@@ -285,9 +285,6 @@ const KelolaMenuViewInner: React.FC = () => {
           <h1 className="text-xl sm:text-2xl font-bold text-[#1c1c19] tracking-tight">
             Kelola Menu
           </h1>
-          <p className="text-xs text-[#524344] mt-0.5">
-            Daftar katalog hidangan restoran dan kendali ketersediaan menu secara cepat.
-          </p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -391,8 +388,8 @@ const KelolaMenuViewInner: React.FC = () => {
         </div>
 
         {/* Tabel Menu Compact */}
-        <div className="bg-white rounded-xl border border-[#ebe8e3] overflow-hidden shadow-xs">
-          <div className="overflow-x-auto">
+        <div className="bg-white rounded-xl border border-[#ebe8e3] shadow-xs">
+          <div className="overflow-x-auto overflow-y-visible">
             <table className="w-full text-left text-xs border-collapse">
               <thead className="bg-[#f6f3ee] text-[#524344] uppercase tracking-wider text-[10px] font-bold border-b border-[#ebe8e3]">
                 <tr>
@@ -411,65 +408,67 @@ const KelolaMenuViewInner: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  filteredMenuItems.map((item) => (
-                    <tr key={item.id} className="hover:bg-[#fcf9f4] transition-colors">
-                      <td className="py-2.5 px-4">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-lg bg-[#3d1018] text-[#ffdadc] flex items-center justify-center font-bold text-xs shrink-0 border border-[#58252c]">
-                            {item.name.slice(0, 2).toUpperCase()}
+                  filteredMenuItems.map((item, idx) => {
+                    const isBottomRow = idx >= filteredMenuItems.length - 2;
+                    return (
+                      <tr key={item.id} className="hover:bg-[#fcf9f4] transition-colors">
+                        <td className="py-2.5 px-4">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-lg bg-[#3d1018] text-[#ffdadc] flex items-center justify-center font-bold text-xs shrink-0 border border-[#58252c]">
+                              {item.name.slice(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <span className="font-bold text-[#1c1c19] block leading-tight">
+                                {item.name}
+                              </span>
+                              <span className="text-[10px] text-[#847374] font-mono">
+                                {item.code}
+                              </span>
+                            </div>
                           </div>
-                          <div>
-                            <span className="font-bold text-[#1c1c19] block leading-tight">
-                              {item.name}
-                            </span>
-                            <span className="text-[10px] text-[#847374] font-mono">
-                              {item.code}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-2.5 px-4 text-[#524344] font-medium">{item.category}</td>
-                      <td className="py-2.5 px-4 font-bold text-[#3d1018] tabular-nums">
-                        Rp {item.price.toLocaleString('id-ID')}
-                      </td>
-                      {/* Switch Cepat Habis / Tersedia */}
-                      <td className="py-2.5 px-4 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleAvailability(item)}
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                            item.isAvailable
-                              ? 'bg-[#f0ede9] text-[#3d1018] hover:bg-[#e0dcd8]'
-                              : 'bg-[#ffdadc] text-[#ba1a1a] hover:bg-[#ffcdd2]'
-                          }`}
-                          title="Klik untuk ubah status ketersediaan"
-                        >
-                          <span className="material-symbols-outlined text-[14px]">
-                            {item.isAvailable ? 'check_circle' : 'do_not_disturb_on'}
-                          </span>
-                          <span>{item.isAvailable ? 'Tersedia' : 'Habis'}</span>
-                        </button>
-                      </td>
-                      <td className="py-2.5 px-4 text-center relative">
-                        <div className="relative inline-block text-left">
+                        </td>
+                        <td className="py-2.5 px-4 text-[#524344] font-medium">{item.category}</td>
+                        <td className="py-2.5 px-4 font-bold text-[#3d1018] tabular-nums">
+                          Rp {item.price.toLocaleString('id-ID')}
+                        </td>
+                        {/* Switch Cepat Habis / Tersedia */}
+                        <td className="py-2.5 px-4 text-center">
                           <button
                             type="button"
-                            onClick={() => setOpenMenuActionId(openMenuActionId === item.id ? null : item.id)}
-                            className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-[#f6f3ee] hover:bg-[#ebe8e3] text-[#1c1c19] border border-[#ebe8e3] text-xs font-semibold cursor-pointer transition-colors"
+                            onClick={() => handleToggleAvailability(item)}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                              item.isAvailable
+                                ? 'bg-[#f0ede9] text-[#3d1018] hover:bg-[#e0dcd8]'
+                                : 'bg-[#ffdadc] text-[#ba1a1a] hover:bg-[#ffcdd2]'
+                            }`}
+                            title="Klik untuk ubah status ketersediaan"
                           >
-                            <span>Aksi</span>
-                            <span className="material-symbols-outlined text-[14px] text-[#524344]">
-                              {openMenuActionId === item.id ? 'expand_less' : 'expand_more'}
+                            <span className="material-symbols-outlined text-[14px]">
+                              {item.isAvailable ? 'check_circle' : 'do_not_disturb_on'}
                             </span>
+                            <span>{item.isAvailable ? 'Tersedia' : 'Habis'}</span>
                           </button>
+                        </td>
+                        <td className="py-2.5 px-4 text-center relative">
+                          <div className="relative inline-block text-left">
+                            <button
+                              type="button"
+                              onClick={() => setOpenMenuActionId(openMenuActionId === item.id ? null : item.id)}
+                              className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-[#f6f3ee] hover:bg-[#ebe8e3] text-[#1c1c19] border border-[#ebe8e3] text-xs font-semibold cursor-pointer transition-colors"
+                            >
+                              <span>Aksi</span>
+                              <span className="material-symbols-outlined text-[14px] text-[#524344]">
+                                {openMenuActionId === item.id ? 'expand_less' : 'expand_more'}
+                              </span>
+                            </button>
 
-                          {openMenuActionId === item.id && (
-                            <>
-                              <div
-                                className="fixed inset-0 z-20"
-                                onClick={() => setOpenMenuActionId(null)}
-                              />
-                              <div className="absolute right-0 mt-1 w-40 bg-white rounded-xl shadow-xl border border-[#ebe8e3] py-1 z-30 text-left divide-y divide-[#ebe8e3] animate-in fade-in zoom-in-95 duration-100">
+                            {openMenuActionId === item.id && (
+                              <>
+                                <div
+                                  className="fixed inset-0 z-20"
+                                  onClick={() => setOpenMenuActionId(null)}
+                                />
+                                <div className={`absolute right-0 ${isBottomRow ? 'bottom-full mb-1 origin-bottom-right' : 'top-full mt-1 origin-top-right'} w-40 bg-white rounded-xl shadow-xl border border-[#ebe8e3] py-1 z-30 text-left divide-y divide-[#ebe8e3] animate-in fade-in zoom-in-95 duration-100`}>
                                 <div className="py-1">
                                   <button
                                     type="button"
@@ -502,8 +501,9 @@ const KelolaMenuViewInner: React.FC = () => {
                         </div>
                       </td>
                     </tr>
-                  ))
-                )}
+                  );
+                })
+              )}
               </tbody>
             </table>
           </div>

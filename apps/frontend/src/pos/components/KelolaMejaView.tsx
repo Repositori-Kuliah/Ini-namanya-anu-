@@ -157,7 +157,7 @@ const KelolaMejaViewInner: React.FC = () => {
       </div>
 
       {/* Tabel Meja Compact */}
-      <div className="bg-white rounded-xl border border-[#ebe8e3] overflow-hidden shadow-xs">
+      <div className="bg-white rounded-xl border border-[#ebe8e3] shadow-xs">
         <div className="overflow-x-auto overflow-y-visible">
           <table className="w-full text-left text-xs border-collapse">
             <thead className="bg-[#f6f3ee] text-[#524344] uppercase tracking-wider text-[10px] font-bold border-b border-[#ebe8e3]">
@@ -176,9 +176,10 @@ const KelolaMejaViewInner: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                filtered.map((tbl) => {
+                filtered.map((tbl, idx) => {
                   const isOccupied = tbl.status !== 'kosong';
                   const isCheckout = tbl.status === 'checkout';
+                  const isBottomRow = idx >= filtered.length - 2;
 
                   return (
                     <tr key={tbl.id} className="hover:bg-[#fcf9f4] transition-colors">
@@ -230,7 +231,7 @@ const KelolaMejaViewInner: React.FC = () => {
                                 className="fixed inset-0 z-20"
                                 onClick={() => setOpenTableActionId(null)}
                               />
-                              <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl shadow-xl border border-[#ebe8e3] py-1 z-30 text-left divide-y divide-[#ebe8e3] animate-in fade-in zoom-in-95 duration-100">
+                              <div className={`absolute right-0 ${isBottomRow ? 'bottom-full mb-1 origin-bottom-right' : 'top-full mt-1 origin-top-right'} w-44 bg-white rounded-xl shadow-xl border border-[#ebe8e3] py-1 z-30 text-left divide-y divide-[#ebe8e3] animate-in fade-in zoom-in-95 duration-100`}>
                                 <div className="py-1">
                                   <button
                                     type="button"

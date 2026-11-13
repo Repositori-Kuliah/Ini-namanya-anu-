@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { HelpModal } from './Navigation';
 
 interface RollerWheelProps {
   label: string;
@@ -195,16 +194,22 @@ export const PengaturanView: React.FC = () => {
   const [openHourInput, setOpenHourInput] = useState(storeSettings.openHour || '08:00');
   const [closeHourInput, setCloseHourInput] = useState(storeSettings.closeHour || '22:00');
   const [drawerCashInput, setDrawerCashInput] = useState<number>(storeSettings.drawerInitialCash ?? 200000);
-  const [showHelpModal, setShowHelpModal] = useState(false);
 
-  const handleSaveOperational = (e: React.FormEvent) => {
+  const handleSaveHours = (e: React.FormEvent) => {
     e.preventDefault();
     updateStoreSettings({
       openHour: openHourInput,
       closeHour: closeHourInput,
+    });
+    showToast('Jam operasional berhasil disimpan', 'success');
+  };
+
+  const handleSaveDrawerCash = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateStoreSettings({
       drawerInitialCash: drawerCashInput,
     });
-    showToast('Pengaturan jam operasional & modal awal laci berhasil disimpan', 'success');
+    showToast(`Modal awal laci kasir diperbarui: Rp ${drawerCashInput.toLocaleString('id-ID')}`, 'success');
   };
 
   const isKdsActive = storeSettings.enableKitchenDisplay ?? storeSettings.kdsEnabled ?? true;
@@ -218,9 +223,6 @@ export const PengaturanView: React.FC = () => {
           <h1 className="text-xl sm:text-2xl font-bold text-[#1c1c19] tracking-tight">
             Pengaturan Sistem Outlet
           </h1>
-          <p className="text-xs text-[#524344] mt-0.5">
-            Konfigurasi jam kerja, kontrol modul fitur, notifikasi suara, dan panduan operasional Rawon Gusti.
-          </p>
         </div>
       </div>
 
@@ -271,8 +273,8 @@ export const PengaturanView: React.FC = () => {
               </button>
             </div>
 
-            {/* Roller Time Picker Jam Buka & Jam Tutup serta Modal Awal Kasir */}
-            <form onSubmit={handleSaveOperational} className="space-y-3 pt-3">
+            {/* Roller Time Picker Jam Buka & Jam Tutup */}
+            <form onSubmit={handleSaveHours} className="space-y-3 pt-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <RollerTimePicker
                   label="Jam Buka Outlet"
@@ -288,39 +290,12 @@ export const PengaturanView: React.FC = () => {
                 />
               </div>
 
-              {/* Input Modal Awal Kasir di Laci */}
-              <div className="p-3 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                <div className="max-w-[65%]">
-                  <label htmlFor="drawer-cash-input" className="font-bold text-xs text-[#1c1c19] block">
-                    Modal Awal Kasir di Laci (Drawer)
-                  </label>
-                  <span className="text-[11px] text-[#524344] block mt-0.5 leading-relaxed">
-                    Nominal kas awal pecahan kecil kembalian. Masuk otomatis ke rekonsiliasi kas di Laporan.
-                  </span>
-                </div>
-                <div className="relative shrink-0 w-full sm:w-44">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#847374]">Rp</span>
-                  <input
-                    id="drawer-cash-input"
-                    type="text"
-                    inputMode="numeric"
-                    value={drawerCashInput.toLocaleString('id-ID')}
-                    onChange={(e) => {
-                      const num = parseInt(e.target.value.replace(/\D/g, ''), 10) || 0;
-                      setDrawerCashInput(num);
-                    }}
-                    className="w-full pl-9 pr-3 py-1.5 bg-white border border-[#ebe8e3] rounded-xl text-xs font-bold text-[#1c1c19] text-right focus:outline-none focus:border-[#3d1018] shadow-2xs"
-                    placeholder="200.000"
-                  />
-                </div>
-              </div>
-
               <div className="flex justify-end pt-1">
                 <button
                   type="submit"
                   className="px-4 py-2 bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
                 >
-                  Simpan Pengaturan Operasional
+                  Simpan Jam Operasional
                 </button>
               </div>
             </form>
@@ -405,19 +380,57 @@ export const PengaturanView: React.FC = () => {
                 <option value="Bar Minuman">Bar Minuman</option>
               </select>
             </div>
-
-            {/* Status Info Speaker */}
-            <div className="p-3 bg-[#fcf9f4] rounded-xl border border-[#ebe8e3] flex items-center gap-2.5 text-xs text-[#524344]">
-              <span className="material-symbols-outlined text-[18px] text-[#994703]">volume_up</span>
-              <span>
-                Audio sintetis Web Audio API aktif. Suara diputar lokal pada peramban perangkat kasir/dapur tanpa internet tambahan.
-              </span>
-            </div>
           </div>
         </div>
       </div>
 
-      {/* ================= BARIS 2: MODUL FITUR OUTLET (3 KOLOM SEJAJAR 100% PERSIS / SEJEJER) ================= */}
+      {/* ================= BARIS 2: MODAL AWAL KASIR DI LACI (DRAWER TERDEDIKASI) ================= */}
+      <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs">
+        <form onSubmit={handleSaveDrawerCash} className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#3d1018] text-white flex items-center justify-center shadow-xs shrink-0 mt-0.5">
+              <span className="material-symbols-outlined text-[20px]">point_of_sale</span>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="font-bold text-sm text-[#1c1c19]">Modal Awal Kasir di Laci (Cash Drawer)</h2>
+                <span className="bg-amber-100 text-[#3d1018] text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200">
+                  Tersinkronisasi Otomatis ke Laporan
+                </span>
+              </div>
+              <p className="text-xs text-[#524344] mt-0.5 max-w-xl">
+                Nominal kas awal pecahan kecil kembalian di laci kasir. Otomatis masuk sebagai modal awal pada Rincian Transaksi Selesai di Laporan Transaksi.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0 self-end md:self-auto w-full md:w-auto">
+            <div className="relative flex-1 md:w-48">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#847374]">Rp</span>
+              <input
+                id="drawer-cash-input"
+                type="text"
+                inputMode="numeric"
+                value={drawerCashInput.toLocaleString('id-ID')}
+                onChange={(e) => {
+                  const num = parseInt(e.target.value.replace(/\D/g, ''), 10) || 0;
+                  setDrawerCashInput(num);
+                }}
+                className="w-full pl-9 pr-3 py-2 bg-[#fcf9f4] border border-[#ebe8e3] rounded-xl text-xs font-bold text-[#1c1c19] text-right focus:outline-none focus:border-[#3d1018] shadow-2xs"
+                placeholder="200.000"
+              />
+            </div>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer whitespace-nowrap"
+            >
+              Simpan Modal Laci
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* ================= BARIS 3: MODUL FITUR OUTLET (3 KOLOM SEJAJAR 100% PERSIS / SEJEJER) ================= */}
       <div>
         <div className="pb-2 mb-3 border-b border-[#ebe8e3]">
           <h2 className="font-bold text-sm text-[#1c1c19] flex items-center gap-2">
@@ -591,65 +604,6 @@ export const PengaturanView: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* ================= BARIS 3: BANTUAN & PANDUAN OPERASIONAL (FULL-WIDTH BOTTOM SECTION) ================= */}
-      <div className="bg-white p-6 rounded-2xl border border-[#ebe8e3] shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-[#ebe8e3]">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#3d1018] text-white flex items-center justify-center shadow-xs">
-              <span className="material-symbols-outlined text-[22px]">menu_book</span>
-            </div>
-            <div>
-              <h2 className="font-bold text-base text-[#1c1c19]">Bantuan &amp; Panduan Operasional</h2>
-              <p className="text-xs text-[#524344]">Petunjuk ringkas prosedur kerja outlet Rawon Gusti Surabaya</p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setShowHelpModal(true)}
-            className="px-5 py-2.5 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer self-start sm:self-auto"
-          >
-            <span className="material-symbols-outlined text-[18px]">help</span>
-            <span>Buka Pop-up Panduan Lengkap</span>
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
-          <div className="p-4 bg-[#fcf9f4] rounded-xl border border-[#ebe8e3] space-y-1.5">
-            <h3 className="font-bold text-xs text-[#3d1018] flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[16px]">point_of_sale</span>
-              <span>1. Kasir &amp; Checkout</span>
-            </h3>
-            <p className="text-[11px] text-[#524344] leading-relaxed">
-              Mulai shift dengan "Buka Kasir", proses pelunasan Tunai, QRIS, Kartu Debit, atau Pecah Pembayaran, serta cetak struk rekap transaksi saat tutup kasir.
-            </p>
-          </div>
-
-          <div className="p-4 bg-[#fcf9f4] rounded-xl border border-[#ebe8e3] space-y-1.5">
-            <h3 className="font-bold text-xs text-[#3d1018] flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[16px]">soup_kitchen</span>
-              <span>2. Alur Pesanan &amp; Dapur</span>
-            </h3>
-            <p className="text-[11px] text-[#524344] leading-relaxed">
-              Pesanan dari tamu (QR Meja) atau Kasir masuk secara real-time. Dapur memantau tiket antrean dan menandai sajian yang selesai dimasak.
-            </p>
-          </div>
-
-          <div className="p-4 bg-[#fcf9f4] rounded-xl border border-[#ebe8e3] space-y-1.5">
-            <h3 className="font-bold text-xs text-[#3d1018] flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[16px]">tune</span>
-              <span>3. Operasional &amp; Meja</span>
-            </h3>
-            <p className="text-[11px] text-[#524344] leading-relaxed">
-              Atur ketersediaan menu habis/tersedia, atur penggabungan meja beruntun, serta tutup sementara saat hari libur melalui kendali Force Close.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Pop-up Dialog Bantuan Operasional (Terpusat) */}
-      <HelpModal isOpen={showHelpModal} onClose={() => setShowHelpModal(false)} />
     </div>
   );
 };

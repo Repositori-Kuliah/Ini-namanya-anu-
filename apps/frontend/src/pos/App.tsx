@@ -103,10 +103,10 @@ const AppContent: React.FC = () => {
         </div>
       </div>
 
-      {/* Global Toast Notification */}
+      {/* Global Toast Notification (Top Center) */}
       {toast && (
-        <div className="fixed top-20 inset-x-4 sm:inset-x-auto sm:right-6 sm:w-auto z-50 bg-[#3d1018] text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-[#ffdadc]/20 animate-in slide-in-from-top-4 duration-200">
-          <span className="material-symbols-outlined text-[#fc934f] text-[20px]">
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-[#3d1018] text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-[#ffdadc]/20 max-w-[90vw] animate-in fade-in slide-in-from-top-4 duration-200">
+          <span className="material-symbols-outlined text-[#fc934f] text-[20px] shrink-0">
             {toast.type === 'success'
               ? 'check_circle'
               : toast.type === 'warning'
