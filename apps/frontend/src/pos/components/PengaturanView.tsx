@@ -14,74 +14,74 @@ const TouchTimePicker: React.FC<TouchTimePickerProps> = ({ label, value, onChang
   const h = parseInt(hStr, 10) || 0;
   const m = parseInt(mStr, 10) || 0;
 
-  const updateTime = (newH: number, newM: number) => {
+  const updateTime = (deltaHours: number, deltaMinutes: number) => {
+    let newH = h + deltaHours;
+    let newM = m + deltaMinutes;
+    if (newM >= 60) {
+      newM = 0;
+      newH += 1;
+    } else if (newM < 0) {
+      newM = 45;
+      newH -= 1;
+    }
     const validH = (newH + 24) % 24;
-    const validM = (newM + 60) % 60;
-    const formatted = `${String(validH).padStart(2, '0')}:${String(validM).padStart(2, '0')}`;
+    const formatted = `${String(validH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
     onChange(formatted);
   };
 
   return (
-    <div className="bg-[#fcf9f4] p-3 rounded-xl border border-[#ebe8e3] space-y-2">
-      <span className="text-xs font-bold text-[#1c1c19] block text-center sm:text-left">{label}</span>
-      <div className="flex items-center justify-center gap-3 py-1">
-        {/* Kontrol Jam */}
-        <div className="flex flex-col items-center">
-          <button
-            type="button"
-            onClick={() => updateTime(h + 1, m)}
-            className="w-8 h-7 rounded-lg bg-white border border-[#ebe8e3] hover:bg-[#3d1018] hover:text-white text-[#1c1c19] flex items-center justify-center font-bold text-xs cursor-pointer transition-colors shadow-2xs"
-            aria-label="Tambah jam"
-          >
-            ▲
-          </button>
-          <span className="font-mono text-xl font-bold text-[#3d1018] my-1 tabular-nums">
-            {String(h).padStart(2, '0')}
-          </span>
-          <button
-            type="button"
-            onClick={() => updateTime(h - 1, m)}
-            className="w-8 h-7 rounded-lg bg-white border border-[#ebe8e3] hover:bg-[#3d1018] hover:text-white text-[#1c1c19] flex items-center justify-center font-bold text-xs cursor-pointer transition-colors shadow-2xs"
-            aria-label="Kurang jam"
-          >
-            ▼
-          </button>
-        </div>
-
-        <span className="text-xl font-bold text-[#3d1018] -mt-1">:</span>
-
-        {/* Kontrol Menit */}
-        <div className="flex flex-col items-center">
-          <button
-            type="button"
-            onClick={() => updateTime(h, m + 15 >= 60 ? 0 : m + 15)}
-            className="w-8 h-7 rounded-lg bg-white border border-[#ebe8e3] hover:bg-[#3d1018] hover:text-white text-[#1c1c19] flex items-center justify-center font-bold text-xs cursor-pointer transition-colors shadow-2xs"
-            aria-label="Tambah menit"
-          >
-            ▲
-          </button>
-          <span className="font-mono text-xl font-bold text-[#3d1018] my-1 tabular-nums">
-            {String(m).padStart(2, '0')}
-          </span>
-          <button
-            type="button"
-            onClick={() => updateTime(h, m - 15 < 0 ? 45 : m - 15)}
-            className="w-8 h-7 rounded-lg bg-white border border-[#ebe8e3] hover:bg-[#3d1018] hover:text-white text-[#1c1c19] flex items-center justify-center font-bold text-xs cursor-pointer transition-colors shadow-2xs"
-            aria-label="Kurang menit"
-          >
-            ▼
-          </button>
-        </div>
+    <div className="bg-[#fcf9f4] p-3 rounded-xl border border-[#ebe8e3] flex flex-col justify-between">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs font-bold text-[#1c1c19]">{label}</span>
+        <span className="font-mono text-base font-bold text-[#3d1018] tabular-nums bg-white px-2 py-0.5 rounded border border-[#ebe8e3]">
+          {value}
+        </span>
       </div>
 
-      {/* Pilihan Cepat Jam Populer */}
+      {/* Kontrol Penambah/Pengurang Cepat */}
+      <div className="flex items-center justify-center gap-2 my-1.5">
+        <button
+          type="button"
+          onClick={() => updateTime(-1, 0)}
+          className="px-2 py-1 rounded bg-white hover:bg-[#3d1018] hover:text-white border border-[#ebe8e3] text-xs font-bold text-[#1c1c19] transition-colors cursor-pointer shadow-2xs"
+          title="Kurang 1 Jam"
+        >
+          -1 Jam
+        </button>
+        <button
+          type="button"
+          onClick={() => updateTime(0, -15)}
+          className="px-2 py-1 rounded bg-white hover:bg-[#3d1018] hover:text-white border border-[#ebe8e3] text-xs font-bold text-[#1c1c19] transition-colors cursor-pointer shadow-2xs"
+          title="Kurang 15 Menit"
+        >
+          -15m
+        </button>
+        <button
+          type="button"
+          onClick={() => updateTime(0, 15)}
+          className="px-2 py-1 rounded bg-white hover:bg-[#3d1018] hover:text-white border border-[#ebe8e3] text-xs font-bold text-[#1c1c19] transition-colors cursor-pointer shadow-2xs"
+          title="Tambah 15 Menit"
+        >
+          +15m
+        </button>
+        <button
+          type="button"
+          onClick={() => updateTime(1, 0)}
+          className="px-2 py-1 rounded bg-white hover:bg-[#3d1018] hover:text-white border border-[#ebe8e3] text-xs font-bold text-[#1c1c19] transition-colors cursor-pointer shadow-2xs"
+          title="Tambah 1 Jam"
+        >
+          +1 Jam
+        </button>
+      </div>
+
+      {/* Preset Jam Populer */}
       <div className="flex items-center justify-center gap-1.5 flex-wrap pt-1 border-t border-[#ebe8e3]">
         {presets.map((timeStr) => (
           <button
             key={timeStr}
             type="button"
             onClick={() => onChange(timeStr)}
-            className={`px-2 py-0.5 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+            className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer ${
               value === timeStr
                 ? 'bg-[#3d1018] text-white shadow-2xs'
                 : 'bg-white text-[#524344] hover:bg-[#ebe8e3] border border-[#ebe8e3]'
@@ -128,304 +128,353 @@ export const PengaturanView: React.FC = () => {
             Pengaturan Sistem Outlet
           </h1>
           <p className="text-xs text-[#524344] mt-0.5">
-            Konfigurasi operasional, kontrol self-ordering, modul sistem, dan suara notifikasi restoran.
+            Konfigurasi jam kerja, kontrol modul fitur, notifikasi suara, dan panduan operasional Rawon Gusti.
           </p>
         </div>
       </div>
 
-      {/* Grid Kartu Pengaturan Utama (Responsif 2 Kolom) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
-        {/* Card 1: Self Ordering Sendiri */}
-        <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs space-y-4">
-          <div className="flex items-center gap-2.5 pb-2 border-b border-[#ebe8e3]">
-            <div className="w-8 h-8 rounded-lg bg-[#3d1018] text-white flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px]">qr_code_scanner</span>
-            </div>
-            <div>
-              <h2 className="font-bold text-sm text-[#1c1c19]">Sistem Pembayaran &amp; Self-Ordering Meja</h2>
-              <p className="text-[11px] text-[#524344]">Kendali pesanan mandiri tamu lewat QR meja</p>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3]">
-            <div className="max-w-[80%]">
-              <span className="font-bold text-xs text-[#1c1c19] block">
-                Pesanan Mandiri Tamu (Self-Ordering)
-              </span>
-              <span className="text-[11px] text-[#524344] leading-relaxed block mt-0.5">
-                {storeSettings.selfOrderEnabled
-                  ? 'Aktif: Pelanggan dapat langsung memesan makanan dari QR meja.'
-                  : 'Nonaktif: Pelanggan diarahkan memanggil pelayan manual.'}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                const next = !storeSettings.selfOrderEnabled;
-                updateStoreSettings({ selfOrderEnabled: next });
-                showToast(`Self ordering ${next ? 'diaktifkan' : 'dinonaktifkan (mode panggil pelayan)'}`, 'info');
-              }}
-              className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
-                storeSettings.selfOrderEnabled ? 'bg-[#3d1018]' : 'bg-[#e0dcd8]'
-              }`}
-              aria-pressed={storeSettings.selfOrderEnabled}
-            >
-              <div
-                className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
-                  storeSettings.selfOrderEnabled ? 'translate-x-6' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
-        </div>
-
-        {/* Card 2: Jam Operasional Disatukan dengan Force Close */}
-        <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs space-y-4">
-          <div className="flex items-center gap-2.5 pb-2 border-b border-[#ebe8e3]">
-            <div className="w-8 h-8 rounded-lg bg-[#3d1018] text-white flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px]">schedule</span>
-            </div>
-            <div>
-              <h2 className="font-bold text-sm text-[#1c1c19]">Jam Buka &amp; Operasional Harian</h2>
-              <p className="text-[11px] text-[#524344]">Jadwal buka outlet dan kontrol tutup sementara (force close)</p>
-            </div>
-          </div>
-
-          {/* Toggle Saklar Force Close */}
-          <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3]">
-            <div className="max-w-[80%]">
-              <span className="font-bold text-xs text-[#1c1c19] block">
-                Tutup Sementara Outlet (Force Close)
-              </span>
-              <span className="text-[11px] text-[#524344] leading-relaxed block mt-0.5">
-                {storeSettings.forceClose
-                  ? 'Outlet sedang ditutup sementara (hari libur/khusus). Tamu tidak dapat memesan.'
-                  : 'Outlet buka normal sesuai jadwal jam operasional harian.'}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                const next = !storeSettings.forceClose;
-                updateStoreSettings({ forceClose: next });
-                showToast(`Status outlet: ${next ? 'Tutup Sementara' : 'Buka Normal'}`, next ? 'warning' : 'success');
-              }}
-              className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
-                storeSettings.forceClose ? 'bg-[#994703]' : 'bg-[#e0dcd8]'
-              }`}
-              aria-pressed={storeSettings.forceClose}
-            >
-              <div
-                className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
-                  storeSettings.forceClose ? 'translate-x-6' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
-
-          {/* Touch-Friendly Visual Time Picker */}
-          <form onSubmit={handleSaveHours} className="space-y-3 pt-1">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <TouchTimePicker
-                label="Jam Buka Outlet"
-                value={openHourInput}
-                onChange={setOpenHourInput}
-                presets={['07:00', '08:00', '09:00', '10:00']}
-              />
-              <TouchTimePicker
-                label="Jam Tutup Outlet"
-                value={closeHourInput}
-                onChange={setCloseHourInput}
-                presets={['20:00', '21:00', '22:00', '23:00']}
-              />
+      {/* ================= BARIS 1: OPERASIONAL UTAMA OUTLET (2 KOLOM SEJAJAR BERIMBANG) ================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
+        {/* Kartu Kiri: Jam Buka & Operasional Harian */}
+        <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs flex flex-col justify-between space-y-4">
+          <div>
+            <div className="flex items-center gap-2.5 pb-2 border-b border-[#ebe8e3]">
+              <div className="w-8 h-8 rounded-lg bg-[#3d1018] text-white flex items-center justify-center shadow-xs">
+                <span className="material-symbols-outlined text-[18px]">schedule</span>
+              </div>
+              <div>
+                <h2 className="font-bold text-sm text-[#1c1c19]">Jam Buka &amp; Operasional Harian</h2>
+                <p className="text-[11px] text-[#524344]">Jadwal aktif pemesanan outlet &amp; status hari libur</p>
+              </div>
             </div>
 
-            <div className="flex justify-end pt-1">
+            {/* Saklar Force Close */}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3] mt-3">
+              <div className="max-w-[78%]">
+                <span className="font-bold text-xs text-[#1c1c19] block">
+                  Tutup Sementara Outlet (Force Close)
+                </span>
+                <span className="text-[11px] text-[#524344] leading-relaxed block mt-0.5">
+                  {storeSettings.forceClose
+                    ? 'Outlet tutup sementara. Pemesanan mandiri meja dinonaktifkan.'
+                    : 'Outlet buka normal sesuai jadwal harian di bawah.'}
+                </span>
+              </div>
               <button
-                type="submit"
-                className="px-4 py-2 bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+                type="button"
+                onClick={() => {
+                  const next = !storeSettings.forceClose;
+                  updateStoreSettings({ forceClose: next });
+                  showToast(`Status outlet: ${next ? 'Tutup Sementara' : 'Buka Normal'}`, next ? 'warning' : 'success');
+                }}
+                className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
+                  storeSettings.forceClose ? 'bg-[#994703]' : 'bg-[#e0dcd8]'
+                }`}
+                aria-pressed={storeSettings.forceClose}
               >
-                Simpan Jam Operasional
+                <div
+                  className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
+                    storeSettings.forceClose ? 'translate-x-6' : 'translate-x-0'
+                  }`}
+                />
               </button>
             </div>
-          </form>
-        </div>
 
-        {/* Card 3: Suara Notifikasi & Pilihan Area Bagian */}
-        <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs space-y-4">
-          <div className="flex items-center gap-2.5 pb-2 border-b border-[#ebe8e3]">
-            <div className="w-8 h-8 rounded-lg bg-[#3d1018] text-white flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px]">notifications_active</span>
-            </div>
-            <div>
-              <h2 className="font-bold text-sm text-[#1c1c19]">Suara &amp; Audio Notifikasi</h2>
-              <p className="text-[11px] text-[#524344]">Peringatan suara pesanan masuk dan filter bagian dapur</p>
-            </div>
-          </div>
+            {/* Time Picker Jam Buka & Jam Tutup */}
+            <form onSubmit={handleSaveHours} className="space-y-3 pt-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <TouchTimePicker
+                  label="Jam Buka Outlet"
+                  value={openHourInput}
+                  onChange={setOpenHourInput}
+                  presets={['07:00', '08:00', '09:00', '10:00']}
+                />
+                <TouchTimePicker
+                  label="Jam Tutup Outlet"
+                  value={closeHourInput}
+                  onChange={setCloseHourInput}
+                  presets={['20:00', '21:00', '22:00', '23:00']}
+                />
+              </div>
 
-          {/* Toggle Audio Ding */}
-          <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3]">
-            <div className="max-w-[75%]">
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-xs text-[#1c1c19]">
-                  Audio Ding Notifikasi
-                </span>
+              <div className="flex justify-end pt-1">
                 <button
-                  type="button"
-                  onClick={() => {
-                    playDingSound();
-                    showToast('Uji coba suara chime berhasil', 'info');
-                  }}
-                  className="px-2 py-0.5 rounded-md bg-[#ebe8e3] hover:bg-[#d7c2c2] text-[10px] font-bold text-[#3d1018] cursor-pointer transition-colors"
+                  type="submit"
+                  className="px-4 py-2 bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
                 >
-                  Uji Coba Suara
+                  Simpan Jam Operasional
                 </button>
               </div>
-              <span className="text-[11px] text-[#524344] leading-relaxed block mt-0.5">
-                Berbunyi otomatis saat ada pesanan baru atau panggilan pelayan dari meja.
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                const next = !storeSettings.soundEnabled;
-                updateStoreSettings({ soundEnabled: next });
-                showToast(`Suara notifikasi ${next ? 'diaktifkan' : 'dimatikan'}`);
-              }}
-              className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
-                storeSettings.soundEnabled ? 'bg-[#3d1018]' : 'bg-[#e0dcd8]'
-              }`}
-              aria-pressed={storeSettings.soundEnabled}
-            >
-              <div
-                className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
-                  storeSettings.soundEnabled ? 'translate-x-6' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
-
-          {/* Pilihan Area Stasiun Dapur */}
-          <div className="p-3.5 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <span className="font-bold text-xs text-[#1c1c19] block">
-                Area Dapur / Stasiun Pantau
-              </span>
-              <span className="text-[11px] text-[#524344] block mt-0.5">
-                Pilih stasiun default untuk pemfilteran tiket dan notifikasi.
-              </span>
-            </div>
-            <select
-              value={storeSettings.soundStation || 'Semua Bagian'}
-              onChange={(e) => {
-                updateStoreSettings({ soundStation: e.target.value });
-                showToast(`Area stasiun diatur ke: ${e.target.value}`, 'info');
-              }}
-              className="bg-white border border-[#ebe8e3] rounded-xl px-3 py-1.5 text-xs font-bold text-[#1c1c19] outline-none cursor-pointer focus:border-[#3d1018]"
-            >
-              <option value="Semua Bagian">Semua Bagian</option>
-              <option value="Dapur Utama (Makanan)">Dapur Utama (Makanan)</option>
-              <option value="Bar Minuman">Bar Minuman</option>
-            </select>
+            </form>
           </div>
         </div>
 
-        {/* Card 4: Pantau Pesanan (KDS Dapur) */}
-        <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs space-y-4">
-          <div className="flex items-center gap-2.5 pb-2 border-b border-[#ebe8e3]">
-            <div className="w-8 h-8 rounded-lg bg-[#3d1018] text-white flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px]">soup_kitchen</span>
+        {/* Kartu Kanan: Suara & Audio Notifikasi */}
+        <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs flex flex-col justify-between space-y-4">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2.5 pb-2 border-b border-[#ebe8e3]">
+              <div className="w-8 h-8 rounded-lg bg-[#3d1018] text-white flex items-center justify-center shadow-xs">
+                <span className="material-symbols-outlined text-[18px]">notifications_active</span>
+              </div>
+              <div>
+                <h2 className="font-bold text-sm text-[#1c1c19]">Suara &amp; Audio Notifikasi</h2>
+                <p className="text-[11px] text-[#524344]">Pengingat nada suara lonceng pesanan baru &amp; rute stasiun</p>
+              </div>
             </div>
-            <div>
-              <h2 className="font-bold text-sm text-[#1c1c19]">Pantau Pesanan (KDS Dapur)</h2>
-              <p className="text-[11px] text-[#524344]">Kendali visibilitas modul Kitchen Display System di sidebar</p>
-            </div>
-          </div>
 
-          <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3]">
-            <div className="max-w-[80%]">
-              <span className="font-bold text-xs text-[#1c1c19] block">
-                {isKdsActive ? 'Modul KDS Aktif' : 'Modul KDS Nonaktif'}
-              </span>
-              <span className="text-[11px] text-[#524344] leading-relaxed block mt-0.5">
-                {isKdsActive
-                  ? 'Aktif: Tab Pantau Pesanan muncul di navigasi samping untuk alur digital.'
-                  : 'Nonaktif: Dapur menggunakan alur pesanan manual/cetak langsung (tab disembunyikan).'}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                const next = !isKdsActive;
-                updateStoreSettings({
-                  enableKitchenDisplay: next,
-                  kdsEnabled: next,
-                });
-                showToast(`Modul Pantau Pesanan (KDS) ${next ? 'diaktifkan' : 'dinonaktifkan'}`);
-              }}
-              className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
-                isKdsActive ? 'bg-[#3d1018]' : 'bg-[#e0dcd8]'
-              }`}
-              aria-pressed={isKdsActive}
-            >
-              <div
-                className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
-                  isKdsActive ? 'translate-x-6' : 'translate-x-0'
+            {/* Toggle Saklar Audio Ding */}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3]">
+              <div className="max-w-[75%]">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-xs text-[#1c1c19]">
+                    Audio Ding Notifikasi
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playDingSound();
+                      showToast('Uji coba suara chime berhasil', 'info');
+                    }}
+                    className="px-2 py-0.5 rounded-md bg-white border border-[#ebe8e3] hover:bg-[#ebe8e3] text-[10px] font-bold text-[#3d1018] cursor-pointer transition-colors shadow-2xs"
+                  >
+                    Uji Coba Suara
+                  </button>
+                </div>
+                <span className="text-[11px] text-[#524344] leading-relaxed block mt-0.5">
+                  Berbunyi otomatis saat ada tiket pesanan masuk atau panggilan pelayan meja.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !storeSettings.soundEnabled;
+                  updateStoreSettings({ soundEnabled: next });
+                  showToast(`Suara notifikasi ${next ? 'diaktifkan' : 'dimatikan'}`);
+                }}
+                className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
+                  storeSettings.soundEnabled ? 'bg-[#3d1018]' : 'bg-[#e0dcd8]'
                 }`}
-              />
-            </button>
-          </div>
-        </div>
+                aria-pressed={storeSettings.soundEnabled}
+              >
+                <div
+                  className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
+                    storeSettings.soundEnabled ? 'translate-x-6' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
 
-        {/* Card 5: Pelacakan Stok Bahan Baku Otomatis (Full Width across 2 cols) */}
-        <div className="md:col-span-2 bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs space-y-4">
-          <div className="flex items-center gap-2.5 pb-2 border-b border-[#ebe8e3]">
-            <div className="w-8 h-8 rounded-lg bg-[#3d1018] text-white flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px]">inventory</span>
+            {/* Pilihan Area Stasiun Dapur */}
+            <div className="p-3.5 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <span className="font-bold text-xs text-[#1c1c19] block">
+                  Area Dapur / Stasiun Pantau
+                </span>
+                <span className="text-[11px] text-[#524344] block mt-0.5">
+                  Pilih stasiun default untuk pemfilteran tiket dan nada notifikasi.
+                </span>
+              </div>
+              <select
+                value={storeSettings.soundStation || 'Semua Bagian'}
+                onChange={(e) => {
+                  updateStoreSettings({ soundStation: e.target.value });
+                  showToast(`Area stasiun diatur ke: ${e.target.value}`, 'info');
+                }}
+                className="bg-white border border-[#ebe8e3] rounded-xl px-3 py-2 text-xs font-bold text-[#1c1c19] outline-none cursor-pointer focus:border-[#3d1018]"
+              >
+                <option value="Semua Bagian">Semua Bagian</option>
+                <option value="Dapur Utama (Makanan)">Dapur Utama (Makanan)</option>
+                <option value="Bar Minuman">Bar Minuman</option>
+              </select>
             </div>
-            <div>
-              <h2 className="font-bold text-sm text-[#1c1c19]">Pelacakan Stok Bahan Baku Otomatis</h2>
-              <p className="text-[11px] text-[#524344]">Pengurangan stok otomatis saat transaksi &amp; tab kelola bahan makanan</p>
-            </div>
-          </div>
 
-          <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3]">
-            <div className="max-w-[80%]">
-              <span className="font-bold text-xs text-[#1c1c19] block">
-                {isInventoryActive ? 'Pelacakan Bahan Baku Aktif' : 'Pelacakan Bahan Baku Nonaktif'}
-              </span>
-              <span className="text-[11px] text-[#524344] leading-relaxed block mt-0.5">
-                {isInventoryActive
-                  ? 'Aktif: Tab "Stok Bahan Baku" tampil di Kelola Menu dan stok terpotong otomatis saat checkout.'
-                  : 'Nonaktif: Mode manual murni melalui saklar Tersedia / Habis di katalog menu (tab bahan disembunyikan).'}
+            {/* Status Info Speaker */}
+            <div className="p-3 bg-[#fcf9f4] rounded-xl border border-[#ebe8e3] flex items-center gap-2.5 text-xs text-[#524344]">
+              <span className="material-symbols-outlined text-[18px] text-[#994703]">volume_up</span>
+              <span>
+                Audio sintetis Web Audio API aktif. Suara diputar lokal pada peramban perangkat kasir/dapur tanpa internet tambahan.
               </span>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                const next = !isInventoryActive;
-                updateStoreSettings({
-                  enableInventoryTracking: next,
-                  autoInventoryDeduction: next,
-                });
-                showToast(`Pelacakan Stok Bahan Baku ${next ? 'diaktifkan' : 'dinonaktifkan (mode manual)'}`);
-              }}
-              className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
-                isInventoryActive ? 'bg-[#3d1018]' : 'bg-[#e0dcd8]'
-              }`}
-              aria-pressed={isInventoryActive}
-            >
-              <div
-                className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
-                  isInventoryActive ? 'translate-x-6' : 'translate-x-0'
-                }`}
-              />
-            </button>
           </div>
         </div>
       </div>
 
-      {/* Bagian Bawah: Bantuan & Panduan Operasional (Full-Width Bottom Section) */}
+      {/* ================= BARIS 2: MODUL FITUR OUTLET (3 KOLOM SEJAJAR 100% PERSIS / SEJEJER) ================= */}
+      <div>
+        <div className="pb-2 mb-3 border-b border-[#ebe8e3]">
+          <h2 className="font-bold text-sm text-[#1c1c19] flex items-center gap-2">
+            <span className="material-symbols-outlined text-[18px] text-[#994703]">toggle_on</span>
+            <span>Kendali Saklar Modul Fitur Restoran</span>
+          </h2>
+          <p className="text-[11px] text-[#524344]">Hidupkan atau matikan modul sistem sesuai alur operasional cabang</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">
+          {/* Modul 1: Self-Ordering Meja */}
+          <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs flex flex-col justify-between space-y-4">
+            <div>
+              <div className="flex items-center gap-2.5 pb-2 border-b border-[#ebe8e3]">
+                <div className="w-8 h-8 rounded-lg bg-[#3d1018] text-white flex items-center justify-center shadow-xs">
+                  <span className="material-symbols-outlined text-[18px]">qr_code_scanner</span>
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-[#1c1c19]">Pemesanan Mandiri Tamu</h3>
+                  <p className="text-[11px] text-[#524344]">Self-Ordering QR Meja</p>
+                </div>
+              </div>
+
+              <div className="py-3">
+                <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold mb-2 ${
+                  storeSettings.selfOrderEnabled
+                    ? 'bg-amber-100 text-[#3d1018] border border-amber-200'
+                    : 'bg-stone-100 text-[#847374]'
+                }`}>
+                  {storeSettings.selfOrderEnabled ? 'Status: Aktif' : 'Status: Nonaktif'}
+                </span>
+                <p className="text-xs text-[#524344] leading-relaxed">
+                  {storeSettings.selfOrderEnabled
+                    ? 'Pelanggan dapat memindai stiker QR di meja untuk memesan hidangan dan menyelesaikan pembayaran mandiri.'
+                    : 'Pemesanan digital ditutup; tamu diarahkan memanggil pelayan manual untuk pemesanan di meja.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-[#ebe8e3] flex items-center justify-between">
+              <span className="text-xs font-bold text-[#1c1c19]">Aktifkan Modul</span>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !storeSettings.selfOrderEnabled;
+                  updateStoreSettings({ selfOrderEnabled: next });
+                  showToast(`Self ordering ${next ? 'diaktifkan' : 'dinonaktifkan (mode panggil pelayan)'}`, 'info');
+                }}
+                className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
+                  storeSettings.selfOrderEnabled ? 'bg-[#3d1018]' : 'bg-[#e0dcd8]'
+                }`}
+                aria-pressed={storeSettings.selfOrderEnabled}
+              >
+                <div
+                  className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
+                    storeSettings.selfOrderEnabled ? 'translate-x-6' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* Modul 2: Pantau Pesanan (KDS Dapur) */}
+          <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs flex flex-col justify-between space-y-4">
+            <div>
+              <div className="flex items-center gap-2.5 pb-2 border-b border-[#ebe8e3]">
+                <div className="w-8 h-8 rounded-lg bg-[#3d1018] text-white flex items-center justify-center shadow-xs">
+                  <span className="material-symbols-outlined text-[18px]">soup_kitchen</span>
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-[#1c1c19]">Pantau Pesanan Dapur</h3>
+                  <p className="text-[11px] text-[#524344]">Kitchen Display System (KDS)</p>
+                </div>
+              </div>
+
+              <div className="py-3">
+                <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold mb-2 ${
+                  isKdsActive
+                    ? 'bg-amber-100 text-[#3d1018] border border-amber-200'
+                    : 'bg-stone-100 text-[#847374]'
+                }`}>
+                  {isKdsActive ? 'Status: Aktif' : 'Status: Nonaktif'}
+                </span>
+                <p className="text-xs text-[#524344] leading-relaxed">
+                  {isKdsActive
+                    ? 'Tab "Pantau Pesanan" muncul di navigasi samping kasir/dapur untuk memantau tiket antrean memasak secara digital.'
+                    : 'Modul disembunyikan dari sidebar jika dapur memilih alur pesanan manual atau mengandalkan tiket cetak.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-[#ebe8e3] flex items-center justify-between">
+              <span className="text-xs font-bold text-[#1c1c19]">Aktifkan Modul</span>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !isKdsActive;
+                  updateStoreSettings({
+                    enableKitchenDisplay: next,
+                    kdsEnabled: next,
+                  });
+                  showToast(`Modul Pantau Pesanan (KDS) ${next ? 'diaktifkan' : 'dinonaktifkan'}`);
+                }}
+                className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
+                  isKdsActive ? 'bg-[#3d1018]' : 'bg-[#e0dcd8]'
+                }`}
+                aria-pressed={isKdsActive}
+              >
+                <div
+                  className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
+                    isKdsActive ? 'translate-x-6' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* Modul 3: Pelacakan Stok Bahan Baku Otomatis */}
+          <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs flex flex-col justify-between space-y-4">
+            <div>
+              <div className="flex items-center gap-2.5 pb-2 border-b border-[#ebe8e3]">
+                <div className="w-8 h-8 rounded-lg bg-[#3d1018] text-white flex items-center justify-center shadow-xs">
+                  <span className="material-symbols-outlined text-[18px]">inventory</span>
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-[#1c1c19]">Pelacakan Bahan Baku</h3>
+                  <p className="text-[11px] text-[#524344]">Inventarisasi &amp; Restock Bahan</p>
+                </div>
+              </div>
+
+              <div className="py-3">
+                <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold mb-2 ${
+                  isInventoryActive
+                    ? 'bg-amber-100 text-[#3d1018] border border-amber-200'
+                    : 'bg-stone-100 text-[#847374]'
+                }`}>
+                  {isInventoryActive ? 'Status: Aktif' : 'Status: Nonaktif'}
+                </span>
+                <p className="text-xs text-[#524344] leading-relaxed">
+                  {isInventoryActive
+                    ? 'Tab "Stok Bahan Baku" aktif di Kelola Menu dan gramasi daging/bumbu terpotong otomatis setiap kali kasir menyelesaikan transaksi.'
+                    : 'Mode manual murni. Tab bahan baku disembunyikan; stok dikontrol kasir lewat tombol "Habis/Tersedia" di menu.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-[#ebe8e3] flex items-center justify-between">
+              <span className="text-xs font-bold text-[#1c1c19]">Aktifkan Modul</span>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !isInventoryActive;
+                  updateStoreSettings({
+                    enableInventoryTracking: next,
+                    autoInventoryDeduction: next,
+                  });
+                  showToast(`Pelacakan Stok Bahan Baku ${next ? 'diaktifkan' : 'dinonaktifkan (mode manual)'}`);
+                }}
+                className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
+                  isInventoryActive ? 'bg-[#3d1018]' : 'bg-[#e0dcd8]'
+                }`}
+                aria-pressed={isInventoryActive}
+              >
+                <div
+                  className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
+                    isInventoryActive ? 'translate-x-6' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ================= BARIS 3: BANTUAN & PANDUAN OPERASIONAL (FULL-WIDTH BOTTOM SECTION) ================= */}
       <div className="bg-white p-6 rounded-2xl border border-[#ebe8e3] shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-[#ebe8e3]">
           <div className="flex items-center gap-3">

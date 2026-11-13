@@ -58,6 +58,30 @@ export const CheckoutView: React.FC = () => {
   const [physicalCashInput, setPhysicalCashInput] = useState<number>(cashierShift.totalLaci);
   const [shiftClosedSummary, setShiftClosedSummary] = useState<{ difference: number } | null>(null);
 
+  const handleBukaNumpad = (val: string) => {
+    const cur = String(modalAwalInput || 0);
+    const nextStr = cur === '0' ? val : cur + val;
+    setModalAwalInput(parseInt(nextStr, 10) || 0);
+  };
+
+  const handleBukaBackspace = () => {
+    const cur = String(modalAwalInput || 0);
+    if (cur.length <= 1) setModalAwalInput(0);
+    else setModalAwalInput(parseInt(cur.slice(0, -1), 10) || 0);
+  };
+
+  const handlePhysicalCashNumpad = (val: string) => {
+    const cur = String(physicalCashInput || 0);
+    const nextStr = cur === '0' ? val : cur + val;
+    setPhysicalCashInput(parseInt(nextStr, 10) || 0);
+  };
+
+  const handlePhysicalCashBackspace = () => {
+    const cur = String(physicalCashInput || 0);
+    if (cur.length <= 1) setPhysicalCashInput(0);
+    else setPhysicalCashInput(parseInt(cur.slice(0, -1), 10) || 0);
+  };
+
   const filteredBills = bills.filter(
     (b) =>
       b.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1040,6 +1064,53 @@ export const CheckoutView: React.FC = () => {
                   className="w-full bg-transparent font-bold text-base text-[#3d1018] outline-none tabular-nums"
                 />
               </div>
+
+              {/* Preset Pilihan Cepat Modal */}
+              <div className="flex items-center gap-1.5 flex-wrap pt-2">
+                {[0, 100000, 200000, 500000].map((nominal) => (
+                  <button
+                    key={nominal}
+                    type="button"
+                    onClick={() => setModalAwalInput(nominal)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${
+                      modalAwalInput === nominal
+                        ? 'bg-[#3d1018] text-white border-[#3d1018]'
+                        : 'bg-[#fcf9f4] border-[#ebe8e3] text-[#1c1c19] hover:bg-[#ebe8e3]'
+                    }`}
+                  >
+                    {nominal === 0 ? 'Rp 0 (Tanpa Modal)' : `Rp ${(nominal / 1000).toLocaleString('id-ID')}rb`}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setModalAwalInput(0)}
+                  className="px-2 py-1 rounded-lg text-xs font-bold bg-[#fcf9f4] border border-[#ebe8e3] text-red-700 hover:bg-red-50 cursor-pointer"
+                >
+                  C
+                </button>
+              </div>
+
+              {/* Keypad Layar Sentuh untuk Tablet & Mobile */}
+              <div className="grid grid-cols-4 gap-1.5 pt-2">
+                {['1', '2', '3', '000', '4', '5', '6', '00', '7', '8', '9'].map((val) => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => handleBukaNumpad(val)}
+                    className="h-10 rounded-xl bg-[#fcf9f4] hover:bg-[#ebe8e3] font-bold text-xs text-[#1c1c19] border border-[#ebe8e3] cursor-pointer active:scale-95 transition-all shadow-2xs"
+                  >
+                    {val}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={handleBukaBackspace}
+                  className="h-10 rounded-xl bg-[#f0ede9] text-[#3d1018] hover:bg-[#e0dcd8] font-bold border border-[#ebe8e3] flex items-center justify-center cursor-pointer active:scale-95 transition-all shadow-2xs"
+                  aria-label="Hapus digit"
+                >
+                  <span className="material-symbols-outlined text-[18px]">backspace</span>
+                </button>
+              </div>
             </div>
 
             <div className="flex gap-2 pt-2">
@@ -1131,6 +1202,67 @@ export const CheckoutView: React.FC = () => {
                   onChange={(e) => setPhysicalCashInput(parseInt(e.target.value, 10) || 0)}
                   className="w-full bg-transparent font-bold text-base text-[#3d1018] outline-none tabular-nums"
                 />
+              </div>
+
+              {/* Tombol Cepat Rekonsiliasi & Pecahan */}
+              <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                <button
+                  type="button"
+                  onClick={() => setPhysicalCashInput(cashierShift.totalLaci)}
+                  className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[#fcf9f4] border border-[#3d1018] text-[#3d1018] hover:bg-[#3d1018] hover:text-white transition-colors cursor-pointer"
+                >
+                  Pas Sesuai Sistem
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPhysicalCashInput((p) => p + 10000)}
+                  className="px-2 py-1 rounded-lg text-xs font-bold bg-[#fcf9f4] border border-[#ebe8e3] text-[#1c1c19] hover:bg-[#ebe8e3] cursor-pointer"
+                >
+                  +10rb
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPhysicalCashInput((p) => p + 50000)}
+                  className="px-2 py-1 rounded-lg text-xs font-bold bg-[#fcf9f4] border border-[#ebe8e3] text-[#1c1c19] hover:bg-[#ebe8e3] cursor-pointer"
+                >
+                  +50rb
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPhysicalCashInput((p) => p + 100000)}
+                  className="px-2 py-1 rounded-lg text-xs font-bold bg-[#fcf9f4] border border-[#ebe8e3] text-[#1c1c19] hover:bg-[#ebe8e3] cursor-pointer"
+                >
+                  +100rb
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPhysicalCashInput(0)}
+                  className="px-2 py-1 rounded-lg text-xs font-bold bg-[#fcf9f4] border border-[#ebe8e3] text-red-700 hover:bg-red-50 cursor-pointer"
+                >
+                  C
+                </button>
+              </div>
+
+              {/* Keypad Layar Sentuh Tablet/Mobile */}
+              <div className="grid grid-cols-4 gap-1.5 pt-1.5">
+                {['1', '2', '3', '000', '4', '5', '6', '00', '7', '8', '9'].map((val) => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => handlePhysicalCashNumpad(val)}
+                    className="h-9 rounded-xl bg-[#fcf9f4] hover:bg-[#ebe8e3] font-bold text-xs text-[#1c1c19] border border-[#ebe8e3] cursor-pointer active:scale-95 transition-all shadow-2xs"
+                  >
+                    {val}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={handlePhysicalCashBackspace}
+                  className="h-9 rounded-xl bg-[#f0ede9] text-[#3d1018] hover:bg-[#e0dcd8] font-bold border border-[#ebe8e3] flex items-center justify-center cursor-pointer active:scale-95 transition-all shadow-2xs"
+                  aria-label="Hapus digit"
+                >
+                  <span className="material-symbols-outlined text-[16px]">backspace</span>
+                </button>
               </div>
 
               {/* Status Selisih */}
