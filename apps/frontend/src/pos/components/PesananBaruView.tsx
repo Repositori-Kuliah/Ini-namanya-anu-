@@ -25,6 +25,7 @@ export const PesananBaruView: React.FC = () => {
     saveDraftOrder,
     toggleMenuItemAvailability,
     tables,
+    storeSettings,
   } = useApp();
 
   const [activeCategory, setActiveCategory] = useState<string>('Semua');
@@ -51,12 +52,22 @@ export const PesananBaruView: React.FC = () => {
     return item.category === activeCategory;
   });
 
-  // Kalkulasi total biaya pesanan
+  // Kalkulasi total biaya pesanan (Modular Pajak, Layanan, & Pembulatan)
   const subtotal = cartItems.reduce((acc, curr) => acc + curr.menuItem.price * curr.quantity, 0);
   const totalItemCount = cartItems.reduce((acc, curr) => acc + curr.quantity, 0);
-  const serviceCharge = Math.round(subtotal * 0.05); // 5% Biaya Layanan
-  const pb1Tax = Math.round((subtotal + serviceCharge) * 0.1); // 10% Pajak Daerah PB1
-  const grandTotal = subtotal + serviceCharge + pb1Tax;
+
+  const enableService = storeSettings?.enableServiceCharge ?? true;
+  const serviceRate = enableService ? (storeSettings?.serviceChargeRate ?? 5) / 100 : 0;
+  const serviceCharge = Math.round(subtotal * serviceRate);
+
+  const enableTax = storeSettings?.enableTax ?? true;
+  const taxRate = enableTax ? (storeSettings?.taxRate ?? 10) / 100 : 0;
+  const pb1Tax = Math.round((subtotal + serviceCharge) * taxRate);
+
+  let grandTotal = subtotal + serviceCharge + pb1Tax;
+  if (storeSettings?.roundingRule === '100') grandTotal = Math.ceil(grandTotal / 100) * 100;
+  else if (storeSettings?.roundingRule === '500') grandTotal = Math.round(grandTotal / 500) * 500;
+  else if (storeSettings?.roundingRule === '1000') grandTotal = Math.ceil(grandTotal / 1000) * 1000;
 
   const handleKirimKitchen = () => {
     if (cartItems.length === 0) return;
@@ -382,13 +393,11 @@ export const PesananBaruView: React.FC = () => {
                   onChange={(e) => setOrderTableNumber(e.target.value)}
                   className="w-full bg-[#fcf9f4] border border-[#ebe8e3] rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#1c1c19] outline-none cursor-pointer focus:border-[#3d1018]"
                 >
-                  {['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'].map(
-                    (num) => (
-                      <option key={num} value={num}>
-                        Meja {num}
-                      </option>
-                    )
-                  )}
+                  {tables.map((t) => (
+                    <option key={t.number} value={t.number}>
+                      Meja {t.number}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -437,9 +446,10 @@ export const PesananBaruView: React.FC = () => {
                   Meja utama: <strong>Meja {orderTableNumber}</strong>. Centang meja tambahan bila meja di sampingnya sedang dipakai:
                 </p>
                 <div className="grid grid-cols-4 sm:grid-cols-6 gap-1">
-                  {['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12']
-                    .filter((num) => num !== orderTableNumber)
-                    .map((num) => {
+                  {tables
+                    .filter((t) => t.number !== orderTableNumber)
+                    .map((t) => {
+                      const num = t.number;
                       const isSelected = orderSecondaryTables.includes(num);
                       return (
                         <button
@@ -581,18 +591,22 @@ export const PesananBaruView: React.FC = () => {
                 Rp {subtotal.toLocaleString('id-ID')}
               </span>
             </div>
-            <div className="flex justify-between text-[#524344]">
-              <span>Biaya Layanan (5%)</span>
-              <span className="font-medium text-[#1c1c19] tabular-nums">
-                Rp {serviceCharge.toLocaleString('id-ID')}
-              </span>
-            </div>
-            <div className="flex justify-between text-[#524344]">
-              <span>Pajak Daerah PB1 (10%)</span>
-              <span className="font-medium text-[#1c1c19] tabular-nums">
-                Rp {pb1Tax.toLocaleString('id-ID')}
-              </span>
-            </div>
+            {enableService && (
+              <div className="flex justify-between text-[#524344]">
+                <span>{storeSettings?.serviceChargeName || 'Biaya Layanan'} ({storeSettings?.serviceChargeRate ?? 5}%)</span>
+                <span className="font-medium text-[#1c1c19] tabular-nums">
+                  Rp {serviceCharge.toLocaleString('id-ID')}
+                </span>
+              </div>
+            )}
+            {enableTax && (
+              <div className="flex justify-between text-[#524344]">
+                <span>{storeSettings?.taxName || 'PB1 (Pajak Restoran)'} ({storeSettings?.taxRate ?? 10}%)</span>
+                <span className="font-medium text-[#1c1c19] tabular-nums">
+                  Rp {pb1Tax.toLocaleString('id-ID')}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between pt-2 border-t border-[#ebe8e3] items-baseline">
               <span className="text-sm font-bold text-[#1c1c19]">TOTAL</span>
               <span className="text-xl font-bold text-[#3d1018] tabular-nums">

@@ -100,7 +100,15 @@ export interface StoreSettings {
   enableKitchenDisplay?: boolean;  // Alias kdsEnabled
   autoInventoryDeduction?: boolean;// Fitur stok bahan baku (on: sesuai stok, off: manual)
   enableInventoryTracking?: boolean; // Alias autoInventoryDeduction
+  enableDrawerCash?: boolean;      // Modular on/off modal awal laci kasir (default true)
   drawerInitialCash?: number;      // Modal awal laci kasir (default Rp 200.000)
+  enableTax?: boolean;             // Modular on/off Pajak Restoran PB1 (default true)
+  taxName?: string;                // Nama label pajak (default "PB1 (Pajak Restoran)")
+  taxRate?: number;                // Tarif pajak dalam persen (default 10)
+  enableServiceCharge?: boolean;   // Modular on/off Biaya Layanan (default true)
+  serviceChargeName?: string;      // Nama label biaya layanan (default "Biaya Layanan")
+  serviceChargeRate?: number;      // Tarif biaya layanan dalam persen (default 5)
+  roundingRule?: 'none' | '100' | '500' | '1000'; // Aturan pembulatan (default 'none')
 }
 
 export interface CashierShift {

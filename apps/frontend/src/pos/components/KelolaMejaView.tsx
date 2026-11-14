@@ -158,7 +158,7 @@ const KelolaMejaViewInner: React.FC = () => {
 
       {/* Tabel Meja Compact */}
       <div className="bg-white rounded-xl border border-[#ebe8e3] shadow-xs">
-        <div className="overflow-x-auto pb-10">
+        <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead className="bg-[#f6f3ee] text-[#524344] uppercase tracking-wider text-[10px] font-bold border-b border-[#ebe8e3]">
               <tr>

@@ -402,24 +402,23 @@ const MejaPelangganViewInner: React.FC = () => {
                   <span className="text-[11px] font-bold uppercase tracking-wider text-[#524344]">
                     Rincian Menu
                   </span>
-                  <span>{selectedTable.items?.length || 4} Item</span>
+                  <span>{selectedTable.items?.length || 0} Item</span>
                 </div>
                 <div className="divide-y divide-[#ebe8e3] text-xs max-h-48 overflow-y-auto pr-1">
-                  {(
-                    selectedTable.items || [
-                      { name: '2x Rawon Daging Spesial', price: 96000 },
-                      { name: '2x Nasi Putih Wangi', price: 16000 },
-                      { name: '2x Telur Asin Brebes', price: 18000 },
-                      { name: '2x Es Sinom Tradisional', price: 30000 },
-                    ]
-                  ).map((item, idx) => (
-                    <div key={idx} className="py-2 flex justify-between items-center">
-                      <span className="text-[#1c1c19] truncate">{item.name}</span>
-                      <span className="font-semibold text-[#1c1c19] tabular-nums shrink-0 ml-2">
-                        Rp {item.price.toLocaleString('id-ID')}
-                      </span>
+                  {(selectedTable.items && selectedTable.items.length > 0) ? (
+                    selectedTable.items.map((item, idx) => (
+                      <div key={idx} className="py-2 flex justify-between items-center">
+                        <span className="text-[#1c1c19] truncate">{item.name}</span>
+                        <span className="font-semibold text-[#1c1c19] tabular-nums shrink-0 ml-2">
+                          Rp {item.price.toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="py-4 text-center text-xs text-[#847374] italic">
+                      Belum ada rincian pesanan tercatat
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
 
@@ -429,7 +428,7 @@ const MejaPelangganViewInner: React.FC = () => {
                   Total Tagihan
                 </span>
                 <span className="font-serif text-2xl font-bold text-[#3d1018] tabular-nums">
-                  {selectedTable.totalFormatted || 'Rp 207.900'}
+                  {selectedTable.totalFormatted || 'Rp 0'}
                 </span>
               </div>
 
@@ -546,21 +545,20 @@ const MejaPelangganViewInner: React.FC = () => {
                 </div>
 
                 <div className="divide-y divide-[#ebe8e3] text-xs py-1">
-                  {(
-                    selectedTable.items || [
-                      { name: '2x Rawon Daging Spesial', price: 96000 },
-                      { name: '2x Nasi Putih Wangi', price: 16000 },
-                      { name: '2x Telur Asin Brebes', price: 18000 },
-                      { name: '2x Es Sinom Tradisional', price: 30000 },
-                    ]
-                  ).map((item, idx) => (
-                    <div key={idx} className="py-2 flex justify-between items-center">
-                      <span className="text-[#1c1c19] truncate">{item.name}</span>
-                      <span className="font-semibold text-[#1c1c19] tabular-nums shrink-0 ml-2">
-                        Rp {item.price.toLocaleString('id-ID')}
-                      </span>
+                  {(selectedTable.items && selectedTable.items.length > 0) ? (
+                    selectedTable.items.map((item, idx) => (
+                      <div key={idx} className="py-2 flex justify-between items-center">
+                        <span className="text-[#1c1c19] truncate">{item.name}</span>
+                        <span className="font-semibold text-[#1c1c19] tabular-nums shrink-0 ml-2">
+                          Rp {item.price.toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="py-3 text-center text-xs text-[#847374] italic">
+                      Belum ada rincian pesanan tercatat
                     </div>
-                  ))}
+                  )}
                 </div>
 
                 <div className="flex items-baseline justify-between pt-2 border-t border-[#ebe8e3]">
@@ -568,7 +566,7 @@ const MejaPelangganViewInner: React.FC = () => {
                     Total Tagihan
                   </span>
                   <span className="font-serif text-xl font-bold text-[#3d1018] tabular-nums">
-                    {selectedTable.totalFormatted || 'Rp 207.900'}
+                    {selectedTable.totalFormatted || 'Rp 0'}
                   </span>
                 </div>
 

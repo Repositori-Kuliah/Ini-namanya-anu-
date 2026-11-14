@@ -389,7 +389,7 @@ const KelolaMenuViewInner: React.FC = () => {
 
         {/* Tabel Menu Compact */}
         <div className="bg-white rounded-xl border border-[#ebe8e3] shadow-xs">
-          <div className="overflow-x-auto pb-10">
+          <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead className="bg-[#f6f3ee] text-[#524344] uppercase tracking-wider text-[10px] font-bold border-b border-[#ebe8e3]">
                 <tr>
@@ -413,19 +413,9 @@ const KelolaMenuViewInner: React.FC = () => {
                     return (
                       <tr key={item.id} className="hover:bg-[#fcf9f4] transition-colors">
                         <td className="py-2.5 px-4">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-lg bg-[#3d1018] text-[#ffdadc] flex items-center justify-center font-bold text-xs shrink-0 border border-[#58252c]">
-                              {item.name.slice(0, 2).toUpperCase()}
-                            </div>
-                            <div>
-                              <span className="font-bold text-[#1c1c19] block leading-tight">
-                                {item.name}
-                              </span>
-                              <span className="text-[10px] text-[#847374] font-mono">
-                                {item.code}
-                              </span>
-                            </div>
-                          </div>
+                          <span className="font-bold text-[#1c1c19] block leading-tight">
+                            {item.name}
+                          </span>
                         </td>
                         <td className="py-2.5 px-4 text-[#524344] font-medium">{item.category}</td>
                         <td className="py-2.5 px-4 font-bold text-[#3d1018] tabular-nums">

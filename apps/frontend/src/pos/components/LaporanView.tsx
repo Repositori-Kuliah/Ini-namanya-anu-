@@ -457,9 +457,11 @@ export const LaporanView: React.FC = () => {
         </div>
 
         <div className="px-2 border-l border-[#ebe8e3]">
-          <span className="text-[11px] font-semibold text-[#847374] uppercase tracking-wider">Pajak Restoran (PB1)</span>
+          <span className="text-[11px] font-semibold text-[#847374] uppercase tracking-wider">
+            {storeSettings.taxName || 'Pajak Restoran (PB1)'} {storeSettings.enableTax === false ? '(Nonaktif)' : ''}
+          </span>
           <div className="text-xl font-bold font-serif text-[#3d1018] mt-0.5 tabular-nums">
-            Rp {totalPajak.toLocaleString('id-ID')}
+            {storeSettings.enableTax === false ? 'Rp 0' : `Rp ${totalPajak.toLocaleString('id-ID')}`}
           </div>
         </div>
       </div>
@@ -584,22 +586,24 @@ export const LaporanView: React.FC = () => {
             </span>
           </div>
 
-          {/* Saldo Kas di Drawer Laci */}
-          <div className="flex items-center gap-3 bg-[#fcf9f4] px-3 py-1.5 rounded-xl border border-[#ebe8e3] text-xs">
-            <div className="flex items-center gap-1.5 text-[#524344]">
-              <span className="material-symbols-outlined text-[17px] text-[#994703]">point_of_sale</span>
-              <span className="font-semibold">Laci Kasir (Drawer):</span>
+          {/* Saldo Kas di Drawer Laci (Modular: disembunyikan jika enableDrawerCash false) */}
+          {storeSettings.enableDrawerCash !== false && (
+            <div className="flex items-center gap-3 bg-[#fcf9f4] px-3 py-1.5 rounded-xl border border-[#ebe8e3] text-xs">
+              <div className="flex items-center gap-1.5 text-[#524344]">
+                <span className="material-symbols-outlined text-[17px] text-[#994703]">point_of_sale</span>
+                <span className="font-semibold">Laci Kasir (Drawer):</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[#847374]">Modal: <strong className="text-[#1c1c19]">Rp {drawerModal.toLocaleString('id-ID')}</strong></span>
+                <span className="text-[#c5bcb5]">•</span>
+                <span className="text-[#847374]">Tunai: <strong className="text-[#994703]">+Rp {tunaiTotal.toLocaleString('id-ID')}</strong></span>
+                <span className="text-[#c5bcb5]">•</span>
+                <span className="bg-white px-2 py-0.5 rounded-md border border-[#ebe8e3] font-bold text-[#3d1018] tabular-nums">
+                  Total Drawer: Rp {(drawerModal + tunaiTotal).toLocaleString('id-ID')}
+                </span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[#847374]">Modal: <strong className="text-[#1c1c19]">Rp {drawerModal.toLocaleString('id-ID')}</strong></span>
-              <span className="text-[#c5bcb5]">•</span>
-              <span className="text-[#847374]">Tunai: <strong className="text-[#994703]">+Rp {tunaiTotal.toLocaleString('id-ID')}</strong></span>
-              <span className="text-[#c5bcb5]">•</span>
-              <span className="bg-white px-2 py-0.5 rounded-md border border-[#ebe8e3] font-bold text-[#3d1018] tabular-nums">
-                Total Drawer: Rp {(drawerModal + tunaiTotal).toLocaleString('id-ID')}
-              </span>
-            </div>
-          </div>
+          )}
         </div>
 
         <div className="overflow-x-auto">
@@ -612,7 +616,9 @@ export const LaporanView: React.FC = () => {
                 <th className="py-2.5 px-3">Sumber</th>
                 <th className="py-2.5 px-3">Metode</th>
                 <th className="py-2.5 px-3.5 text-right">Subtotal</th>
-                <th className="py-2.5 px-3.5 text-right">PB1 (10%)</th>
+                <th className="py-2.5 px-3.5 text-right">
+                  {storeSettings.taxName || 'PB1'} ({storeSettings.enableTax === false ? '0%' : `${storeSettings.taxRate ?? 10}%`})
+                </th>
                 <th className="py-2.5 px-3.5 text-right">Total Bayar</th>
                 <th className="py-2.5 px-3 text-center">Struk</th>
               </tr>
@@ -702,9 +708,11 @@ export const LaporanView: React.FC = () => {
             <span className="text-[#524344]">
               Subtotal: <strong className="text-[#1c1c19]">Rp {totalSubtotal.toLocaleString('id-ID')}</strong>
             </span>
-            <span className="text-[#524344]">
-              PB1: <strong className="text-[#1c1c19]">Rp {totalPajak.toLocaleString('id-ID')}</strong>
-            </span>
+            {storeSettings.enableTax !== false && (
+              <span className="text-[#524344]">
+                {storeSettings.taxName || 'PB1'}: <strong className="text-[#1c1c19]">Rp {totalPajak.toLocaleString('id-ID')}</strong>
+              </span>
+            )}
             <span className="text-[#3d1018] font-serif font-bold text-sm">
               Total: Rp {totalPenjualan.toLocaleString('id-ID')}
             </span>

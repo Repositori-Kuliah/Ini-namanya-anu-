@@ -118,7 +118,11 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 // ---------- helper tampilan ----------
-const pad = (n: number | string) => String(n).padStart(2, '0');
+const pad = (n: number | string) => {
+  const num = typeof n === 'number' ? n : parseInt(String(n), 10);
+  if (isNaN(num) || num <= 0) return '01';
+  return String(num).padStart(2, '0');
+};
 const WIB = 'Asia/Jakarta';
 const hhmm = (iso?: string | null) => (iso ? new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: WIB }).replace(':', '.') : '-');
 const hhmmColon = (iso: string) => hhmm(iso).replace('.', ':');
@@ -232,7 +236,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           enableKitchenDisplay: parsed.enableKitchenDisplay ?? parsed.kdsEnabled ?? true,
           autoInventoryDeduction: parsed.autoInventoryDeduction ?? parsed.enableInventoryTracking ?? true,
           enableInventoryTracking: parsed.enableInventoryTracking ?? parsed.autoInventoryDeduction ?? true,
+          enableDrawerCash: parsed.enableDrawerCash ?? true,
           drawerInitialCash: parsed.drawerInitialCash ?? 200000,
+          enableTax: parsed.enableTax ?? true,
+          taxName: parsed.taxName || 'PB1 (Pajak Restoran)',
+          taxRate: parsed.taxRate ?? 10,
+          enableServiceCharge: parsed.enableServiceCharge ?? true,
+          serviceChargeName: parsed.serviceChargeName || 'Biaya Layanan',
+          serviceChargeRate: parsed.serviceChargeRate ?? 5,
+          roundingRule: parsed.roundingRule || 'none',
         };
       }
     } catch {}
@@ -247,7 +259,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       enableKitchenDisplay: true,
       autoInventoryDeduction: true,
       enableInventoryTracking: true,
+      enableDrawerCash: true,
       drawerInitialCash: 200000,
+      enableTax: true,
+      taxName: 'PB1 (Pajak Restoran)',
+      taxRate: 10,
+      enableServiceCharge: true,
+      serviceChargeName: 'Biaya Layanan',
+      serviceChargeRate: 5,
+      roundingRule: 'none',
     };
   });
 
@@ -731,7 +751,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const live = (s.orders || []).filter((o: any) => o.order_status !== 'draft');
     if (!live.length) return [];
     const t = rawTables.find((x) => x.table_id === s.table_id);
-    const b = billOfOrders(live.map((o: any) => itemsSubtotal(o.order_items)));
+    const subtotal = live.map((o: any) => itemsSubtotal(o.order_items)).reduce((acc: number, val: number) => acc + val, 0);
+    const sRate = (storeSettings.enableServiceCharge ?? true) ? ((storeSettings.serviceChargeRate ?? 5) / 100) : 0;
+    const tRate = (storeSettings.enableTax ?? true) ? ((storeSettings.taxRate ?? 10) / 100) : 0;
+    const serviceFee = Math.round(subtotal * sRate);
+    const tax = Math.round((subtotal + serviceFee) * tRate);
+    let total = subtotal + serviceFee + tax;
+    if (storeSettings.roundingRule === '100') total = Math.ceil(total / 100) * 100;
+    else if (storeSettings.roundingRule === '500') total = Math.round(total / 500) * 500;
+    else if (storeSettings.roundingRule === '1000') total = Math.ceil(total / 1000) * 1000;
+
     const req = requests.find((r) => r.table_id === s.table_id && r.kind === 'checkout');
     const items: OrderItemSummary[] = live.flatMap((o: any) => o.order_items.map((i: any) => ({
       name: i.product_name, quantity: i.quantity, price: Number(i.unit_price), notes: i.note || undefined })));
@@ -742,14 +771,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return [{
       id: `bill-${s.session_id}`, sessionId: s.session_id, billNumber: `B-${s.session_id}`, tableNumber: pad(t?.table_number ?? '?'),
       customerName: s.customer_name || 'Tamu', guestCount: s.guest_count, itemCount: items.reduce((a, i) => a + i.quantity, 0), items,
-      subtotal: b.subtotal, serviceFee: b.service, tax: b.tax, total: b.total,
+      subtotal, serviceFee, tax, total,
       requestedAt: req ? hhmmColon(req.created_at) : '-', elapsedMinutesAgo: minsSince(req?.created_at ?? s.opened_at),
       waiterName: staffOrder?.profiles?.full_name || 'QR Meja', openedAtTime: `${hhmm(s.opened_at)} WIB`,
       status: req ? 'minta_checkout' : 'belum_dibayar',
       isAllServed,
       unservedCount: unservedOrders.length,
     } as BillItem];
-  }).sort((a, b) => (a.status === b.status ? 0 : a.status === 'minta_checkout' ? -1 : 1)), [sessions, rawTables, requests]);
+  }).sort((a, b) => (a.status === b.status ? 0 : a.status === 'minta_checkout' ? -1 : 1)), [sessions, rawTables, requests, storeSettings]);
   const selectedBill = bills.find((b) => b.id === selectedBillId) || bills[0];
 
   const kitchenTickets: KitchenTicket[] = useMemo(() => sessions.flatMap((s) => {
@@ -914,9 +943,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!tbl) { showToast('Pilih meja terlebih dahulu', 'warning'); return; }
 
     const subtotal = cartItems.reduce((acc, c) => acc + c.menuItem.price * c.quantity, 0);
-    const serviceFee = Math.round(subtotal * 0.05);
-    const tax = Math.round(subtotal * 0.1);
-    const total = subtotal + serviceFee + tax;
+    const sRate = (storeSettings.enableServiceCharge ?? true) ? ((storeSettings.serviceChargeRate ?? 5) / 100) : 0;
+    const tRate = (storeSettings.enableTax ?? true) ? ((storeSettings.taxRate ?? 10) / 100) : 0;
+    const serviceFee = Math.round(subtotal * sRate);
+    const tax = Math.round((subtotal + serviceFee) * tRate);
+    let total = subtotal + serviceFee + tax;
+    if (storeSettings.roundingRule === '100') total = Math.ceil(total / 100) * 100;
+    else if (storeSettings.roundingRule === '500') total = Math.round(total / 500) * 500;
+    else if (storeSettings.roundingRule === '1000') total = Math.ceil(total / 1000) * 1000;
 
     const formattedTableLabel = orderSecondaryTables.length > 0
       ? `${orderTableNumber} (+ Meja ${orderSecondaryTables.join(', ')})`
