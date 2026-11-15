@@ -29,5 +29,7 @@ export const resetToRealSupabase = () => {
 };
 
 /** Alamat dasar untuk URL QR meja. */
-export const appBaseUrl = () => ((import.meta.env.VITE_APP_URL as string) || window.location.origin).replace(/\/$/, '');
+export const appBaseUrl = () =>
+  ((import.meta.env.VITE_APP_URL as string) || `${window.location.origin}${import.meta.env.BASE_URL}`)
+    .replace(/\/$/, '');
 export const tableUrl = (qrToken: string) => `${appBaseUrl()}/pesan?meja=${encodeURIComponent(qrToken)}`;
