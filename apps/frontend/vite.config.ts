@@ -4,7 +4,7 @@ import { resolve } from 'path';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  base: '/',
+  base: process.env.NODE_ENV === 'production' ? '/Ini-namanya-anu-/' : '/',
   envDir: '../../',
   plugins: [react(), tailwindcss()],
   build: {
