@@ -29,6 +29,7 @@ export const CheckoutView: React.FC = () => {
   // Split payment state
   const [splitMethod1, setSplitMethod1] = useState<'Tunai' | 'QRIS' | 'Kartu Debit'>('Tunai');
   const [splitAmount1, setSplitAmount1] = useState<number>(0);
+  const [splitInputStr, setSplitInputStr] = useState<string>('');
   const [splitMethod2, setSplitMethod2] = useState<'Tunai' | 'QRIS' | 'Kartu Debit'>('QRIS');
 
   const filteredBills = bills.filter(
@@ -253,8 +254,8 @@ export const CheckoutView: React.FC = () => {
             )}
           </div>
 
-          {/* Daftar Tagihan Ringkas (Compact Horizontal List) */}
-          <div className="flex flex-col gap-2">
+          {/* Daftar Tagihan Ringkas (Compact Horizontal List dengan Scroll Mandiri) */}
+          <div className="flex flex-col gap-2 max-h-[calc(100vh-220px)] overflow-y-auto pr-1 custom-scrollbar">
             {queueTab === 'unpaid' ? (
               filteredBills.length === 0 ? (
                 <div className="bg-white rounded-xl p-8 text-center border border-[#ebe8e3]">
@@ -598,8 +599,10 @@ export const CheckoutView: React.FC = () => {
                         onClick={() => {
                           setPaymentMethod(method);
                           setShowQrisCode(method === 'QRIS');
-                          if (method === 'Split Payment' && splitAmount1 === 0) {
-                            setSplitAmount1(Math.round(currentBill.total / 2));
+                          if (method === 'Split Payment') {
+                            const half = currentBill.total > 0 ? Math.round(currentBill.total / 2) : 0;
+                            setSplitAmount1(half);
+                            setSplitInputStr(half > 0 ? half.toLocaleString('id-ID') : '');
                           }
                         }}
                         className={`py-2 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
@@ -676,15 +679,17 @@ export const CheckoutView: React.FC = () => {
                           type="text"
                           inputMode="numeric"
                           placeholder="0"
-                          value={splitAmount1 === 0 ? '' : splitAmount1.toLocaleString('id-ID')}
+                          value={splitInputStr}
                           onChange={(e) => {
-                            const clean = e.target.value.replace(/\D/g, '');
-                            if (!clean) {
+                            const digits = e.target.value.replace(/\D/g, '');
+                            if (!digits) {
+                              setSplitInputStr('');
                               setSplitAmount1(0);
                               return;
                             }
-                            const raw = parseInt(clean, 10) || 0;
-                            setSplitAmount1(Math.min(currentBill.total, raw));
+                            const num = parseInt(digits, 10);
+                            setSplitInputStr(num.toLocaleString('id-ID'));
+                            setSplitAmount1(num);
                           }}
                           className="w-full bg-transparent text-xs font-bold tabular-nums outline-none text-[#1c1c19]"
                         />

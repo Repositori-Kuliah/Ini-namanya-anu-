@@ -387,11 +387,11 @@ const KelolaMenuViewInner: React.FC = () => {
           </div>
         </div>
 
-        {/* Tabel Menu Compact */}
+        {/* Tabel Menu Compact dengan Scroll Mandiri */}
         <div className="bg-white rounded-xl border border-[#ebe8e3] shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-[calc(100vh-270px)] overflow-y-auto custom-scrollbar">
             <table className="w-full text-left text-xs border-collapse">
-              <thead className="bg-[#f6f3ee] text-[#524344] uppercase tracking-wider text-[10px] font-bold border-b border-[#ebe8e3]">
+              <thead className="bg-[#f6f3ee] text-[#524344] uppercase tracking-wider text-[10px] font-bold border-b border-[#ebe8e3] sticky top-0 z-10">
                 <tr>
                   <th className="py-2.5 px-4">Nama Menu</th>
                   <th className="py-2.5 px-4">Kategori</th>
@@ -557,11 +557,11 @@ const KelolaMenuViewInner: React.FC = () => {
             </div>
           </div>
 
-          {/* Tabel Bahan Baku Compact */}
+          {/* Tabel Bahan Baku Compact dengan Scroll Mandiri */}
           <div className="bg-white rounded-xl border border-[#ebe8e3] overflow-hidden shadow-xs">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto max-h-[calc(100vh-270px)] overflow-y-auto custom-scrollbar">
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#f6f3ee] text-[#524344] uppercase tracking-wider text-[10px] font-bold border-b border-[#ebe8e3]">
+                <thead className="bg-[#f6f3ee] text-[#524344] uppercase tracking-wider text-[10px] font-bold border-b border-[#ebe8e3] sticky top-0 z-10">
                   <tr>
                     <th className="py-2.5 px-4">Bahan Baku</th>
                     <th className="py-2.5 px-4">Kategori</th>
