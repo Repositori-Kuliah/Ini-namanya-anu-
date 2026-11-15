@@ -254,7 +254,7 @@ export const CheckoutView: React.FC = () => {
           </div>
 
           {/* Daftar Tagihan Ringkas (Compact Horizontal List dengan Scroll Mandiri) */}
-          <div className="flex flex-col gap-2 max-h-[calc(100vh-220px)] overflow-y-auto pr-1 scrollbar-thin">
+          <div className="flex flex-col gap-2 max-h-[calc(100vh-220px)] overflow-y-auto pr-1 custom-scrollbar">
             {queueTab === 'unpaid' ? (
               filteredBills.length === 0 ? (
                 <div className="bg-white rounded-xl p-8 text-center border border-[#ebe8e3]">

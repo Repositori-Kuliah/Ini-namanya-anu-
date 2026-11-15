@@ -237,7 +237,7 @@ const MejaPelangganViewInner: React.FC = () => {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[calc(100vh-280px)] overflow-y-auto pr-1 scrollbar-thin">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {filteredTables.map((table) => {
                 const isSelected = selectedTable?.number === table.number;
                 const isKosong = table.status === 'kosong';
