@@ -209,6 +209,11 @@ export const PengaturanView: React.FC = () => {
     (storeSettings.roundingRule as any) || 'none'
   );
 
+  // Pengaturan WiFi Tamu Restoran
+  const [enableWifiInput, setEnableWifiInput] = useState(storeSettings.enableGuestWifi ?? true);
+  const [wifiSsidInput, setWifiSsidInput] = useState(storeSettings.wifiSsid || 'RawonGusti_VIP');
+  const [wifiPasswordInput, setWifiPasswordInput] = useState(storeSettings.wifiPassword || 'rawonenak08');
+
   const handleSaveHours = (e: React.FormEvent) => {
     e.preventDefault();
     updateStoreSettings({
@@ -238,6 +243,16 @@ export const PengaturanView: React.FC = () => {
       roundingRule: (roundingRuleInput === '100_down' ? 'none' : roundingRuleInput) as any,
     });
     showToast('Pengaturan Pajak, Biaya Layanan & Pembulatan berhasil disimpan', 'success');
+  };
+
+  const handleSaveWifi = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateStoreSettings({
+      enableGuestWifi: enableWifiInput,
+      wifiSsid: wifiSsidInput.trim() || 'RawonGusti_VIP',
+      wifiPassword: wifiPasswordInput.trim() || 'rawonenak08',
+    });
+    showToast('Pengaturan WiFi Tamu Restoran berhasil disimpan', 'success');
   };
 
   // Kalkulasi Simulasi Kasir Live (Pesanan Rp 50.000)
@@ -721,52 +736,9 @@ export const PengaturanView: React.FC = () => {
                   </button>
                 </div>
               </div>
-
-              {/* Simulasi Kasir (Di bawah Biaya Layanan, Selaras Tema Heritage) */}
-              <div className="p-4 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3] space-y-2.5 shadow-2xs">
-                <div className="flex items-center gap-2 pb-1.5 border-b border-[#ebe8e3]">
-                  <span className="material-symbols-outlined text-[17px] text-[#994703]">calculate</span>
-                  <span className="text-xs font-bold text-[#1c1c19]">
-                    Simulasi Kasir: Pesanan Rp 50.000 (1x Rawon Spesial)
-                  </span>
-                </div>
-
-                <div className="space-y-1.5 text-xs text-[#524344]">
-                  <div className="flex justify-between">
-                    <span>Subtotal Menu:</span>
-                    <span className="font-semibold text-[#1c1c19] tabular-nums">Rp {simSubtotal.toLocaleString('id-ID')}</span>
-                  </div>
-                  <div className="flex justify-between text-[11px]">
-                    <span>Biaya Layanan ({enableServiceInput ? `${serviceRateInput}%` : 'Nonaktif'}):</span>
-                    <span className="font-medium tabular-nums text-[#994703]">
-                      {enableServiceInput ? `+Rp ${simServiceAmt.toLocaleString('id-ID')}` : 'Rp 0'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-[11px]">
-                    <span>{taxNameInput || 'PB1'} ({enableTaxInput ? `${taxRateInput}%` : 'Nonaktif'}):</span>
-                    <span className="font-medium tabular-nums text-[#994703]">
-                      {enableTaxInput ? `+Rp ${simTaxAmt.toLocaleString('id-ID')}` : 'Rp 0'}
-                    </span>
-                  </div>
-                  {simRoundDiff !== 0 && (
-                    <div className="flex justify-between text-[11px] text-[#847374] font-medium">
-                      <span>Penyesuaian Pembulatan:</span>
-                      <span className="tabular-nums">
-                        {simRoundDiff > 0 ? `+Rp ${simRoundDiff.toLocaleString('id-ID')}` : `-Rp ${Math.abs(simRoundDiff).toLocaleString('id-ID')}`}
-                      </span>
-                    </div>
-                  )}
-                  <div className="pt-2 border-t border-[#ebe8e3] flex justify-between items-baseline font-bold">
-                    <span className="text-xs text-[#1c1c19]">Total Tagihan Akhir:</span>
-                    <span className="text-xl text-[#3d1018] font-serif tabular-nums font-bold">
-                      Rp {simTotal.toLocaleString('id-ID')}
-                    </span>
-                  </div>
-                </div>
-              </div>
             </div>
 
-            {/* Kolom Kanan: Aturan Pembulatan & Tombol Simpan */}
+            {/* Kolom Kanan: Aturan Pembulatan, Simulasi Kasir & Tombol Simpan */}
             <div className="space-y-4">
               {/* Aturan Pembulatan */}
               <div className="p-4 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3] space-y-2.5">
@@ -812,6 +784,49 @@ export const PengaturanView: React.FC = () => {
                       </div>
                     </label>
                   ))}
+                </div>
+              </div>
+
+              {/* Simulasi Kasir (Posisi Kanan Bawah Aturan Pembulatan, Selaras Tema Heritage) */}
+              <div className="p-4 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3] space-y-2.5 shadow-2xs">
+                <div className="flex items-center gap-2 pb-1.5 border-b border-[#ebe8e3]">
+                  <span className="material-symbols-outlined text-[17px] text-[#994703]">calculate</span>
+                  <span className="text-xs font-bold text-[#1c1c19]">
+                    Simulasi Kasir: Pesanan Rp 50.000 (1x Rawon Spesial)
+                  </span>
+                </div>
+
+                <div className="space-y-1.5 text-xs text-[#524344]">
+                  <div className="flex justify-between">
+                    <span>Subtotal Menu:</span>
+                    <span className="font-semibold text-[#1c1c19] tabular-nums">Rp {simSubtotal.toLocaleString('id-ID')}</span>
+                  </div>
+                  <div className="flex justify-between text-[11px]">
+                    <span>Biaya Layanan ({enableServiceInput ? `${serviceRateInput}%` : 'Nonaktif'}):</span>
+                    <span className="font-medium tabular-nums text-[#994703]">
+                      {enableServiceInput ? `+Rp ${simServiceAmt.toLocaleString('id-ID')}` : 'Rp 0'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-[11px]">
+                    <span>{taxNameInput || 'PB1'} ({enableTaxInput ? `${taxRateInput}%` : 'Nonaktif'}):</span>
+                    <span className="font-medium tabular-nums text-[#994703]">
+                      {enableTaxInput ? `+Rp ${simTaxAmt.toLocaleString('id-ID')}` : 'Rp 0'}
+                    </span>
+                  </div>
+                  {simRoundDiff !== 0 && (
+                    <div className="flex justify-between text-[11px] text-[#847374] font-medium">
+                      <span>Penyesuaian Pembulatan:</span>
+                      <span className="tabular-nums">
+                        {simRoundDiff > 0 ? `+Rp ${simRoundDiff.toLocaleString('id-ID')}` : `-Rp ${Math.abs(simRoundDiff).toLocaleString('id-ID')}`}
+                      </span>
+                    </div>
+                  )}
+                  <div className="pt-2 border-t border-[#ebe8e3] flex justify-between items-baseline font-bold">
+                    <span className="text-xs text-[#1c1c19]">Total Tagihan Akhir:</span>
+                    <span className="text-xl text-[#3d1018] font-serif tabular-nums font-bold">
+                      Rp {simTotal.toLocaleString('id-ID')}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -1002,6 +1017,88 @@ export const PengaturanView: React.FC = () => {
               </button>
             </div>
           </div>
+        </div>
+
+        {/* ================= MODUL 4: WIFI TAMU RESTORAN (DIBAWAH SAKLAR MODUL) ================= */}
+        <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs mt-5">
+          <form onSubmit={handleSaveWifi} className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#3d1018] text-white flex items-center justify-center shadow-xs shrink-0 mt-0.5">
+                <span className="material-symbols-outlined text-[20px]">wifi</span>
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-sm text-[#1c1c19]">WiFi Tamu Restoran (QR &amp; Meja)</h3>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    enableWifiInput ? 'bg-amber-100 text-[#3d1018] border border-amber-200' : 'bg-stone-100 text-[#847374]'
+                  }`}>
+                    {enableWifiInput ? 'Modul Aktif' : 'Modul Nonaktif'}
+                  </span>
+                </div>
+                <p className="text-xs text-[#524344] mt-0.5 max-w-xl">
+                  Koneksi WiFi untuk pelanggan yang bersantap. Ditampilkan pada halaman status pemesanan mandiri tamu meja jika modul aktif.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0 w-full lg:w-auto">
+              {/* Toggle Saklar Modular */}
+              <div className="flex items-center gap-2 justify-between sm:justify-start">
+                <span className="text-xs font-bold text-[#1c1c19] sm:hidden">Aktifkan WiFi Tamu</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !enableWifiInput;
+                    setEnableWifiInput(next);
+                    updateStoreSettings({ enableGuestWifi: next });
+                    showToast(`WiFi tamu restoran ${next ? 'diaktifkan' : 'dinonaktifkan (disembunyikan dari pelanggan)'}`, 'info');
+                  }}
+                  className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
+                    enableWifiInput ? 'bg-[#3d1018]' : 'bg-[#e0dcd8]'
+                  }`}
+                  title={enableWifiInput ? 'Klik untuk menonaktifkan WiFi tamu' : 'Klik untuk mengaktifkan WiFi tamu'}
+                  aria-pressed={enableWifiInput}
+                >
+                  <div
+                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
+                      enableWifiInput ? 'translate-x-6' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className={`flex flex-col sm:flex-row items-center gap-2 transition-opacity ${!enableWifiInput ? 'opacity-40 pointer-events-none' : ''}`}>
+                <div className="w-full sm:w-44">
+                  <input
+                    type="text"
+                    disabled={!enableWifiInput}
+                    value={wifiSsidInput}
+                    onChange={(e) => setWifiSsidInput(e.target.value)}
+                    placeholder="Nama / SSID WiFi"
+                    className="w-full h-9 px-3 text-xs font-medium rounded-lg border border-[#ebe8e3] bg-white focus:outline-none focus:border-[#3d1018]"
+                  />
+                </div>
+                <div className="w-full sm:w-40">
+                  <input
+                    type="text"
+                    disabled={!enableWifiInput}
+                    value={wifiPasswordInput}
+                    onChange={(e) => setWifiPasswordInput(e.target.value)}
+                    placeholder="Kata Sandi WiFi"
+                    className="w-full h-9 px-3 text-xs font-mono font-medium rounded-lg border border-[#ebe8e3] bg-white focus:outline-none focus:border-[#3d1018]"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={!enableWifiInput}
+                  className="w-full sm:w-auto h-9 px-4 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[15px]">save</span>
+                  <span>Simpan WiFi</span>
+                </button>
+              </div>
+            </div>
+          </form>
         </div>
       </div>
     </div>

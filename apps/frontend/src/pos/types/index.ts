@@ -109,6 +109,9 @@ export interface StoreSettings {
   serviceChargeName?: string;      // Nama label biaya layanan (default "Biaya Layanan")
   serviceChargeRate?: number;      // Tarif biaya layanan dalam persen (default 5)
   roundingRule?: 'none' | '100' | '500' | '1000'; // Aturan pembulatan (default 'none')
+  enableGuestWifi?: boolean;       // Modular on/off WiFi tamu restoran (default true)
+  wifiSsid?: string;               // Nama SSID / username WiFi (default "RawonGusti_VIP")
+  wifiPassword?: string;           // Password WiFi tamu (default "rawonenak08")
 }
 
 export interface CashierShift {

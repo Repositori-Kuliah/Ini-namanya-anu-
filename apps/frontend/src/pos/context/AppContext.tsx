@@ -245,6 +245,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           serviceChargeName: parsed.serviceChargeName || 'Biaya Layanan',
           serviceChargeRate: parsed.serviceChargeRate ?? 5,
           roundingRule: parsed.roundingRule || 'none',
+          enableGuestWifi: parsed.enableGuestWifi ?? true,
+          wifiSsid: parsed.wifiSsid || 'RawonGusti_VIP',
+          wifiPassword: parsed.wifiPassword || 'rawonenak08',
         };
       }
     } catch {}
@@ -268,6 +271,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       serviceChargeName: 'Biaya Layanan',
       serviceChargeRate: 5,
       roundingRule: 'none',
+      enableGuestWifi: true,
+      wifiSsid: 'RawonGusti_VIP',
+      wifiPassword: 'rawonenak08',
     };
   });
 
