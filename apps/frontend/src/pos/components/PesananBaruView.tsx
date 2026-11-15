@@ -22,8 +22,6 @@ export const PesananBaruView: React.FC = () => {
     updateCartItemNotes,
     removeFromCart,
     sendOrderToKitchen,
-    saveDraftOrder,
-    toggleMenuItemAvailability,
     tables,
     storeSettings,
   } = useApp();
@@ -273,20 +271,9 @@ export const PesananBaruView: React.FC = () => {
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[11px] text-[#847374] block truncate">
-                            {item.category}
-                          </span>
-                          {/* Switch cepat status Habis / Tersedia */}
-                          <button
-                            type="button"
-                            onClick={() => toggleMenuItemAvailability(item.dbId || item.id)}
-                            className="text-[10px] text-[#994703] hover:underline cursor-pointer"
-                            title="Klik untuk ubah ketersediaan menu"
-                          >
-                            {isOut ? 'Set Tersedia' : 'Set Habis'}
-                          </button>
-                        </div>
+                        <span className="text-[11px] text-[#847374] block truncate">
+                          {item.category}
+                        </span>
                       </div>
                     </div>
 
@@ -353,40 +340,20 @@ export const PesananBaruView: React.FC = () => {
             mobileTab === 'catalog' ? 'hidden lg:flex' : 'flex'
           }`}
         >
-          {/* Selector Meja & Pelanggan (Compact Horizontal Grid) */}
+          {/* Selector Meja & Gabung Meja Rombongan (Compact Horizontal Grid) */}
           <div className="pb-3 border-b border-[#ebe8e3] space-y-2">
-            <div className="flex items-center justify-between">
+            <div>
               <span className="text-[11px] font-bold uppercase tracking-wider text-[#524344]">
                 Target Meja &amp; Tamu
               </span>
-              <button
-                type="button"
-                onClick={saveDraftOrder}
-                className="text-xs font-semibold text-[#994703] hover:text-[#753400] flex items-center gap-1 cursor-pointer transition-colors"
-              >
-                <span className="material-symbols-outlined text-[14px]">bookmark</span>
-                <span>Simpan Draf</span>
-              </button>
             </div>
 
             <div className="grid grid-cols-3 gap-2">
               {/* Dropdown Meja Utama */}
               <div>
-                <div className="flex items-center justify-between mb-0.5">
-                  <label htmlFor="order-table" className="text-[10px] text-[#847374] block">
-                    No. Meja
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowMultiTableSelector(!showMultiTableSelector)}
-                    className="text-[9px] text-[#994703] font-bold cursor-pointer"
-                    title="Gabung meja untuk rombongan"
-                  >
-                    {showMultiTableSelector
-                      ? (orderSecondaryTables.length > 0 ? `-${orderSecondaryTables.length} Meja` : '- Gabung')
-                      : (orderSecondaryTables.length > 0 ? `+${orderSecondaryTables.length} Meja` : '+ Gabung')}
-                  </button>
-                </div>
+                <label htmlFor="order-table" className="text-[10px] text-[#847374] block mb-0.5">
+                  No. Meja Utama
+                </label>
                 <select
                   id="order-table"
                   value={orderTableNumber}
@@ -401,10 +368,36 @@ export const PesananBaruView: React.FC = () => {
                 </select>
               </div>
 
+              {/* Selector Gabung Meja (Pengganti Jumlah Pelanggan) */}
+              <div>
+                <label className="text-[10px] text-[#847374] block mb-0.5">
+                  Gabung Meja
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowMultiTableSelector(!showMultiTableSelector)}
+                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg border text-xs font-bold cursor-pointer transition-colors ${
+                    orderSecondaryTables.length > 0
+                      ? 'bg-[#3d1018] text-white border-[#3d1018]'
+                      : 'bg-[#fcf9f4] border-[#ebe8e3] text-[#524344] hover:bg-[#f0ede9]'
+                  }`}
+                  title="Klik untuk memilih meja gabungan"
+                >
+                  <span className="truncate">
+                    {orderSecondaryTables.length > 0
+                      ? `${orderSecondaryTables.length} Meja`
+                      : 'Gabung'}
+                  </span>
+                  <span className="material-symbols-outlined text-[14px]">
+                    {showMultiTableSelector ? 'expand_less' : 'expand_more'}
+                  </span>
+                </button>
+              </div>
+
               {/* Input Nama Tamu */}
               <div>
                 <label htmlFor="order-customer" className="text-[10px] text-[#847374] block mb-0.5">
-                  Nama Tamu
+                  Nama Tamu / Rombongan
                 </label>
                 <input
                   id="order-customer"
@@ -415,36 +408,16 @@ export const PesananBaruView: React.FC = () => {
                   className="w-full bg-[#fcf9f4] border border-[#ebe8e3] rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#1c1c19] outline-none focus:border-[#3d1018]"
                 />
               </div>
-
-              {/* Selector Jumlah Pelanggan */}
-              <div>
-                <label htmlFor="order-guests" className="text-[10px] text-[#847374] block mb-0.5">
-                  Jumlah Pelanggan
-                </label>
-                <select
-                  id="order-guests"
-                  value={orderGuestCount}
-                  onChange={(e) => setOrderGuestCount(parseInt(e.target.value, 10))}
-                  className="w-full bg-[#fcf9f4] border border-[#ebe8e3] rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#1c1c19] outline-none cursor-pointer focus:border-[#3d1018]"
-                >
-                  {[1, 2, 3, 4, 5, 6, 8, 10, 12].map((num) => (
-                    <option key={num} value={num}>
-                      {num} Orang
-                    </option>
-                  ))}
-                </select>
-              </div>
             </div>
 
-            {/* Panel Selector Gabung Meja (Untuk rombongan 8 orang dll) */}
+            {/* Panel Selector Gabung Meja */}
             {showMultiTableSelector && (
               <div className="p-2.5 bg-[#fcf9f4] rounded-lg border border-[#ebe8e3] space-y-1.5">
-                <span className="text-[10px] font-bold text-[#3d1018] block">
-                  Pilih Meja Gabungan (Rombongan Tamu)
-                </span>
-                <p className="text-[10px] text-[#847374]">
-                  Meja utama: <strong>Meja {orderTableNumber}</strong>. Centang meja tambahan bila meja di sampingnya sedang dipakai:
-                </p>
+                <div>
+                  <span className="text-[10px] font-bold text-[#3d1018]">
+                    Pilih Meja Gabungan:
+                  </span>
+                </div>
                 <div className="grid grid-cols-4 sm:grid-cols-6 gap-1">
                   {tables
                     .filter((t) => t.number !== orderTableNumber)
@@ -462,22 +435,17 @@ export const PesananBaruView: React.FC = () => {
                               setOrderSecondaryTables([...orderSecondaryTables, num]);
                             }
                           }}
-                          className={`py-1 px-1.5 rounded text-[10px] font-bold transition-all ${
+                          className={`py-1 px-1.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
                             isSelected
-                              ? 'bg-[#3d1018] text-white'
+                              ? 'bg-[#3d1018] text-white shadow-2xs'
                               : 'bg-white border border-[#ebe8e3] text-[#524344] hover:bg-[#f0ede9]'
                           }`}
                         >
-                          +{num}
+                          {num}
                         </button>
                       );
                     })}
                 </div>
-                {orderSecondaryTables.length > 0 && (
-                  <p className="text-[10px] text-[#994703] font-medium pt-0.5">
-                    Tergabung: Meja {orderTableNumber} + Meja {orderSecondaryTables.join(', ')}
-                  </p>
-                )}
               </div>
             )}
           </div>

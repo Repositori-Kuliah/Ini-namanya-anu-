@@ -40,6 +40,7 @@ interface AppContextType {
   setSelectedTableId: (id: string) => void;
   updateTable: (table: TableItem) => void;
   addTable: (tableNumber: number, capacity: number, area: string) => Promise<boolean>;
+  clearTableSession: (tableNumberOrSessionId: string | number) => Promise<void>;
 
   cartItems: CartItem[];
   orderTableNumber: string;
@@ -90,6 +91,17 @@ interface AppContextType {
   kitchenTickets: KitchenTicket[];
   advanceTicketStatus: (ticketId: string) => void;
   confirmCustomerOrder: (ticketId: string) => void;
+  rejectCustomerOrder: (orderId: string) => void;
+  pendingQrOrders: Array<{
+    orderId: string;
+    orderNumber: string;
+    tableNumber: string;
+    customerName: string;
+    total: number;
+    items: any[];
+    createdAt: string;
+    note?: string;
+  }>;
 
   transactions: TransactionRecord[];
   recentReceipts: BillItem[];
@@ -137,8 +149,8 @@ const METHOD_FROM_DB: Record<string, TransactionRecord['method']> = { cash: 'Tun
 const BAR_CATEGORIES = ['Teh', 'Kopi', 'Wedang', 'Lainnya'];
 
 const STATUS_LABEL: Record<TableStatus, string> = {
-  kosong: 'Kosong', terisi: 'Disajikan', checkout: 'Minta Checkout', diproses: 'Diproses',
-  siap_diantar: 'Siap Diantar', draf: 'Draf Pesanan', terkirim: 'Terkirim',
+  kosong: 'Tersedia', terisi: 'Terisi', checkout: 'Terisi', diproses: 'Terisi',
+  siap_diantar: 'Terisi', draf: 'Terisi', terkirim: 'Terisi',
 };
 const ORDER_TO_TABLE: Record<string, TableStatus> = { submitted: 'terkirim', preparing: 'diproses', ready: 'siap_diantar', served: 'terisi' };
 const ORDER_TO_TICKET: Record<string, KitchenTicket['status']> = { submitted: 'new', preparing: 'preparing', ready: 'ready', served: 'served' };
@@ -505,7 +517,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const reqData = reqs.data ?? [];
       const tblData = rawTablesRef.current;
 
-      if (ses.data) setSessions(ses.data);
+      if (ses.data) {
+        // Otomatis filter & bersihkan sesi kosong zombie (0 menu / total 0)
+        const activeSessions = ses.data.filter((s: any) => {
+          const orders = s.orders || [];
+          const totalItems = orders.reduce((acc: number, o: any) => acc + (o.order_items?.length || 0), 0);
+          const totalAmount = orders.reduce((acc: number, o: any) => acc + Number(o.total || 0), 0);
+          if (orders.length === 0 || (totalItems === 0 && totalAmount === 0)) {
+            // Tutup sesi kosong di database di background
+            supabase.from('table_sessions').update({ closed_at: new Date().toISOString() }).eq('session_id', s.session_id).then(() => {});
+            return false;
+          }
+          return true;
+        });
+        setSessions(activeSessions);
+      }
       if (reqs.data) setRequests(reqData);
       if (pays.data) setPayments(pays.data);
 
@@ -739,28 +765,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const s = sessions.find((x) => x.table_id === t.table_id);
       const base: TableItem = {
         id: `tbl-${pad(t.table_number)}`, dbId: t.table_id, qrToken: t.qr_token, number: pad(t.table_number),
-        capacity: 4, area: 'Ruang Restoran', status: 'kosong', statusLabel: STATUS_LABEL.kosong,
+        capacity: 4, area: 'Ruang Restoran', status: 'kosong', statusLabel: 'Tersedia',
         qrCodeId: `RG-M${pad(t.table_number)}`, qrUrl: tableUrl(t.qr_token),
       };
-    if (!s) return base;
-    const live = (s.orders || []).filter((o: any) => o.order_status !== 'draft');
-    const drafts = (s.orders || []).filter((o: any) => o.order_status === 'draft');
-    const shown = live.length ? live : drafts;
-    const req = requests.find((r) => r.table_id === t.table_id && r.kind === 'checkout');
-    const has = (st: string) => live.find((o: any) => o.order_status === st);
-    let status: TableStatus; let info = `Sejak ${hhmm(s.opened_at)}`;
-    if (!live.length && !drafts.length) status = 'terisi';
-    else if (!live.length) { status = 'draf'; info = 'Belum dikirim'; }
-    else if (req) { status = 'checkout'; info = `Diminta ${hhmm(req.created_at)}`; }
-    else if (has('preparing')) { status = 'diproses'; info = `Kitchen ${minsSince(has('preparing').created_at)} min`; }
-    else if (has('submitted')) { status = 'terkirim'; info = `Antrean ${minsSince(has('submitted').created_at)} min`; }
-    else if (has('ready')) { status = 'siap_diantar'; info = `Siap ${hhmm(has('ready').ready_at)}`; }
-    else status = ORDER_TO_TABLE.served;
-    const items: OrderItemSummary[] = shown.flatMap((o: any) => o.order_items.map((i: any) => ({
-      name: i.product_name, quantity: i.quantity, price: i.unit_price * i.quantity, notes: i.note || undefined })));
-    const totalRaw = shown.reduce((a: number, o: any) => a + Number(o.total), 0);
-    return { ...base, status, statusLabel: STATUS_LABEL[status], name: s.customer_name || undefined, guestCount: s.guest_count,
-      totalRaw, totalFormatted: rp(totalRaw), billId: `${status === 'draf' ? 'D' : 'B'}-${s.session_id}`, infoSubtitle: info, sessionId: s.session_id, items };
+      if (!s) return base;
+      const live = (s.orders || []).filter((o: any) => o.order_status !== 'draft');
+      const drafts = (s.orders || []).filter((o: any) => o.order_status === 'draft');
+      const shown = live.length ? live : drafts;
+      const req = requests.find((r) => r.table_id === t.table_id && r.kind === 'checkout');
+      const has = (st: string) => live.find((o: any) => o.order_status === st);
+      let status: TableStatus; let info = `Sejak ${hhmm(s.opened_at)}`;
+      if (!live.length && !drafts.length) status = 'terisi';
+      else if (!live.length) { status = 'draf'; info = 'Belum dikirim'; }
+      else if (req) { status = 'checkout'; info = `Diminta ${hhmm(req.created_at)}`; }
+      else if (has('preparing')) { status = 'diproses'; info = `Kitchen ${minsSince(has('preparing').created_at)} min`; }
+      else if (has('submitted')) { status = 'terkirim'; info = `Antrean ${minsSince(has('submitted').created_at)} min`; }
+      else if (has('ready')) { status = 'siap_diantar'; info = `Siap ${hhmm(has('ready').ready_at)}`; }
+      else status = 'terisi';
+      const items: OrderItemSummary[] = shown.flatMap((o: any) => (o.order_items || []).map((i: any) => ({
+        name: i.product_name, quantity: i.quantity, price: i.unit_price * i.quantity, notes: i.note || undefined })));
+      const totalRaw = shown.reduce((a: number, o: any) => a + Number(o.total || 0), 0);
+
+      // Sesi kosong tanpa rincian item & total 0 dianggap kosong/tersedia
+      if (items.length === 0 && totalRaw === 0) {
+        return base;
+      }
+
+      return { ...base, status, statusLabel: 'Terisi', name: s.customer_name || undefined, guestCount: s.guest_count,
+        totalRaw, totalFormatted: rp(totalRaw), billId: `${status === 'draf' ? 'D' : 'B'}-${s.session_id}`, infoSubtitle: info, sessionId: s.session_id, items };
     });
   }, [rawTables, sessions, requests, now]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -798,25 +830,129 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }).sort((a, b) => (a.status === b.status ? 0 : a.status === 'minta_checkout' ? -1 : 1)), [sessions, rawTables, requests, storeSettings]);
   const selectedBill = bills.find((b) => b.id === selectedBillId) || bills[0];
 
+  // Deteksi stasiun item: Dapur Utama (Makanan) vs Bar Minuman
+  const isDrinkCategoryOrItem = (catName: string, prodName: string) => {
+    const c = (catName || '').toLowerCase();
+    const p = (prodName || '').toLowerCase();
+    const drinkKeywords = ['minum', 'teh', 'kopi', 'wedang', 'jus', 'bar', 'beverage', 'drink'];
+    const nameKeywords = ['es ', 'teh', 'kopi', 'sinom', 'jeruk', 'air mineral', 'degan', 'soda', 'kelapa', 'lemon'];
+    return drinkKeywords.some((k) => c.includes(k)) || nameKeywords.some((k) => p.includes(k));
+  };
+
   const kitchenTickets: KitchenTicket[] = useMemo(() => sessions.flatMap((s) => {
     const t = rawTables.find((x) => x.table_id === s.table_id);
-    return (s.orders || []).filter((o: any) => o.order_status !== 'draft').map((o: any): KitchenTicket => {
-      const cats = o.order_items.map((i: any) => productCategory.get(i.product_id) || '');
-      const station = cats.length && cats.every((c: string) => BAR_CATEGORIES.includes(c)) ? 'Bar Minuman' : 'Dapur Utama (Makanan)';
+    const tableNumberStr = `Table ${pad(t?.table_number ?? '?')}`;
+
+    // Hanya tampilkan pesanan yang bukan draf dan sudah dikonfirmasi (cegah order fiktif)
+    const validOrders = (s.orders || []).filter((o: any) =>
+      o.order_status !== 'draft' &&
+      o.order_status !== 'pending_confirmation' &&
+      o.order_status !== 'menunggu_kasir' &&
+      o.order_status !== 'cancelled'
+    );
+
+    return validOrders.flatMap((o: any): KitchenTicket[] => {
       const elapsed = Math.max(0, Math.floor((now - new Date(o.created_at).getTime()) / 1000));
-      const status = ORDER_TO_TICKET[o.order_status];
+      const status = ORDER_TO_TICKET[o.order_status] || 'new';
       const waiter = o.profiles?.full_name || (o.order_source === 'qr' ? 'QR Meja' : 'Staf');
-      return {
-        id: String(o.order_id), orderId: o.order_id, ticketNumber: `#${o.order_number}`, tableNumber: `Table ${pad(t?.table_number ?? '?')}`,
-        type: 'Dine in', waiterName: waiter, elapsedSeconds: elapsed, status, station,
-        isPriority: elapsed > 900 && (status === 'new' || status === 'preparing'),
-        totalItems: o.order_items.reduce((a: number, i: any) => a + i.quantity, 0), totalAmount: Number(o.total),
-        readySecondsAgo: o.ready_at ? Math.max(0, Math.floor((now - new Date(o.ready_at).getTime()) / 1000)) : undefined,
-        notesBanner: o.note ? `Catatan: ${o.note}` : o.order_source === 'qr' ? 'Dipesan via QR meja' : `Dikirim oleh ${waiter}`,
-        items: o.order_items.map((i: any) => ({ name: i.product_name, quantity: i.quantity, notes: i.note || undefined })),
-      };
+
+      const foodItems = (o.order_items || []).filter((i: any) =>
+        !isDrinkCategoryOrItem(productCategory.get(i.product_id) || '', i.product_name)
+      );
+      const drinkItems = (o.order_items || []).filter((i: any) =>
+        isDrinkCategoryOrItem(productCategory.get(i.product_id) || '', i.product_name)
+      );
+
+      const tickets: KitchenTicket[] = [];
+
+      // Sub-tiket 1: Dapur Utama (Makanan)
+      if (foodItems.length > 0) {
+        tickets.push({
+          id: `${o.order_id}-food`,
+          orderId: o.order_id,
+          ticketNumber: `#${o.order_number}${drinkItems.length > 0 ? ' [Makanan]' : ''}`,
+          tableNumber: tableNumberStr,
+          type: 'Dine in',
+          waiterName: waiter,
+          elapsedSeconds: elapsed,
+          status,
+          station: 'Dapur Utama (Makanan)',
+          isPriority: elapsed > 900 && (status === 'new' || status === 'preparing'),
+          totalItems: foodItems.reduce((a: number, i: any) => a + i.quantity, 0),
+          totalAmount: Number(o.total),
+          readySecondsAgo: o.ready_at ? Math.max(0, Math.floor((now - new Date(o.ready_at).getTime()) / 1000)) : undefined,
+          notesBanner: o.note ? `Catatan: ${o.note}` : o.order_source === 'qr' ? 'Dipesan via QR meja' : `Dikirim oleh ${waiter}`,
+          items: foodItems.map((i: any) => ({ name: i.product_name, quantity: i.quantity, notes: i.note || undefined })),
+        });
+      }
+
+      // Sub-tiket 2: Bar Minuman
+      if (drinkItems.length > 0) {
+        tickets.push({
+          id: `${o.order_id}-drink`,
+          orderId: o.order_id,
+          ticketNumber: `#${o.order_number}${foodItems.length > 0 ? ' [Minuman]' : ''}`,
+          tableNumber: tableNumberStr,
+          type: 'Dine in',
+          waiterName: waiter,
+          elapsedSeconds: elapsed,
+          status,
+          station: 'Bar Minuman',
+          isPriority: elapsed > 600 && (status === 'new' || status === 'preparing'),
+          totalItems: drinkItems.reduce((a: number, i: any) => a + i.quantity, 0),
+          totalAmount: Number(o.total),
+          readySecondsAgo: o.ready_at ? Math.max(0, Math.floor((now - new Date(o.ready_at).getTime()) / 1000)) : undefined,
+          notesBanner: o.note ? `Catatan: ${o.note}` : o.order_source === 'qr' ? 'Dipesan via QR meja' : `Dikirim oleh ${waiter}`,
+          items: drinkItems.map((i: any) => ({ name: i.product_name, quantity: i.quantity, notes: i.note || undefined })),
+        });
+      }
+
+      // Fallback tiket jika tidak ada item
+      if (tickets.length === 0) {
+        tickets.push({
+          id: String(o.order_id),
+          orderId: o.order_id,
+          ticketNumber: `#${o.order_number}`,
+          tableNumber: tableNumberStr,
+          type: 'Dine in',
+          waiterName: waiter,
+          elapsedSeconds: elapsed,
+          status,
+          station: 'Dapur Utama (Makanan)',
+          isPriority: elapsed > 900 && (status === 'new' || status === 'preparing'),
+          totalItems: (o.order_items || []).reduce((a: number, i: any) => a + i.quantity, 0),
+          totalAmount: Number(o.total),
+          readySecondsAgo: o.ready_at ? Math.max(0, Math.floor((now - new Date(o.ready_at).getTime()) / 1000)) : undefined,
+          notesBanner: o.note ? `Catatan: ${o.note}` : o.order_source === 'qr' ? 'Dipesan via QR meja' : `Dikirim oleh ${waiter}`,
+          items: (o.order_items || []).map((i: any) => ({ name: i.product_name, quantity: i.quantity, notes: i.note || undefined })),
+        });
+      }
+
+      return tickets;
     });
   }).sort((a, b) => b.elapsedSeconds - a.elapsedSeconds), [sessions, rawTables, productCategory, now]);
+
+  // Pesanan QR Masuk Yang Menunggu Konfirmasi Kasir (Anti-Order Fiktif)
+  const pendingQrOrders = useMemo(() => {
+    return sessions.flatMap((s) => {
+      const tbl = rawTables.find((t) => t.table_id === s.table_id);
+      return (s.orders || [])
+        .filter((o: any) =>
+          o.order_source === 'qr' &&
+          (o.order_status === 'pending_confirmation' || o.order_status === 'menunggu_kasir')
+        )
+        .map((o: any) => ({
+          orderId: String(o.order_id),
+          orderNumber: o.order_number,
+          tableNumber: pad(tbl?.table_number ?? '?'),
+          customerName: s.customer_name || 'Tamu QR',
+          total: Number(o.total),
+          items: o.order_items || [],
+          createdAt: o.created_at,
+          note: o.note,
+        }));
+    });
+  }, [sessions, rawTables]);
 
   const transactions: TransactionRecord[] = useMemo(() => payments.map((p) => {
     const total = Number(p.amount);
@@ -934,6 +1070,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       supabase.from('tables').delete().eq('table_id', tableId),
       'Meja berhasil dihapus'
     );
+  };
+  const clearTableSession = async (tableNumberOrSessionId: string | number) => {
+    const target = tables.find((t) => t.number === String(tableNumberOrSessionId) || t.sessionId === Number(tableNumberOrSessionId));
+    const targetSessionId = target?.sessionId || (typeof tableNumberOrSessionId === 'number' ? tableNumberOrSessionId : undefined);
+    if (targetSessionId) {
+      try {
+        await supabase.from('table_sessions').update({ closed_at: new Date().toISOString() }).eq('session_id', targetSessionId);
+      } catch {}
+      setSessions((prev) => prev.filter((s) => s.session_id !== targetSessionId));
+    }
+    showToast(`Meja ${target?.number || tableNumberOrSessionId} berhasil dikosongkan`, 'success');
   };
 
   // ---------- aksi: keranjang & pesanan staf ----------
@@ -1218,10 +1365,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ---------- aksi: dapur ----------
   const advanceTicketStatus = async (ticketId: string) => {
+    const rawOrderId = ticketId.replace('-food', '').replace('-drink', '');
     setSessions((prev) => prev.map((s) => ({
       ...s,
       orders: (s.orders || []).map((o: any) => {
-        if (String(o.order_id) === String(ticketId)) {
+        if (String(o.order_id) === String(rawOrderId)) {
           const cur = o.order_status;
           const nextStatus = cur === 'pending' || cur === 'submitted' ? 'cooking' : cur === 'cooking' || cur === 'preparing' ? 'ready' : 'served';
           return { ...o, order_status: nextStatus, ready_at: nextStatus === 'ready' ? new Date().toISOString() : o.ready_at };
@@ -1231,27 +1379,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     })));
 
     try {
-      await supabase.rpc('advance_order', { p_order: Number(ticketId) });
+      await supabase.rpc('advance_order', { p_order: Number(rawOrderId) });
     } catch {}
     playDingSound();
     showToast('Status pesanan diperbarui');
   };
 
   const confirmCustomerOrder = async (ticketId: string) => {
+    const rawOrderId = ticketId.replace('-food', '').replace('-drink', '');
     setSessions((prev) => prev.map((s) => ({
       ...s,
       orders: (s.orders || []).map((o: any) => {
-        if (String(o.order_id) === String(ticketId)) {
+        if (String(o.order_id) === String(rawOrderId)) {
           return { ...o, order_status: 'cooking' };
         }
         return o;
       })
     })));
     try {
-      await supabase.from('orders').update({ order_status: 'cooking' }).eq('order_id', Number(ticketId));
+      await supabase.from('orders').update({ order_status: 'cooking' }).eq('order_id', Number(rawOrderId));
     } catch {}
     playDingSound();
     showToast('Pesanan pelanggan berhasil dikonfirmasi dan dikirim ke dapur!', 'success');
+  };
+
+  const rejectCustomerOrder = async (orderId: string) => {
+    const rawOrderId = orderId.replace('-food', '').replace('-drink', '');
+    setSessions((prev) => prev.map((s) => ({
+      ...s,
+      orders: (s.orders || []).filter((o: any) => String(o.order_id) !== String(rawOrderId))
+    })));
+    try {
+      await supabase.from('orders').update({ order_status: 'cancelled' }).eq('order_id', Number(rawOrderId));
+    } catch {}
+    showToast('Pesanan fiktif/batal berhasil ditolak', 'info');
   };
 
   // ---------- aksi: menu ----------
@@ -1319,7 +1480,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AppContext.Provider value={{
       currentUser, currentRole, setCurrentRole, isLoggedIn, authLoading, dataReady, login, logout,
       activeView, setActiveView, viewportMode, setViewportMode, outletName, setOutletName,
-      tables, selectedTableId, setSelectedTableId, updateTable, addTable, deleteTable,
+      tables, selectedTableId, setSelectedTableId, updateTable, addTable, deleteTable, clearTableSession,
       cartItems, orderTableNumber, setOrderTableNumber, orderSecondaryTables, setOrderSecondaryTables,
       orderCustomerName, setOrderCustomerName, orderGuestCount, setOrderGuestCount,
       kitchenGeneralNote, setKitchenGeneralNote, addToCart, removeFromCart, updateCartQuantity, updateCartItemNotes, clearCart,
@@ -1328,7 +1489,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       menuItems, menuCategories, updateMenuItem, addMenuItem, deleteMenuItem, toggleMenuItemAvailability,
       rawIngredients, lowStockIngredients, updateIngredientStock, restockIngredient, updateIngredientMinimum, addRawIngredient, deleteRawIngredient,
       dismissStockWarning, setDismissStockWarning,
-      kitchenTickets, advanceTicketStatus, confirmCustomerOrder, transactions, recentReceipts,
+      kitchenTickets, advanceTicketStatus, confirmCustomerOrder, rejectCustomerOrder, pendingQrOrders, transactions, recentReceipts,
       toast, showToast, receiptModalData, openReceiptModal: setReceiptModalData, closeReceiptModal: () => setReceiptModalData(null),
       qrModalTable, openQrModal: setQrModalTable, closeQrModal: () => setQrModalTable(null),
       desktopSidebarOpen, setDesktopSidebarOpen, toggleDesktopSidebar,

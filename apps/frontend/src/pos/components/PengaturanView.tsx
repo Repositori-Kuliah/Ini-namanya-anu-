@@ -185,11 +185,21 @@ export const PengaturanView: React.FC = () => {
 
   const handleSaveHours = (e: React.FormEvent) => {
     e.preventDefault();
+    let finalClose = closeHourInput;
+
+    // Jika jam buka sama dengan jam tutup, otomatis berikan rentang 2 jam langsung tanpa peringatan
+    if (openHourInput === closeHourInput) {
+      const [oH, oM] = openHourInput.split(':').map((v) => parseInt(v, 10) || 0);
+      const newCloseH = (oH + 2) % 24;
+      finalClose = `${String(newCloseH).padStart(2, '0')}:${String(oM).padStart(2, '0')}`;
+      setCloseHourInput(finalClose);
+    }
+
     updateStoreSettings({
       openHour: openHourInput,
-      closeHour: closeHourInput,
+      closeHour: finalClose,
     });
-    showToast('Jam operasional berhasil disimpan', 'success');
+    showToast(`Jam operasional disimpan: ${openHourInput} – ${finalClose}`, 'success');
   };
 
   const handleSaveFinancials = (e: React.FormEvent) => {

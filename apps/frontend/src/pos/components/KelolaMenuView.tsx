@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { MenuItem, RawIngredient } from '../types';
+import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 
 const KelolaMenuViewInner: React.FC = () => {
   const {
@@ -46,6 +47,7 @@ const KelolaMenuViewInner: React.FC = () => {
   const [editDescription, setEditDescription] = useState('');
   const [editImage, setEditImage] = useState('');
   const [editIsRecommended, setEditIsRecommended] = useState(false);
+  const [editIsAvailable, setEditIsAvailable] = useState(true);
   const [isDraggingEdit, setIsDraggingEdit] = useState(false);
   const [showEditUrlInput, setShowEditUrlInput] = useState(false);
   const fileInputEditRef = useRef<HTMLInputElement>(null);
@@ -96,6 +98,18 @@ const KelolaMenuViewInner: React.FC = () => {
   const [openMenuActionId, setOpenMenuActionId] = useState<string | number | null>(null);
   const [openIngActionId, setOpenIngActionId] = useState<string | number | null>(null);
 
+  // Kunci scroll background saat modal apa pun terbuka
+  const isAnyModalOpen = Boolean(
+    showAddMenuModal ||
+    editingItem ||
+    restockItem ||
+    editMinItem ||
+    showAddIngredientModal ||
+    deleteMenuConfirm ||
+    deleteIngConfirm
+  );
+  useLockBodyScroll(isAnyModalOpen);
+
   // --- Filter Logic: Menu ---
   const filteredMenuItems = menuItems.filter((item) => {
     const matchesSearch =
@@ -140,6 +154,7 @@ const KelolaMenuViewInner: React.FC = () => {
     setEditDescription(item.description || '');
     setEditImage(item.image || '');
     setEditIsRecommended(Boolean(item.isRecommended || item.isFavorite));
+    setEditIsAvailable(item.isAvailable !== false);
   };
 
   const handleSaveEdit = (e: React.FormEvent) => {
@@ -160,6 +175,7 @@ const KelolaMenuViewInner: React.FC = () => {
       image: editImage.trim() || editingItem.image || '/logo-rawon.png',
       isRecommended: editIsRecommended,
       isFavorite: editIsRecommended,
+      isAvailable: editIsAvailable,
     };
 
     updateMenuItem(updated);
@@ -396,104 +412,50 @@ const KelolaMenuViewInner: React.FC = () => {
                   <th className="py-2.5 px-4">Nama Menu</th>
                   <th className="py-2.5 px-4">Kategori</th>
                   <th className="py-2.5 px-4">Harga Jual</th>
-                  <th className="py-2.5 px-4 text-center">Switch Ketersediaan</th>
-                  <th className="py-2.5 px-4 text-center">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#ebe8e3]">
                 {filteredMenuItems.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-8 text-center text-xs text-[#847374]">
+                    <td colSpan={3} className="py-8 text-center text-xs text-[#847374]">
                       Tidak ada menu yang sesuai dengan filter.
                     </td>
                   </tr>
                 ) : (
-                  filteredMenuItems.map((item, idx) => {
-                    const isBottomRow = idx >= Math.max(1, filteredMenuItems.length - 4);
+                  filteredMenuItems.map((item) => {
                     return (
-                      <tr key={item.id} className="hover:bg-[#fcf9f4] transition-colors">
+                      <tr
+                        key={item.id}
+                        onClick={() => handleOpenEdit(item)}
+                        className="hover:bg-[#fcf9f4] transition-colors cursor-pointer"
+                        title="Klik untuk edit &amp; kelola menu"
+                      >
                         <td className="py-2.5 px-4">
-                          <span className="font-bold text-[#1c1c19] block leading-tight">
-                            {item.name}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-[#1c1c19] block leading-tight">
+                              {item.name}
+                            </span>
+                            {!item.isAvailable && (
+                              <span className="px-1.5 py-0.2 rounded bg-[#ffdadc] text-[#ba1a1a] text-[10px] font-bold shrink-0">
+                                Habis
+                              </span>
+                            )}
+                            {Boolean(item.isRecommended || item.isFavorite) && (
+                              <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 text-[10px] font-bold shrink-0 flex items-center gap-0.5">
+                                <span className="material-symbols-outlined text-[11px]">star</span>
+                                <span>Unggulan</span>
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="py-2.5 px-4 text-[#524344] font-medium">{item.category}</td>
                         <td className="py-2.5 px-4 font-bold text-[#3d1018] tabular-nums">
                           Rp {item.price.toLocaleString('id-ID')}
                         </td>
-                        {/* Switch Cepat Habis / Tersedia */}
-                        <td className="py-2.5 px-4 text-center">
-                          <button
-                            type="button"
-                            onClick={() => handleToggleAvailability(item)}
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                              item.isAvailable
-                                ? 'bg-[#f0ede9] text-[#3d1018] hover:bg-[#e0dcd8]'
-                                : 'bg-[#ffdadc] text-[#ba1a1a] hover:bg-[#ffcdd2]'
-                            }`}
-                            title="Klik untuk ubah status ketersediaan"
-                          >
-                            <span className="material-symbols-outlined text-[14px]">
-                              {item.isAvailable ? 'check_circle' : 'do_not_disturb_on'}
-                            </span>
-                            <span>{item.isAvailable ? 'Tersedia' : 'Habis'}</span>
-                          </button>
-                        </td>
-                        <td className="py-2.5 px-4 text-center relative">
-                          <div className="relative inline-block text-left">
-                            <button
-                              type="button"
-                              onClick={() => setOpenMenuActionId(openMenuActionId === item.id ? null : item.id)}
-                              className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-[#f6f3ee] hover:bg-[#ebe8e3] text-[#1c1c19] border border-[#ebe8e3] text-xs font-semibold cursor-pointer transition-colors"
-                            >
-                              <span>Aksi</span>
-                              <span className="material-symbols-outlined text-[14px] text-[#524344]">
-                                {openMenuActionId === item.id ? 'expand_less' : 'expand_more'}
-                              </span>
-                            </button>
-
-                            {openMenuActionId === item.id && (
-                              <>
-                                <div
-                                  className="fixed inset-0 z-20"
-                                  onClick={() => setOpenMenuActionId(null)}
-                                />
-                                <div className={`absolute right-0 ${isBottomRow ? 'bottom-full mb-1 origin-bottom-right' : 'top-full mt-1 origin-top-right'} w-40 bg-white rounded-xl shadow-xl border border-[#ebe8e3] py-1 z-30 text-left divide-y divide-[#ebe8e3] animate-in fade-in zoom-in-95 duration-100`}>
-                                <div className="py-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenMenuActionId(null);
-                                      handleOpenEdit(item);
-                                    }}
-                                    className="w-full px-3 py-1.5 text-xs font-medium text-[#1c1c19] hover:bg-[#f6f3ee] flex items-center gap-2 cursor-pointer"
-                                  >
-                                    <span className="material-symbols-outlined text-[15px] text-[#524344]">edit</span>
-                                    <span>Edit Menu</span>
-                                  </button>
-                                </div>
-                                <div className="py-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenMenuActionId(null);
-                                      setDeleteMenuConfirm(item);
-                                    }}
-                                    className="w-full px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 flex items-center gap-2 cursor-pointer"
-                                  >
-                                    <span className="material-symbols-outlined text-[15px] text-red-700">delete</span>
-                                    <span>Hapus Menu</span>
-                                  </button>
-                                </div>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -1033,31 +995,91 @@ const KelolaMenuViewInner: React.FC = () => {
                 )}
               </div>
 
-              <label className="flex items-center gap-2 cursor-pointer pt-1">
-                <input
-                  type="checkbox"
-                  checked={editIsRecommended}
-                  onChange={(e) => setEditIsRecommended(e.target.checked)}
-                  className="w-4 h-4 rounded text-[#3d1018] accent-[#3d1018] cursor-pointer"
-                />
-                <span className="font-semibold text-[#1c1c19]">Rekomendasi Makanan (Tandai Menu Unggulan)</span>
-              </label>
+              {/* Saklar Toggle 1: Status Ketersediaan Menu */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3]">
+                <div>
+                  <span className="font-bold text-xs text-[#1c1c19] block">
+                    Status Ketersediaan
+                  </span>
+                  <span className="text-[11px] text-[#524344]">
+                    {editIsAvailable ? 'Menu Tersedia (dapat dipesan)' : 'Menu Habis (tidak dapat dipesan)'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={editIsAvailable}
+                  onClick={() => setEditIsAvailable(!editIsAvailable)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    editIsAvailable ? 'bg-[#3d1018]' : 'bg-[#d8d4ce]'
+                  }`}
+                  aria-label="Ubah status ketersediaan"
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                      editIsAvailable ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Saklar Toggle 2: Rekomendasi Menu */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3]">
+                <div>
+                  <span className="font-bold text-xs text-[#1c1c19] block">
+                    Rekomendasi Makanan
+                  </span>
+                  <span className="text-[11px] text-[#524344]">
+                    {editIsRecommended ? 'Ditandai sebagai hidangan favorit/unggulan' : 'Menu reguler standar'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={editIsRecommended}
+                  onClick={() => setEditIsRecommended(!editIsRecommended)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    editIsRecommended ? 'bg-[#3d1018]' : 'bg-[#d8d4ce]'
+                  }`}
+                  aria-label="Tandai menu rekomendasi"
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                      editIsRecommended ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
 
-            <div className="flex gap-2 pt-2 border-t border-[#ebe8e3]">
+            <div className="flex items-center justify-between pt-2 border-t border-[#ebe8e3]">
               <button
                 type="button"
-                onClick={() => setEditingItem(null)}
-                className="flex-1 py-2 rounded-lg bg-[#f0ede9] text-[#1c1c19] text-xs font-semibold cursor-pointer"
+                onClick={() => {
+                  const itm = editingItem;
+                  setEditingItem(null);
+                  setDeleteMenuConfirm(itm);
+                }}
+                className="px-3 py-2 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 hover:text-red-700 cursor-pointer flex items-center gap-1 transition-colors"
               >
-                Batal
+                <span className="material-symbols-outlined text-[16px]">delete</span>
+                <span>Hapus Menu</span>
               </button>
-              <button
-                type="submit"
-                className="flex-1 py-2 rounded-lg bg-[#3d1018] text-white text-xs font-bold hover:bg-[#58252c] cursor-pointer shadow-xs"
-              >
-                Simpan Perubahan
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingItem(null)}
+                  className="px-3.5 py-2 rounded-lg bg-[#f0ede9] text-[#1c1c19] text-xs font-semibold cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-lg bg-[#3d1018] text-white text-xs font-bold hover:bg-[#58252c] cursor-pointer shadow-xs"
+                >
+                  Simpan Perubahan
+                </button>
+              </div>
             </div>
           </form>
         </div>

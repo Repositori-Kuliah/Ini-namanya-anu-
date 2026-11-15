@@ -1,8 +1,11 @@
 import React, { useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 
 export const ThermalReceiptModal: React.FC = () => {
-  const { receiptModalData, closeReceiptModal, currentUser } = useApp();
+  const { receiptModalData, closeReceiptModal } = useApp();
+
+  useLockBodyScroll(Boolean(receiptModalData));
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -27,68 +30,99 @@ export const ThermalReceiptModal: React.FC = () => {
       role="dialog"
       aria-modal="true"
       aria-labelledby="receipt-modal-title"
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in"
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in touch-none"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) closeReceiptModal();
+      }}
+      onTouchMove={(e) => {
+        if (e.target === e.currentTarget) e.preventDefault();
+      }}
     >
-      <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl relative my-8 flex flex-col items-center">
-        {/* Close Button */}
-        <button
-          type="button"
-          onClick={closeReceiptModal}
-          aria-label="Tutup Struk"
-          className="absolute top-4 right-4 w-9 h-9 rounded-full bg-[#f0ede9] hover:bg-[#ebe8e3] flex items-center justify-center text-[#524344] focus-visible:ring-2 focus-visible:ring-[#3d1018] focus-visible:outline-none cursor-pointer"
-        >
-          <span className="material-symbols-outlined text-[18px]" aria-hidden="true">close</span>
-        </button>
+      <div className="bg-white rounded-2xl max-w-sm w-full max-h-[88vh] p-4 sm:p-5 shadow-2xl border border-[#ebe8e3] flex flex-col my-auto animate-in zoom-in-95 duration-150">
+        {/* Header Modal Ringkas */}
+        <div className="flex items-center justify-between pb-3 border-b border-[#ebe8e3] shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[#3d1018] text-[20px]">receipt_long</span>
+            <div>
+              <h3 id="receipt-modal-title" className="font-serif font-bold text-sm sm:text-base text-[#1c1c19] leading-tight">
+                Pratinjau Struk Kasir
+              </h3>
+              <p className="text-[10px] text-[#847374]">Format cetak printer termal 58mm/80mm</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={closeReceiptModal}
+            aria-label="Tutup Struk"
+            className="w-7 h-7 rounded-full bg-[#f0ede9] hover:bg-[#ebe8e3] flex items-center justify-center text-[#524344] cursor-pointer transition-colors"
+          >
+            <span className="material-symbols-outlined text-[16px]" aria-hidden="true">close</span>
+          </button>
+        </div>
 
-        {/* Thermal Paper Simulation Container (Murni Hitam-Putih Monokrom) */}
-        <div className="printable-receipt-area w-full bg-white border-2 border-black p-5 rounded-lg shadow-xs font-mono text-xs text-black flex flex-col gap-3">
-          {/* Header */}
-          <div className="flex flex-col items-center text-center border-b-2 border-dashed border-black pb-3">
-            <h3 id="receipt-modal-title" className="font-bold text-base tracking-wider text-black uppercase">
+        {/* Thermal Paper Simulation Container (Scrollable Preview dengan boundary overscroll-contain) */}
+        <div className="printable-receipt-area w-full flex-1 overflow-y-auto overscroll-contain my-3 p-3.5 sm:p-4 bg-[#faf9f6] rounded-xl border border-dashed border-stone-300 font-mono text-[11px] text-black flex flex-col">
+          {/* Header Toko & Logo */}
+          <div className="flex flex-col items-center text-center pb-2">
+            <img
+              src="/logo-rawon.png"
+              alt="Logo Gusti"
+              className="w-11 h-11 object-contain mx-auto mb-1 filter grayscale contrast-125"
+            />
+            <h4 className="font-bold text-xs tracking-widest text-black uppercase">
               RAWON GUSTI
-            </h3>
-            <p className="text-[10px] text-black">Surabaya, Jawa Timur</p>
-            <p className="text-[9px] text-black">Jl. Pemuda No. 45 - Telp: (031) 567-8901</p>
-            {bill.status === 'lunas' && (
-              <span className="mt-1.5 px-3 py-0.5 border border-black text-black text-[10px] font-bold tracking-widest uppercase">
-                *** LUNAS ***
-              </span>
-            )}
+            </h4>
+            <p className="text-[10px] leading-tight text-black mt-0.5">Ruko Sentra</p>
+            <p className="text-[10px] leading-tight text-black">Jl. Taman Internasional No. A5</p>
+            <p className="text-[10px] leading-tight text-black">Sambikerep, Surabaya</p>
+            <p className="text-[10px] leading-tight text-black">Telp: +62 812-4890-7556</p>
           </div>
 
-          {/* Meta Info */}
-          <div className="flex flex-col gap-1 border-b-2 border-dashed border-black pb-3 text-[11px]">
+          {/* Garis Putus-Putus */}
+          <div className="border-b border-dashed border-black my-1.5" />
+
+          {/* Judul Struk */}
+          <div className="text-center font-bold text-[11px] tracking-wider uppercase py-0.5">
+            STRUK PEMBAYARAN
+          </div>
+
+          {/* Garis Putus-Putus */}
+          <div className="border-b border-dashed border-black my-1.5" />
+
+          {/* Meta Info Transaksi */}
+          <div className="flex flex-col gap-0.5 text-[10px] py-1">
             <div className="flex justify-between">
-              <span className="font-bold">Bill: #{bill.billNumber}</span>
-              <span className="font-bold">Meja: {bill.tableNumber}</span>
+              <span>Waktu</span>
+              <span>{bill.paidAtTime || new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) + ', ' + new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/:/g, '.')}</span>
             </div>
-            <div className="flex justify-between text-black">
-              <span>Tamu: {bill.customerName} ({bill.guestCount} org)</span>
-              <span>Kasir: {currentUser?.name || bill.waiterName || 'Kasir'}</span>
+            <div className="flex justify-between">
+              <span>No. Bill</span>
+              <span className="font-mono">{bill.billNumber.startsWith('ORD-') ? bill.billNumber : `ORD-${bill.billNumber}`}</span>
             </div>
-            <div className="flex justify-between text-black">
-              <span>Waktu: {bill.paidAtTime || `${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' })} ${bill.requestedAt || ''}`}</span>
-              <span>Layanan: Santap di Tempat</span>
+            <div className="flex justify-between">
+              <span>Meja</span>
+              <span>{String(bill.tableNumber).replace(/[^0-9]/g, '').padStart(2, '0') || bill.tableNumber}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Pelanggan</span>
+              <span>{bill.customerName || 'Tamu'}</span>
             </div>
           </div>
 
-          {/* Items */}
-          <div className="flex flex-col gap-1.5 border-b-2 border-dashed border-black pb-3">
+          {/* Garis Putus-Putus */}
+          <div className="border-b border-dashed border-black my-1.5" />
+
+          {/* Rincian Item (Format 2 Baris Presisi) */}
+          <div className="flex flex-col gap-1.5 py-1">
             {bill.items.map((item, idx) => (
-              <div key={idx} className="flex flex-col">
-                <div className="flex justify-between font-bold">
-                  <span>{item.name}</span>
-                </div>
-                <div className="flex justify-between text-black pl-2 text-[10px]">
-                  <span>
-                    {item.quantity} x Rp {item.price.toLocaleString('id-ID')}
-                  </span>
-                  <span className="font-bold">
-                    Rp {(item.price * item.quantity).toLocaleString('id-ID')}
-                  </span>
+              <div key={idx} className="flex flex-col text-[10px]">
+                <div className="text-left font-normal">{item.name}</div>
+                <div className="flex justify-between font-mono">
+                  <span>{item.quantity} x {item.price.toLocaleString('id-ID')}</span>
+                  <span>{(item.price * item.quantity).toLocaleString('id-ID')}</span>
                 </div>
                 {item.notes && (
-                  <span className="text-[9px] text-black pl-2 italic">
+                  <span className="text-[9px] text-stone-700 italic">
                     *{item.notes}
                   </span>
                 )}
@@ -96,73 +130,71 @@ export const ThermalReceiptModal: React.FC = () => {
             ))}
           </div>
 
-          {/* Financial Totals */}
-          <div className="flex flex-col gap-1 border-b-2 border-dashed border-black pb-3 text-[11px]">
-            <div className="flex justify-between text-black">
-              <span>Subtotal:</span>
-              <span>Rp {bill.subtotal.toLocaleString('id-ID')}</span>
-            </div>
-            <div className="flex justify-between text-black">
-              <span>Biaya Layanan (5%):</span>
-              <span>Rp {bill.serviceFee.toLocaleString('id-ID')}</span>
-            </div>
-            <div className="flex justify-between text-black">
-              <span>Pajak Daerah PB1 (10%):</span>
-              <span>Rp {bill.tax.toLocaleString('id-ID')}</span>
-            </div>
-            <div className="flex justify-between font-bold text-sm pt-1 border-t border-black text-black">
-              <span>TOTAL:</span>
-              <span>Rp {bill.total.toLocaleString('id-ID')}</span>
-            </div>
+          {/* Garis Putus-Putus */}
+          <div className="border-b border-dashed border-black my-1.5" />
 
-            {bill.cashTendered && (
-              <>
-                <div className="flex justify-between text-black pt-1">
-                  <span>Bayar ({bill.paymentMethod || 'Tunai'}):</span>
-                  <span>Rp {bill.cashTendered.toLocaleString('id-ID')}</span>
-                </div>
-                <div className="flex justify-between font-bold text-black">
-                  <span>Kembalian:</span>
-                  <span>Rp {(bill.changeAmount || 0).toLocaleString('id-ID')}</span>
-                </div>
-              </>
-            )}
+          {/* Subtotal & Pajak */}
+          <div className="flex flex-col gap-0.5 text-[10px] py-1">
+            <div className="flex justify-between">
+              <span>Subtotal</span>
+              <span className="font-mono">{bill.subtotal.toLocaleString('id-ID')}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Layanan 5%</span>
+              <span className="font-mono">{bill.serviceFee.toLocaleString('id-ID')}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>PB1 10%</span>
+              <span className="font-mono">{bill.tax.toLocaleString('id-ID')}</span>
+            </div>
           </div>
 
-          {/* Footer Note & Barcode */}
-          <div className="flex flex-col items-center text-center pt-1 text-[10px] text-[#736b63] gap-1">
-            <p className="font-serif italic text-xs text-[#3d1018] font-bold">
-              Rasa asli, sepenuh hati.
-            </p>
-            <p>Terima kasih atas kunjungan Anda!</p>
-            <p className="text-[9px]">Struk ini merupakan bukti pembayaran resmi yang sah.</p>
-            <div className="h-7 w-48 bg-stone-800 my-1 flex items-center justify-around px-2">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map((i) => (
-                <div
-                  key={i}
-                  className={`h-full bg-white ${i % 3 === 0 ? 'w-1.5' : i % 2 === 0 ? 'w-0.5' : 'w-1'}`}
-                />
-              ))}
+          {/* Garis Putus-Putus */}
+          <div className="border-b border-dashed border-black my-1.5" />
+
+          {/* Total & Rincian Pembayaran */}
+          <div className="flex flex-col gap-0.5 text-[10px] py-1">
+            <div className="flex justify-between font-bold text-[11px] pt-0.5">
+              <span>TOTAL</span>
+              <span className="font-mono text-xs">{bill.total.toLocaleString('id-ID')}</span>
             </div>
-            <span className="text-[9px] font-mono tracking-widest text-[#847374]">
-              RG-POS-{bill.billNumber.replace(/[^a-zA-Z0-9]/g, '') || '0031'}
-            </span>
+            <div className="flex justify-between">
+              <span>{(bill.paymentMethod || 'TUNAI').toUpperCase()}</span>
+              <span className="font-bold">LUNAS</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Dibayar</span>
+              <span className="font-mono">{(bill.cashTendered || bill.total).toLocaleString('id-ID')}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Kembalian</span>
+              <span className="font-mono">{(bill.changeAmount || 0).toLocaleString('id-ID')}</span>
+            </div>
+          </div>
+
+          {/* Garis Putus-Putus */}
+          <div className="border-b border-dashed border-black my-1.5" />
+
+          {/* Footer Ucapan Terima Kasih */}
+          <div className="flex flex-col items-center text-center pt-2 pb-1 text-[10px] text-black">
+            <p className="font-normal">Terima kasih!</p>
+            <p className="font-normal">Atas kunjungan Anda</p>
           </div>
         </div>
 
-        {/* Modal Action Buttons */}
-        <div className="flex gap-2 w-full mt-4">
+        {/* Modal Action Buttons (Sticky Footer) */}
+        <div className="flex gap-2 w-full pt-2 border-t border-[#ebe8e3] shrink-0">
           <button
             type="button"
             onClick={closeReceiptModal}
-            className="flex-1 py-2.5 rounded-xl bg-[#f0ede9] hover:bg-[#ebe8e3] text-[#1c1c19] text-xs font-semibold focus-visible:ring-2 focus-visible:ring-[#3d1018] focus-visible:outline-none cursor-pointer"
+            className="flex-1 py-2.5 rounded-xl bg-[#f0ede9] hover:bg-[#ebe8e3] text-[#1c1c19] text-xs font-semibold cursor-pointer transition-colors"
           >
             Tutup
           </button>
           <button
             type="button"
             onClick={handlePrint}
-            className="flex-1 py-2.5 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold shadow-md flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-[#3d1018] focus-visible:outline-none cursor-pointer"
+            className="flex-1 py-2.5 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold shadow-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
           >
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">print</span>
             <span>Cetak Struk</span>

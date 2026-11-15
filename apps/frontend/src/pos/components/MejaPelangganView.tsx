@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { TableItem } from '../types';
+import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 
 const MejaPelangganViewInner: React.FC = () => {
   const {
@@ -12,14 +13,18 @@ const MejaPelangganViewInner: React.FC = () => {
     setOrderCustomerName,
     setSelectedBillId,
     openReceiptModal,
+    clearTableSession,
     bills,
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'terisi' | 'checkout' | 'kosong'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'terisi' | 'tersedia'>('all');
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
-  // Filtered tables
+  // Kunci scroll halaman belakang saat modal detail meja terbuka di mobile
+  useLockBodyScroll(mobileDrawerOpen);
+
+  // Filtered tables (Hanya 3 status: Semua Meja, Terisi, Tersedia)
   const filteredTables = tables.filter((table) => {
     const matchesSearch =
       table.number.includes(searchQuery) ||
@@ -29,11 +34,8 @@ const MejaPelangganViewInner: React.FC = () => {
     if (!matchesSearch) return false;
 
     if (filterStatus === 'all') return true;
-    if (filterStatus === 'kosong') return table.status === 'kosong';
-    if (filterStatus === 'checkout') return table.status === 'checkout';
-    if (filterStatus === 'terisi') {
-      return table.status !== 'kosong';
-    }
+    if (filterStatus === 'tersedia') return table.status === 'kosong';
+    if (filterStatus === 'terisi') return table.status !== 'kosong';
     return true;
   });
 
@@ -74,16 +76,10 @@ const MejaPelangganViewInner: React.FC = () => {
   // Metrics counts
   const occupiedCount = tables.filter((t) => t.status !== 'kosong').length;
   const emptyCount = tables.filter((t) => t.status === 'kosong').length;
-  const checkoutCount = tables.filter((t) => t.status === 'checkout').length;
-  const readyCount = tables.filter((t) => t.status === 'siap_diantar').length;
-  const totalGuests = tables.reduce(
-    (acc, t) => acc + (t.status !== 'kosong' ? t.guestCount || 2 : 0),
-    0
-  );
 
   return (
-    <div className="flex flex-col w-full p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1540px] mx-auto pb-4 md:pb-8">
-      {/* Top Header & Action Bar (Aligned with DashboardView) */}
+    <div className="flex flex-col w-full p-4 sm:p-6 lg:p-8 space-y-5 max-w-[1540px] mx-auto pb-4 md:pb-8">
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <h1 className="font-serif text-3xl sm:text-4xl font-bold text-[#3d1018] tracking-tight">
@@ -92,84 +88,7 @@ const MejaPelangganViewInner: React.FC = () => {
         </div>
       </div>
 
-      {/* 4 Operational Metric Cards (Calm, Editorial & Consistent with Dashboard) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Metric 1: Meja Terisi */}
-        <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-[#ebe8e3] flex flex-col justify-between hover:border-[#d8d1c7] transition-colors">
-          <div className="flex items-center justify-between text-[#524344] mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#524344]">
-              Meja Terisi
-            </span>
-            <span className="w-8 h-8 rounded-full bg-[#f0ede9] flex items-center justify-center text-[#3d1018]">
-              <span className="material-symbols-outlined text-[18px]">table_restaurant</span>
-            </span>
-          </div>
-          <div>
-            <div className="font-serif text-2xl sm:text-3xl font-bold text-[#3d1018] tabular-nums">
-              {occupiedCount}
-              <span className="text-sm sm:text-base font-sans text-[#847374] font-medium ml-1">
-                / {tables.length}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Metric 2: Tamu Bersantap */}
-        <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-[#ebe8e3] flex flex-col justify-between hover:border-[#d8d1c7] transition-colors">
-          <div className="flex items-center justify-between text-[#524344] mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#524344]">
-              Tamu Aktif
-            </span>
-            <span className="w-8 h-8 rounded-full bg-[#f0ede9] flex items-center justify-center text-[#3d1018]">
-              <span className="material-symbols-outlined text-[18px]">groups</span>
-            </span>
-          </div>
-          <div>
-            <div className="font-serif text-2xl sm:text-3xl font-bold text-[#3d1018] tabular-nums">
-              {totalGuests}
-              <span className="text-sm font-sans text-[#847374] font-medium ml-1">orang</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Metric 3: Siap Diantar */}
-        <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-[#ebe8e3] flex flex-col justify-between hover:border-[#d8d1c7] transition-colors">
-          <div className="flex items-center justify-between text-[#524344] mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#524344]">
-              Siap Diantar
-            </span>
-            <span className="w-8 h-8 rounded-full bg-[#f0ede9] flex items-center justify-center text-[#3d1018]">
-              <span className="material-symbols-outlined text-[18px]">room_service</span>
-            </span>
-          </div>
-          <div>
-            <div className="font-serif text-2xl sm:text-3xl font-bold text-[#3d1018] tabular-nums">
-              {readyCount}
-              <span className="text-sm font-sans text-[#847374] font-medium ml-1">meja</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Metric 4: Minta Checkout */}
-        <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-[#ebe8e3] flex flex-col justify-between hover:border-[#d8d1c7] transition-colors">
-          <div className="flex items-center justify-between text-[#524344] mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#524344]">
-              Minta Checkout
-            </span>
-            <span className="w-8 h-8 rounded-full bg-[#f0ede9] flex items-center justify-center text-[#3d1018]">
-              <span className="material-symbols-outlined text-[18px]">receipt_long</span>
-            </span>
-          </div>
-          <div>
-            <div className="font-serif text-2xl sm:text-3xl font-bold text-[#3d1018] tabular-nums">
-              {checkoutCount}
-              <span className="text-sm font-sans text-[#847374] font-medium ml-1">meja</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Search & Segmented Filter Bar */}
+      {/* Search & Segmented Filter Bar (3 Tab Filter: Semua Meja, Terisi, Tersedia) */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         {/* Search Input */}
         <div className="relative flex-1 max-w-md">
@@ -195,13 +114,12 @@ const MejaPelangganViewInner: React.FC = () => {
           )}
         </div>
 
-        {/* Clean Segmented Control (Aligned with DashboardView Presets) */}
+        {/* Clean Segmented Control: 3 Status Saja (Semua Meja, Terisi, Tersedia) */}
         <div className="inline-flex items-center bg-white p-1 rounded-xl border border-[#ebe8e3] shadow-xs overflow-x-auto no-scrollbar">
           {[
             { id: 'all', label: 'Semua Meja', count: tables.length },
             { id: 'terisi', label: 'Terisi', count: occupiedCount },
-            { id: 'checkout', label: 'Minta Checkout', count: checkoutCount },
-            { id: 'kosong', label: 'Kosong', count: emptyCount },
+            { id: 'tersedia', label: 'Tersedia', count: emptyCount },
           ].map((item) => {
             const active = filterStatus === item.id;
             return (
@@ -209,7 +127,7 @@ const MejaPelangganViewInner: React.FC = () => {
                 key={item.id}
                 type="button"
                 onClick={() => setFilterStatus(item.id as any)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                   active
                     ? 'bg-[#3d1018] text-white shadow-xs'
                     : 'text-[#524344] hover:text-[#1c1c19] hover:bg-[#f6f3ee]'
@@ -241,92 +159,40 @@ const MejaPelangganViewInner: React.FC = () => {
               {filteredTables.map((table) => {
                 const isSelected = selectedTable?.number === table.number;
                 const isKosong = table.status === 'kosong';
-                const isCheckout = table.status === 'checkout';
-                const isSiap = table.status === 'siap_diantar';
 
                 return (
                   <div
                     key={table.id}
                     onClick={() => handleSelectTable(table)}
-                    className={`rounded-2xl p-4 transition-all cursor-pointer flex flex-col justify-between min-h-[154px] relative bg-white border ${
+                    className={`rounded-2xl p-4 transition-all cursor-pointer flex flex-col justify-between min-h-[148px] relative bg-white border ${
                       isSelected
-                        ? 'border-[#3d1018] ring-1 ring-[#3d1018] shadow-sm'
+                        ? 'border-[#3d1018] ring-2 ring-[#3d1018]/25 shadow-md'
                         : 'border-[#ebe8e3] hover:border-[#d8d1c7] shadow-xs hover:shadow-sm'
                     }`}
                   >
-                    {/* Top Row: Plaque Table Number & Unboxed Status */}
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#847374]">
-                          MEJA
-                        </span>
-                        <span
-                          className={`font-serif text-2xl sm:text-3xl font-bold tabular-nums leading-none ${
-                            isKosong ? 'text-[#847374]' : 'text-[#3d1018]'
-                          }`}
-                        >
-                          {table.number}
-                        </span>
-                      </div>
-
-                      {/* Status Text (No Heavy Pill Sandwiches) */}
-                      {isKosong ? (
-                        <span className="text-[11px] font-medium text-[#847374]">Kosong</span>
-                      ) : isCheckout ? (
-                        <span className="text-[11px] font-bold text-[#994703] flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[14px]">receipt_long</span>
-                          <span>Checkout</span>
-                        </span>
-                      ) : isSiap ? (
-                        <span className="text-[11px] font-bold text-[#994703] flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[14px]">room_service</span>
-                          <span>Siap Antar</span>
-                        </span>
-                      ) : (
-                        <span className="text-[11px] font-medium text-[#524344]">
-                          {table.statusLabel}
-                        </span>
-                      )}
+                    {/* Tengah: Nomor Meja Besar & Tegas */}
+                    <div className="flex flex-col items-center justify-center flex-1 py-3 text-center">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-[#847374] mb-0.5">
+                        MEJA
+                      </span>
+                      <span
+                        className={`font-serif text-3xl sm:text-4xl font-bold tabular-nums leading-none ${
+                          isKosong ? 'text-[#847374]' : 'text-[#3d1018]'
+                        }`}
+                      >
+                        {table.number}
+                      </span>
                     </div>
 
-                    {/* Middle Info */}
-                    <div className="my-2">
-                      {isKosong ? (
-                        <>
-                          <p className="font-semibold text-xs text-[#1c1c19]">Tersedia</p>
-                          <p className="text-[11px] text-[#847374] mt-0.5">
-                            Kapasitas 4 orang
-                          </p>
-                        </>
-                      ) : (
-                        <>
-                          <p className="font-semibold text-xs sm:text-sm text-[#1c1c19] truncate">
-                            {table.name || 'Pelanggan'} {table.guestCount ? `(${table.guestCount} org)` : ''}
-                          </p>
-                          <p className="text-[11px] text-[#524344] mt-0.5 truncate">
-                            {table.billId ? `Bill #${table.billId} ` : ''}
-                            {table.items ? `${table.items.length} menu` : 'Sedang bersantap'}
-                          </p>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Bottom Row */}
-                    <div className="pt-2 border-t border-[#f0ede9] flex items-center justify-between text-xs">
-                      {isKosong ? (
-                        <div className="w-full text-center">
-                          <span className="text-[11px] text-[#847374] font-medium">Siap buka order</span>
-                        </div>
-                      ) : (
-                        <>
-                          <span className="text-[11px] text-[#847374] truncate max-w-[90px]">
-                            {table.infoSubtitle || 'Santap di Tempat'}
-                          </span>
-                          <span className="font-serif font-bold text-sm text-[#3d1018] tabular-nums">
-                            {table.totalFormatted || 'Rp 0'}
-                          </span>
-                        </>
-                      )}
+                    {/* Bawah: Status Terisi vs Tersedia (Center) */}
+                    <div className="pt-2.5 border-t border-[#f0ede9] text-center">
+                      <span
+                        className={`text-xs font-bold ${
+                          isKosong ? 'text-[#847374]' : 'text-[#3d1018]'
+                        }`}
+                      >
+                        {isKosong ? 'Tersedia' : 'Terisi'}
+                      </span>
                     </div>
                   </div>
                 );
@@ -340,23 +206,23 @@ const MejaPelangganViewInner: React.FC = () => {
           {/* Header Panel */}
           <div className="flex items-start justify-between border-b border-[#ebe8e3] pb-3">
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold text-[#524344] uppercase tracking-wider">
-                  Detail Meja
-                </span>
-                <span className="text-xs font-semibold text-[#3d1018]">
-                  {selectedTable.statusLabel}
-                </span>
-              </div>
-              <h2 className="font-serif text-2xl font-bold text-[#3d1018] mt-1">
+              <span className="text-[11px] font-bold text-[#524344] uppercase tracking-wider block">
+                Detail Meja
+              </span>
+              <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#3d1018] mt-1">
                 Meja {selectedTable.number}
               </h2>
-              <p className="text-xs text-[#524344] mt-0.5">
-                {selectedTable.name
-                  ? `${selectedTable.name} (${selectedTable.guestCount || 2} tamu)`
-                  : 'Kapasitas 4 orang'}
-              </p>
             </div>
+            {selectedTable.status !== 'kosong' && (
+              <button
+                type="button"
+                onClick={() => clearTableSession(selectedTable.number)}
+                className="px-2.5 py-1 text-[11px] font-semibold text-stone-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                title="Kosongkan meja ini"
+              >
+                Kosongkan Meja
+              </button>
+            )}
           </div>
 
           {selectedTable.status === 'kosong' ? (
@@ -365,9 +231,9 @@ const MejaPelangganViewInner: React.FC = () => {
                 <span className="material-symbols-outlined text-[28px]">table_restaurant</span>
               </div>
               <div>
-                <h3 className="font-serif font-bold text-base text-[#1c1c19]">Meja Ini Kosong</h3>
+                <h3 className="font-serif font-bold text-base text-[#1c1c19]">Meja Ini Tersedia</h3>
                 <p className="text-xs text-[#524344] max-w-xs mt-1">
-                  Siap menerima pelanggan baru untuk pesanan santap di tempat.
+                  Siap menerima pesanan baru untuk meja {selectedTable.number}.
                 </p>
               </div>
               <button
@@ -381,22 +247,7 @@ const MejaPelangganViewInner: React.FC = () => {
             </div>
           ) : (
             <>
-              {/* Timeline / Activity Status */}
-              <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-[#faf7f2] border border-[#ebe8e3] text-xs">
-                <div className="flex items-center gap-2 text-[#524344]">
-                  <span className="material-symbols-outlined text-[16px] text-[#994703]">
-                    schedule
-                  </span>
-                  <span className="font-medium">
-                    {selectedTable.infoSubtitle || 'Aktif bersantap'}
-                  </span>
-                </div>
-                <span className="font-mono text-[11px] font-bold text-[#847374]">
-                  {selectedTable.billId ? `Bill #${selectedTable.billId}` : 'Pesanan Aktif'}
-                </span>
-              </div>
-
-              {/* Items Summary */}
+              {/* Items Summary (Rincian Menu) */}
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center text-xs text-[#524344]">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-[#524344]">
@@ -404,7 +255,7 @@ const MejaPelangganViewInner: React.FC = () => {
                   </span>
                   <span>{selectedTable.items?.length || 0} Item</span>
                 </div>
-                <div className="divide-y divide-[#ebe8e3] text-xs max-h-48 overflow-y-auto pr-1">
+                <div className="divide-y divide-[#ebe8e3] text-xs max-h-56 overflow-y-auto pr-1">
                   {(selectedTable.items && selectedTable.items.length > 0) ? (
                     selectedTable.items.map((item, idx) => (
                       <div key={idx} className="py-2 flex justify-between items-center">
@@ -439,7 +290,6 @@ const MejaPelangganViewInner: React.FC = () => {
                     type="button"
                     onClick={() => {
                       if (selectedTable.sessionId) {
-                        // Temukan ticket / order
                         showToast(`Pesanan Meja ${selectedTable.number} berhasil dikonfirmasi!`, 'success');
                       }
                     }}
@@ -474,40 +324,51 @@ const MejaPelangganViewInner: React.FC = () => {
         </div>
       </div>
 
-      {/* Mobile Drawer (Bottom Sheet) */}
+      {/* Mobile Detail Meja Pop-up Modal */}
       {mobileDrawerOpen && (
-        <>
-          <div
-            onClick={() => setMobileDrawerOpen(false)}
-            className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 lg:hidden"
-          ></div>
-          <div className="fixed bottom-0 inset-x-0 z-50 bg-white rounded-t-3xl shadow-2xl p-5 pb-8 border-t border-[#ebe8e3] max-h-[85vh] overflow-y-auto lg:hidden animate-in slide-in-from-bottom duration-200">
-            <div className="w-10 h-1 bg-[#ebe8e3] rounded-full mx-auto mb-3"></div>
-
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs lg:hidden animate-in fade-in duration-150 touch-none"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setMobileDrawerOpen(false);
+          }}
+          onTouchMove={(e) => {
+            if (e.target === e.currentTarget) e.preventDefault();
+          }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl p-5 border border-[#ebe8e3] max-w-sm sm:max-w-md w-full max-h-[90vh] overflow-y-auto overscroll-contain animate-in zoom-in-95 duration-150">
             <div className="flex items-start justify-between border-b border-[#ebe8e3] pb-3">
               <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="font-serif text-2xl font-bold text-[#3d1018]">
-                    Meja {selectedTable.number}
-                  </h2>
-                  <span className="text-xs font-semibold text-[#524344]">
-                    ({selectedTable.statusLabel})
-                  </span>
-                </div>
-                <p className="text-xs text-[#524344] mt-0.5">
-                  {selectedTable.name
-                    ? `${selectedTable.name} • ${selectedTable.guestCount || 2} tamu`
-                    : 'Kapasitas 4 orang'}
-                </p>
+                <span className="text-[11px] font-bold text-[#524344] uppercase tracking-wider block">
+                  Detail Meja
+                </span>
+                <h2 className="font-serif text-2xl font-bold text-[#3d1018] mt-1">
+                  Meja {selectedTable.number}
+                </h2>
               </div>
-              <button
-                type="button"
-                onClick={() => setMobileDrawerOpen(false)}
-                aria-label="Tutup detail meja"
-                className="w-8 h-8 rounded-full bg-[#f0ede9] flex items-center justify-center text-[#524344] cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
+              <div className="flex items-center gap-2">
+                {selectedTable.status !== 'kosong' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearTableSession(selectedTable.number);
+                      setMobileDrawerOpen(false);
+                    }}
+                    className="px-2.5 py-1 text-[11px] font-semibold text-stone-500 hover:text-red-700 bg-stone-100 rounded-lg cursor-pointer"
+                  >
+                    Kosongkan Meja
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setMobileDrawerOpen(false)}
+                  aria-label="Tutup detail meja"
+                  className="w-8 h-8 rounded-full bg-[#f0ede9] flex items-center justify-center text-[#524344] cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[20px]">close</span>
+                </button>
+              </div>
             </div>
 
             {selectedTable.status === 'kosong' ? (
@@ -516,7 +377,7 @@ const MejaPelangganViewInner: React.FC = () => {
                   <span className="material-symbols-outlined text-[28px]">table_restaurant</span>
                 </div>
                 <div>
-                  <h3 className="font-serif font-bold text-base text-[#1c1c19]">Meja Ini Kosong</h3>
+                  <h3 className="font-serif font-bold text-base text-[#1c1c19]">Meja Ini Tersedia</h3>
                   <p className="text-xs text-[#524344] mt-0.5">
                     Buka pesanan baru untuk meja {selectedTable.number}
                   </p>
@@ -532,33 +393,30 @@ const MejaPelangganViewInner: React.FC = () => {
               </div>
             ) : (
               <div className="py-3 flex flex-col gap-3">
-                <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-[#faf7f2] border border-[#ebe8e3] text-xs">
-                  <div className="flex items-center gap-2 text-[#524344]">
-                    <span className="material-symbols-outlined text-[16px] text-[#994703]">
-                      schedule
+                {/* Rincian Menu */}
+                <div className="flex flex-col gap-2">
+                  <div className="flex justify-between items-center text-xs text-[#524344]">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#524344]">
+                      Rincian Menu
                     </span>
-                    <span>{selectedTable.infoSubtitle || 'Dine-in'}</span>
+                    <span>{selectedTable.items?.length || 0} Item</span>
                   </div>
-                  <span className="font-mono text-[#847374]">
-                    {selectedTable.billId ? `Bill #${selectedTable.billId}` : 'Pesanan Aktif'}
-                  </span>
-                </div>
-
-                <div className="divide-y divide-[#ebe8e3] text-xs py-1">
-                  {(selectedTable.items && selectedTable.items.length > 0) ? (
-                    selectedTable.items.map((item, idx) => (
-                      <div key={idx} className="py-2 flex justify-between items-center">
-                        <span className="text-[#1c1c19] truncate">{item.name}</span>
-                        <span className="font-semibold text-[#1c1c19] tabular-nums shrink-0 ml-2">
-                          Rp {item.price.toLocaleString('id-ID')}
-                        </span>
+                  <div className="divide-y divide-[#ebe8e3] text-xs py-1 max-h-48 overflow-y-auto">
+                    {(selectedTable.items && selectedTable.items.length > 0) ? (
+                      selectedTable.items.map((item, idx) => (
+                        <div key={idx} className="py-2 flex justify-between items-center">
+                          <span className="text-[#1c1c19] truncate">{item.name}</span>
+                          <span className="font-semibold text-[#1c1c19] tabular-nums shrink-0 ml-2">
+                            Rp {item.price.toLocaleString('id-ID')}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="py-3 text-center text-xs text-[#847374] italic">
+                        Belum ada rincian pesanan tercatat
                       </div>
-                    ))
-                  ) : (
-                    <div className="py-3 text-center text-xs text-[#847374] italic">
-                      Belum ada rincian pesanan tercatat
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex items-baseline justify-between pt-2 border-t border-[#ebe8e3]">
@@ -591,7 +449,7 @@ const MejaPelangganViewInner: React.FC = () => {
               </div>
             )}
           </div>
-        </>
+        </div>
       )}
     </div>
   );

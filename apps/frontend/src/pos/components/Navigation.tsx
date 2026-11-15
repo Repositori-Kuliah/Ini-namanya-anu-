@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useApp, AppView } from '../context/AppContext';
 import { UserRole } from '../types';
+import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 
 export const HelpModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
   isOpen,
   onClose,
 }) => {
+  useLockBodyScroll(isOpen);
   if (!isOpen) return null;
 
   return (
@@ -89,7 +91,7 @@ export const HelpModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
 };
 
 export const MobileHeader: React.FC = () => {
-  const { activeView, logout } = useApp();
+  const { activeView, logout, currentRole } = useApp();
 
   const getPageTitleBadge = () => {
     switch (activeView) {
@@ -119,11 +121,11 @@ export const MobileHeader: React.FC = () => {
 
   return (
     <>
-      <header className="fixed top-0 inset-x-0 z-40 bg-[#fcf9f4]/95 backdrop-blur-md pt-safe border-b border-[#ebe8e3]">
+      <header className="fixed top-0 inset-x-0 z-40 bg-[#3d1018] text-white pt-safe border-b border-white/10 shadow-sm">
         <div className="h-16 px-4 flex items-center justify-between gap-2 max-w-[1720px] mx-auto">
           {/* Brand Left */}
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg overflow-hidden bg-[#3d1018] flex items-center justify-center p-0.5 shrink-0">
+            <div className="w-8 h-8 rounded-lg overflow-hidden bg-white/10 flex items-center justify-center p-0.5 shrink-0 border border-white/10">
               <img
                 alt="Logo Rawon Gusti"
                 className="w-full h-full object-contain"
@@ -132,23 +134,26 @@ export const MobileHeader: React.FC = () => {
             </div>
             <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-1.5">
-                <span className="font-bold text-sm text-[#3d1018] truncate">
+                <span className="font-bold text-sm text-white truncate">
                   Rawon Gusti
                 </span>
-                <span className="px-1.5 py-0.2 rounded bg-[#ebe8e3] text-[#524344] text-[10px] font-semibold truncate hidden xs:inline">
+                <span className="px-1.5 py-0.2 rounded bg-[#58252c] text-[#ffdadc] text-[10px] font-semibold truncate hidden xs:inline border border-white/10">
                   {getPageTitleBadge()}
                 </span>
               </div>
-              <span className="text-[11px] text-[#524344] truncate">Surabaya • Dine-in</span>
+              <span className="text-[11px] text-[#ffdadc]/70 truncate">Surabaya</span>
             </div>
           </div>
 
           {/* Action Right */}
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#58252c] text-[#ffdadc] border border-white/10 uppercase tracking-wider">
+              {currentRole === 'admin' ? 'Admin' : currentRole === 'kitchen' ? 'Dapur' : 'Kasir'}
+            </span>
             <button
               type="button"
               onClick={logout}
-              className="w-8 h-8 rounded-lg bg-[#f0ede9] text-[#3d1018] hover:bg-[#ffdadc] flex items-center justify-center shrink-0 transition-colors cursor-pointer"
+              className="w-8 h-8 rounded-lg bg-[#58252c] text-[#ffdadc] hover:bg-white/20 hover:text-white flex items-center justify-center shrink-0 transition-colors cursor-pointer border border-white/10"
               aria-label="Keluar shift"
             >
               <span className="material-symbols-outlined text-[18px]">logout</span>
@@ -197,7 +202,7 @@ export const MobileBottomNav: React.FC = () => {
     <>
       <nav
         aria-label="Navigasi Bawah Ponsel"
-        className="fixed bottom-0 inset-x-0 z-40 pb-safe bg-[#fcf9f4]/95 backdrop-blur-md border-t border-[#ebe8e3]"
+        className="fixed bottom-0 inset-x-0 z-40 pb-safe bg-[#3d1018] border-t border-white/10 shadow-lg"
       >
         <div className="flex justify-around items-center h-16 max-w-lg mx-auto px-1">
           {navItems.map((item) => {
@@ -218,14 +223,16 @@ export const MobileBottomNav: React.FC = () => {
                     setActiveView(item.view as AppView);
                   }
                 }}
-                className={`flex flex-col items-center justify-center gap-0.5 w-16 h-14 transition-colors cursor-pointer ${
-                  isActive ? 'text-[#3d1018] font-bold' : 'text-[#524344] hover:text-[#3d1018]'
+                className={`flex flex-col items-center justify-center gap-0.5 w-16 h-12 rounded-xl transition-all cursor-pointer ${
+                  isActive
+                    ? 'bg-[#58252c] text-white font-bold shadow-xs'
+                    : 'text-[#ffdadc]/70 hover:text-white'
                 }`}
                 aria-current={isActive ? 'page' : undefined}
               >
                 <span
                   className={`material-symbols-outlined text-[20px] transition-transform ${
-                    isActive ? 'scale-110 text-[#3d1018]' : ''
+                    isActive ? 'scale-105 text-[#ffdadc]' : ''
                   }`}
                 >
                   {item.icon}

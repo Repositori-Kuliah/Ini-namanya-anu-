@@ -530,9 +530,9 @@ export const DashboardView: React.FC = () => {
 
             {/* Breakdown List */}
             <div className="space-y-2 text-xs">
-              <div className="flex items-center justify-between p-2 rounded-xl hover:bg-[#f6f3ee] transition-colors">
+              <div className="flex items-center justify-between p-2 rounded-xl">
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-sm bg-[#58252c] inline-block"></span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#58252c] shrink-0"></span>
                   <span className="text-[#1c1c19] font-medium">
                     Tunai ({tunaiTrx.length} transaksi - {tunaiPct}%)
                   </span>
@@ -542,9 +542,9 @@ export const DashboardView: React.FC = () => {
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-2 rounded-xl hover:bg-[#f6f3ee] transition-colors">
+              <div className="flex items-center justify-between p-2 rounded-xl">
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-sm bg-[#994703] inline-block"></span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#994703] shrink-0"></span>
                   <span className="text-[#1c1c19] font-medium">
                     QRIS ({qrisTrx.length} transaksi - {qrisPct}%)
                   </span>
@@ -554,9 +554,9 @@ export const DashboardView: React.FC = () => {
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-2 rounded-xl hover:bg-[#f6f3ee] transition-colors">
+              <div className="flex items-center justify-between p-2 rounded-xl">
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-sm bg-[#fc934f] inline-block"></span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#fc934f] shrink-0"></span>
                   <span className="text-[#1c1c19] font-medium">
                     Kartu Debit ({debitTrx.length} transaksi - {debitPct}%)
                   </span>

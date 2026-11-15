@@ -6,6 +6,7 @@ export const KitchenDisplayView: React.FC = () => {
   const { kitchenTickets, advanceTicketStatus, showToast, storeSettings } = useApp();
 
   const [activeLaneFilter, setActiveLaneFilter] = useState<'new' | 'preparing' | 'ready'>('new');
+  const [stationFilter, setStationFilter] = useState<string>(storeSettings.soundStation || 'Semua Bagian');
 
   const soundEnabled = storeSettings.soundEnabled !== false;
   const selectedStation = storeSettings.soundStation || 'Semua Bagian';
@@ -53,9 +54,9 @@ export const KitchenDisplayView: React.FC = () => {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  // Filter stasiun dapur
+  // Filter stasiun dapur (Dapur Utama vs Bar Minuman)
   const stationTickets = kitchenTickets.filter((t) =>
-    selectedStation === 'Semua Stasiun' ? true : t.station === selectedStation
+    stationFilter === 'Semua Stasiun' || stationFilter === 'Semua Bagian' ? true : t.station === stationFilter
   );
 
   const newTickets = stationTickets.filter((t) => t.status === 'new');
@@ -191,15 +192,38 @@ export const KitchenDisplayView: React.FC = () => {
 
   return (
     <div className="flex flex-col w-full min-h-screen pb-4 md:pb-8 max-w-[1720px] mx-auto px-4 sm:px-6 pt-3">
-      {/* Top Bar Kontrol Dapur */}
+      {/* Top Bar Kontrol Dapur & Pemilih Stasiun (Makanan vs Minuman) */}
       <div className="flex flex-col md:flex-row md:items-center justify-between pb-3 mb-4 gap-3 border-b border-[#ebe8e3]">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-[#1c1c19] tracking-tight">
-            Pantau Pesanan
+            Pantau Pesanan Dapur &amp; Bar
           </h1>
           <p className="text-xs text-[#524344] mt-0.5">
-            Layar tiket dapur (KDS) terhubung langsung dengan alur penyajian pesanan pelanggan.
+            Layar tiket dapur (KDS) dengan rute terpisah antara Dapur Utama (Makanan) dan Bar Minuman.
           </p>
+        </div>
+
+        {/* Tab Pemilih Stasiun Dapur */}
+        <div className="flex items-center gap-1.5 bg-[#f0ede9] p-1 rounded-xl">
+          {[
+            { id: 'Semua Bagian', label: 'Semua Bagian', icon: 'splitscreen' },
+            { id: 'Dapur Utama (Makanan)', label: 'Dapur Makanan', icon: 'soup_kitchen' },
+            { id: 'Bar Minuman', label: 'Bar Minuman', icon: 'local_bar' },
+          ].map((st) => (
+            <button
+              key={st.id}
+              type="button"
+              onClick={() => setStationFilter(st.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                stationFilter === st.id
+                  ? 'bg-[#3d1018] text-white shadow-xs'
+                  : 'text-[#524344] hover:text-[#1c1c19] hover:bg-white/60'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[15px]">{st.icon}</span>
+              <span>{st.label}</span>
+            </button>
+          ))}
         </div>
       </div>
 

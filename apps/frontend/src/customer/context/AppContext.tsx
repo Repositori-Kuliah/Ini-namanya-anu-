@@ -420,6 +420,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             sessions[sessionIndex].serviceFee = cartServiceFee;
             sessions[sessionIndex].tax = cartTax;
             sessions[sessionIndex].total = cartTotal;
+
+            const qrOrderObj = {
+              order_id: now.getTime(),
+              order_number: fallbackOrder.orderNumbers[0],
+              order_status: 'pending_confirmation',
+              order_source: 'qr',
+              total: cartTotal,
+              note: notes,
+              created_at: now.toISOString(),
+              order_items: fallbackOrder.items.map((i, idx) => ({
+                order_item_id: now.getTime() + idx,
+                product_id: Number(i.menuItemId) || idx + 1,
+                product_name: i.name,
+                unit_price: i.basePrice,
+                quantity: i.quantity,
+                note: i.customization?.kitchenNotes,
+              })),
+            };
+            sessions[sessionIndex].orders = [...(sessions[sessionIndex].orders || []), qrOrderObj];
             localStorage.setItem('rg_mock_sessions_v2', JSON.stringify(sessions));
           }
         } catch {}

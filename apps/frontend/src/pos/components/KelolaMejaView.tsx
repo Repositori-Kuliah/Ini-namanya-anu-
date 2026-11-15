@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { TableItem, TableStatus } from '../types';
+import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 
 const KelolaMejaViewInner: React.FC = () => {
   const { tables, updateTable, addTable, deleteTable, openQrModal, showToast } = useApp();
@@ -20,6 +21,9 @@ const KelolaMejaViewInner: React.FC = () => {
   // Action dropdown & Delete confirm modal state
   const [openTableActionId, setOpenTableActionId] = useState<string | null>(null);
   const [deleteTableConfirm, setDeleteTableConfirm] = useState<TableItem | null>(null);
+
+  // Kunci scroll background saat modal apa pun terbuka
+  useLockBodyScroll(Boolean(showAddModal || editingTable || deleteTableConfirm));
 
   const openEditModal = (tbl: TableItem) => {
     setEditingTable(tbl);
@@ -164,14 +168,12 @@ const KelolaMejaViewInner: React.FC = () => {
               <tr>
                 <th className="py-2.5 px-4">No. Meja</th>
                 <th className="py-2.5 px-4">Status Meja</th>
-                <th className="py-2.5 px-4">QR Code Meja</th>
-                <th className="py-2.5 px-4 text-center">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#ebe8e3]">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-8 text-center text-xs text-[#847374]">
+                  <td colSpan={2} className="py-8 text-center text-xs text-[#847374]">
                     Tidak ada meja yang cocok dengan pencarian &ldquo;{searchQuery}&rdquo;.
                   </td>
                 </tr>
@@ -179,11 +181,14 @@ const KelolaMejaViewInner: React.FC = () => {
                 filtered.map((tbl, idx) => {
                   const isOccupied = tbl.status !== 'kosong';
                   const isCheckout = tbl.status === 'checkout';
-                  const isBottomRow = idx >= Math.max(1, filtered.length - 3);
-                  const actionKey = tbl.dbId ? `tbl-${tbl.dbId}` : `tbl-${tbl.number}-${idx}`;
 
                   return (
-                    <tr key={tbl.dbId ? `row-${tbl.dbId}` : `row-${tbl.number}-${idx}`} className="hover:bg-[#fcf9f4] transition-colors">
+                    <tr
+                      key={tbl.dbId ? `row-${tbl.dbId}` : `row-${tbl.number}-${idx}`}
+                      onClick={() => openEditModal(tbl)}
+                      className="hover:bg-[#fcf9f4] transition-colors cursor-pointer"
+                      title="Klik untuk edit &amp; kelola meja"
+                    >
                       <td className="py-2.5 px-4 font-bold text-[#1c1c19] text-sm tabular-nums">
                         {tbl.number}
                       </td>
@@ -199,76 +204,6 @@ const KelolaMejaViewInner: React.FC = () => {
                         >
                           {tbl.statusLabel || (isOccupied ? 'Terisi' : 'Kosong')}
                         </span>
-                      </td>
-                      <td className="py-2.5 px-4">
-                        <button
-                          type="button"
-                          onClick={() => openQrModal(tbl)}
-                          className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-[#fcf9f4] hover:bg-[#f0ede9] text-[#3d1018] border border-[#ebe8e3] text-[11px] font-semibold cursor-pointer"
-                          aria-label={`Buka stand QR meja ${tbl.number}`}
-                        >
-                          <span className="material-symbols-outlined text-[15px] text-[#994703]">
-                            qr_code_2
-                          </span>
-                          <span className="font-mono text-[10px]">{tbl.qrCodeId}</span>
-                        </button>
-                      </td>
-                      <td className="py-2.5 px-4 text-center relative">
-                        <div className="relative inline-block text-left">
-                          <button
-                            type="button"
-                            onClick={() => setOpenTableActionId(openTableActionId === actionKey ? null : actionKey)}
-                            className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-[#f6f3ee] hover:bg-[#ebe8e3] text-[#1c1c19] border border-[#ebe8e3] text-xs font-semibold cursor-pointer transition-colors"
-                          >
-                            <span>Aksi</span>
-                            <span className="material-symbols-outlined text-[14px] text-[#524344]">
-                              {openTableActionId === actionKey ? 'expand_less' : 'expand_more'}
-                            </span>
-                          </button>
-
-                          {openTableActionId === actionKey && (
-                            <>
-                              <div
-                                className="fixed inset-0 z-20"
-                                onClick={() => setOpenTableActionId(null)}
-                              />
-                              <div className={`absolute right-0 ${isBottomRow ? 'bottom-full mb-1 origin-bottom-right' : 'top-full mt-1 origin-top-right'} w-40 bg-white rounded-xl shadow-xl border border-[#ebe8e3] py-1 z-30 text-left divide-y divide-[#ebe8e3] animate-in fade-in zoom-in-95 duration-100`}>
-                                <div className="py-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenTableActionId(null);
-                                      openEditModal(tbl);
-                                    }}
-                                    className="w-full px-3 py-1.5 text-xs font-medium text-[#1c1c19] hover:bg-[#f6f3ee] flex items-center gap-2 cursor-pointer"
-                                  >
-                                    <span className="material-symbols-outlined text-[15px] text-[#524344]">edit</span>
-                                    <span>Edit Meja</span>
-                                  </button>
-                                </div>
-                                <div className="py-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenTableActionId(null);
-                                      if (isOccupied) {
-                                        showToast('Tidak bisa menghapus meja yang masih memiliki transaksi/tamu aktif!', 'warning');
-                                        return;
-                                      }
-                                      setDeleteTableConfirm(tbl);
-                                    }}
-                                    className={`w-full px-3 py-1.5 text-xs font-semibold flex items-center gap-2 cursor-pointer ${
-                                      isOccupied ? 'text-gray-400 opacity-50 cursor-not-allowed' : 'text-red-700 hover:bg-red-50'
-                                    }`}
-                                  >
-                                    <span className="material-symbols-outlined text-[15px]">delete</span>
-                                    <span>Hapus Meja</span>
-                                  </button>
-                                </div>
-                              </div>
-                            </>
-                          )}
-                        </div>
                       </td>
                     </tr>
                   );
@@ -392,22 +327,57 @@ const KelolaMejaViewInner: React.FC = () => {
                   <option value="checkout">Minta Checkout</option>
                 </select>
               </div>
+
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newQrId = `RG-M${editingTable.number}-${Math.floor(1000 + Math.random() * 9000)}`;
+                    const updated = { ...editingTable, qrCodeId: newQrId };
+                    showToast(`QR Code Meja ${editingTable.number} berhasil di-generate ulang!`, 'success');
+                    setEditingTable(null);
+                    openQrModal(updated);
+                  }}
+                  className="w-full py-2.5 px-3 rounded-xl bg-[#fcf9f4] hover:bg-[#f0ede9] border border-[#ebe8e3] text-xs font-semibold text-[#3d1018] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px] text-[#994703]">sync</span>
+                  <span>Generate Ulang QR Code Meja</span>
+                </button>
+              </div>
             </div>
 
-            <div className="flex gap-2 pt-2 border-t border-[#ebe8e3]">
+            <div className="flex items-center justify-between pt-2 border-t border-[#ebe8e3]">
               <button
                 type="button"
-                onClick={() => setEditingTable(null)}
-                className="flex-1 py-2 rounded-lg bg-[#f0ede9] text-[#1c1c19] text-xs font-semibold cursor-pointer"
+                onClick={() => {
+                  if (editingTable.status !== 'kosong') {
+                    showToast('Tidak bisa menghapus meja yang masih memiliki transaksi/tamu aktif!', 'warning');
+                    return;
+                  }
+                  const tbl = editingTable;
+                  setEditingTable(null);
+                  setDeleteTableConfirm(tbl);
+                }}
+                className="px-3 py-2 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 hover:text-red-700 cursor-pointer flex items-center gap-1 transition-colors"
               >
-                Batal
+                <span className="material-symbols-outlined text-[16px]">delete</span>
+                <span>Hapus Meja</span>
               </button>
-              <button
-                type="submit"
-                className="flex-1 py-2 rounded-lg bg-[#3d1018] text-white text-xs font-bold hover:bg-[#58252c] cursor-pointer shadow-xs"
-              >
-                Simpan
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingTable(null)}
+                  className="px-3.5 py-2 rounded-lg bg-[#f0ede9] text-[#1c1c19] text-xs font-semibold cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-lg bg-[#3d1018] text-white text-xs font-bold hover:bg-[#58252c] cursor-pointer shadow-xs"
+                >
+                  Simpan
+                </button>
+              </div>
             </div>
           </form>
         </div>

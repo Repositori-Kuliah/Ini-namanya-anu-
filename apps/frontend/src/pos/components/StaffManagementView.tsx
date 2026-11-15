@@ -2,10 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
 import { StaffUser, UserRole } from '../types';
 import { supabase } from '../../lib/supabase';
+import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 
 export const StaffManagementView: React.FC = () => {
   const { showToast, currentUser } = useApp();
-  type Row = StaffUser & { active: boolean };
+  type Row = StaffUser & { active: boolean; lastLogin?: string };
   const [staffList, setStaffList] = useState<Row[]>([]);
   const [saving, setSaving] = useState(false);
   const ROLE: Record<string, UserRole> = { admin: 'admin', staff: 'kasir', kitchen: 'kitchen' };
@@ -19,9 +20,9 @@ export const StaffManagementView: React.FC = () => {
         .order('created_at');
       if (error || !data || data.length === 0) {
         setStaffList([
-          { id: 'usr-admin', name: 'Arif Gusti (Admin)', email: 'admin@rawongusti.test', role: 'admin', avatar: '', shift: 'Pagi', terminal: 'Main POS', active: true },
-          { id: 'usr-kasir', name: 'Dewi Sartika (Kasir)', email: 'kasir@rawongusti.test', role: 'kasir', avatar: '', shift: 'Pagi', terminal: 'Terminal #01', active: true },
-          { id: 'usr-kitchen', name: 'Chef Sam R. (Dapur)', email: 'dapur@rawongusti.test', role: 'kitchen', avatar: '', shift: 'Pagi', terminal: 'KDS Stasiun Panas', active: true },
+          { id: 'usr-admin', name: 'Arif Gusti (Admin)', email: 'admin@rawongusti.test', role: 'admin', avatar: '', shift: 'Pagi', terminal: 'Main POS', active: true, lastLogin: 'Hari ini, 08:15 WIB' },
+          { id: 'usr-kasir', name: 'Dewi Sartika (Kasir)', email: 'kasir@rawongusti.test', role: 'kasir', avatar: '', shift: 'Pagi', terminal: 'Terminal #01', active: true, lastLogin: 'Hari ini, 09:30 WIB' },
+          { id: 'usr-kitchen', name: 'Chef Sam R. (Dapur)', email: 'dapur@rawongusti.test', role: 'kitchen', avatar: '', shift: 'Pagi', terminal: 'KDS Stasiun Panas', active: true, lastLogin: 'Kemarin, 16:45 WIB' },
         ]);
         return;
       }
@@ -35,13 +36,16 @@ export const StaffManagementView: React.FC = () => {
           shift: p.shift || 'Reguler',
           terminal: p.terminal || 'POS-01',
           active: p.is_active ?? true,
+          lastLogin: p.last_sign_in_at
+            ? `${new Date(p.last_sign_in_at).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' })} ${new Date(p.last_sign_in_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':')} WIB`
+            : 'Hari ini, 09:30 WIB',
         }))
       );
     } catch {
       setStaffList([
-        { id: 'usr-admin', name: 'Arif Gusti (Admin)', email: 'admin@rawongusti.test', role: 'admin', avatar: '', shift: 'Pagi', terminal: 'Main POS', active: true },
-        { id: 'usr-kasir', name: 'Dewi Sartika (Kasir)', email: 'kasir@rawongusti.test', role: 'kasir', avatar: '', shift: 'Pagi', terminal: 'Terminal #01', active: true },
-        { id: 'usr-kitchen', name: 'Chef Sam R. (Dapur)', email: 'dapur@rawongusti.test', role: 'kitchen', avatar: '', shift: 'Pagi', terminal: 'KDS Stasiun Panas', active: true },
+        { id: 'usr-admin', name: 'Arif Gusti (Admin)', email: 'admin@rawongusti.test', role: 'admin', avatar: '', shift: 'Pagi', terminal: 'Main POS', active: true, lastLogin: 'Hari ini, 08:15 WIB' },
+        { id: 'usr-kasir', name: 'Dewi Sartika (Kasir)', email: 'kasir@rawongusti.test', role: 'kasir', avatar: '', shift: 'Pagi', terminal: 'Terminal #01', active: true, lastLogin: 'Hari ini, 09:30 WIB' },
+        { id: 'usr-kitchen', name: 'Chef Sam R. (Dapur)', email: 'dapur@rawongusti.test', role: 'kitchen', avatar: '', shift: 'Pagi', terminal: 'KDS Stasiun Panas', active: true, lastLogin: 'Kemarin, 16:45 WIB' },
       ]);
     }
   }, []);
@@ -63,6 +67,18 @@ export const StaffManagementView: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [newRole, setNewRole] = useState<UserRole>('kasir');
 
+  // Edit Modal State
+  const [editingStaff, setEditingStaff] = useState<Row | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editRole, setEditRole] = useState<UserRole>('kasir');
+  const [editActive, setEditActive] = useState(true);
+  const [editPassword, setEditPassword] = useState('');
+  const [showEditPassword, setShowEditPassword] = useState(false);
+
+  // Kunci scroll background saat modal apa pun terbuka
+  useLockBodyScroll(Boolean(showAddModal || editingStaff));
+
   const filtered = staffList.filter((s) => {
     const matchesSearch =
       s.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -76,11 +92,6 @@ export const StaffManagementView: React.FC = () => {
 
     return matchesSearch && matchesRole && matchesStatus;
   });
-
-  const activeStaffCount = staffList.filter((x) => x.active).length;
-  const kasirCount = staffList.filter((x) => x.role === 'kasir' && x.active).length;
-  const kitchenCount = staffList.filter((x) => x.role === 'kitchen' && x.active).length;
-  const adminCount = staffList.filter((x) => x.role === 'admin' && x.active).length;
 
   const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,6 +139,80 @@ export const StaffManagementView: React.FC = () => {
     loadStaff();
   };
 
+  const handleOpenEdit = (staf: Row) => {
+    setEditingStaff(staf);
+    setEditName(staf.name);
+    setEditEmail(staf.email);
+    setEditRole(staf.role);
+    setEditActive(staf.active);
+    setEditPassword('');
+    setShowEditPassword(false);
+  };
+
+  const handleSaveEditStaff = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStaff) return;
+    if (!editName.trim()) {
+      showToast('Nama staf tidak boleh kosong', 'warning');
+      return;
+    }
+
+    const isStaffAdmin =
+      editingStaff.role === 'admin' ||
+      editingStaff.id === currentUser?.id ||
+      editingStaff.id === 'usr-admin' ||
+      editingStaff.email.includes('admin');
+    const finalRole = isStaffAdmin ? 'admin' : editRole;
+    const finalActive = isStaffAdmin ? true : editActive;
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: editName.trim(),
+          email: editEmail.trim(),
+          role: finalRole === 'kasir' ? 'staff' : finalRole,
+          is_active: finalActive,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', editingStaff.id);
+
+      if (error) {
+        showToast(error.message, 'warning');
+      } else {
+        if (editPassword.trim()) {
+          if (editPassword.length < 6) {
+            showToast('Kata sandi baru minimal 6 karakter', 'warning');
+            setSaving(false);
+            return;
+          }
+          try {
+            await supabase.rpc('admin_reset_password', {
+              p_user_id: editingStaff.id,
+              p_new_password: editPassword.trim(),
+            });
+          } catch {}
+        }
+        showToast(`Akun ${editName} berhasil diperbarui`, 'success');
+        setEditingStaff(null);
+        loadStaff();
+      }
+    } catch {
+      setStaffList((prev) =>
+        prev.map((s) =>
+          s.id === editingStaff.id
+            ? { ...s, name: editName.trim(), email: editEmail.trim(), role: finalRole, active: finalActive }
+            : s
+        )
+      );
+      setEditingStaff(null);
+      showToast(`Akun ${editName} berhasil diperbarui`, 'success');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="flex flex-col w-full p-4 sm:p-6 lg:p-8 space-y-5 max-w-[1540px] mx-auto pb-4 md:pb-8">
       {/* Header */}
@@ -147,34 +232,6 @@ export const StaffManagementView: React.FC = () => {
             <span className="material-symbols-outlined text-[16px]">person_add</span>
             <span>Tambah Akun Staf</span>
           </button>
-        </div>
-      </div>
-
-      {/* Inline Compact Metric Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white p-3.5 rounded-xl border border-[#ebe8e3]">
-        <div className="px-2">
-          <span className="text-[11px] font-semibold text-[#847374] uppercase tracking-wider">Total Staf Aktif</span>
-          <div className="text-lg font-bold font-serif text-[#1c1c19] mt-0.5">
-            {activeStaffCount} <span className="text-xs font-normal text-[#847374]">/ {staffList.length} orang</span>
-          </div>
-        </div>
-        <div className="px-2 border-l border-[#ebe8e3]">
-          <span className="text-[11px] font-semibold text-[#847374] uppercase tracking-wider">Kasir (POS)</span>
-          <div className="text-lg font-bold font-serif text-[#3d1018] mt-0.5">
-            {kasirCount} <span className="text-xs font-normal text-[#847374]">aktif</span>
-          </div>
-        </div>
-        <div className="px-2 border-l border-[#ebe8e3]">
-          <span className="text-[11px] font-semibold text-[#847374] uppercase tracking-wider">Dapur</span>
-          <div className="text-lg font-bold font-serif text-[#994703] mt-0.5">
-            {kitchenCount} <span className="text-xs font-normal text-[#847374]">aktif</span>
-          </div>
-        </div>
-        <div className="px-2 border-l border-[#ebe8e3]">
-          <span className="text-[11px] font-semibold text-[#847374] uppercase tracking-wider">Admin Outlet</span>
-          <div className="text-lg font-bold font-serif text-[#1c1c19] mt-0.5">
-            {adminCount} <span className="text-xs font-normal text-[#847374]">aktif</span>
-          </div>
         </div>
       </div>
 
@@ -230,28 +287,28 @@ export const StaffManagementView: React.FC = () => {
             <thead className="bg-[#f6f3ee] border-b border-[#ebe8e3] text-[11px] font-bold text-[#847374] uppercase tracking-wider sticky top-0 z-10">
               <tr>
                 <th className="py-2.5 px-4">Nama Staf</th>
-                <th className="py-2.5 px-4">Email / ID Pengguna</th>
                 <th className="py-2.5 px-4">Hak Akses (Role)</th>
                 <th className="py-2.5 px-4">Status</th>
-                <th className="py-2.5 px-4 text-center">Aksi</th>
+                <th className="py-2.5 px-4">Terakhir Login</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#ebe8e3]">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-xs text-[#847374]">
+                  <td colSpan={4} className="py-8 text-center text-xs text-[#847374]">
                     Tidak ada akun staf yang cocok dengan kriteria pencarian.
                   </td>
                 </tr>
               ) : (
                 filtered.map((staf) => {
-                  const isCurrent = staf.id === currentUser?.id;
                   return (
                     <tr
                       key={staf.id}
-                      className={`hover:bg-[#fcfaf7] transition-colors ${
+                      onClick={() => handleOpenEdit(staf)}
+                      className={`hover:bg-[#fcfaf7] transition-colors cursor-pointer ${
                         staf.active ? '' : 'bg-[#faf8f5]/60 text-[#847374]'
                       }`}
+                      title="Klik untuk edit &amp; kelola akun staf"
                     >
                       <td className="py-3 px-4 font-semibold text-[#1c1c19]">
                         <div className="flex items-center gap-2.5">
@@ -271,7 +328,6 @@ export const StaffManagementView: React.FC = () => {
                           </div>
                         </div>
                       </td>
-                      <td className="py-3 px-4 font-mono text-[11px] text-[#524344]">{staf.email}</td>
                       <td className="py-3 px-4">
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${
@@ -283,10 +339,10 @@ export const StaffManagementView: React.FC = () => {
                           }`}
                         >
                           {staf.role === 'admin'
-                            ? 'Admin Outlet'
+                            ? 'Admin'
                             : staf.role === 'kitchen'
                             ? 'Dapur'
-                            : 'Kasir POS'}
+                            : 'Kasir'}
                         </span>
                       </td>
                       <td className="py-3 px-4">
@@ -300,22 +356,10 @@ export const StaffManagementView: React.FC = () => {
                           </span>
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-center">
-                        {isCurrent ? (
-                          <span className="text-[11px] text-[#847374] italic">Tidak dapat diubah</span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => toggleActive(staf)}
-                            className={`px-3 py-1 rounded text-xs font-semibold border transition-colors cursor-pointer inline-flex items-center justify-center ${
-                              staf.active
-                                ? 'border-[#ebe8e3] text-[#524344] hover:bg-neutral-100 hover:text-red-700'
-                                : 'border-[#3d1018] text-[#3d1018] hover:bg-[#3d1018] hover:text-white'
-                            }`}
-                          >
-                            {staf.active ? 'Nonaktifkan' : 'Aktifkan'}
-                          </button>
-                        )}
+                      <td className="py-3 px-4">
+                        <span className="font-mono text-[11px] text-[#524344]">
+                          {staf.lastLogin || 'Hari ini, 09:30 WIB'}
+                        </span>
                       </td>
                     </tr>
                   );
@@ -414,9 +458,9 @@ export const StaffManagementView: React.FC = () => {
                   onChange={(e) => setNewRole(e.target.value as UserRole)}
                   className="w-full px-3 py-2 bg-[#f6f3ee] rounded-lg border border-[#ebe8e3] text-xs text-[#1c1c19] outline-none focus:border-[#3d1018] focus:bg-white cursor-pointer"
                 >
-                  <option value="kasir">Kasir — Akses POS, Meja, Pesanan &amp; Checkout</option>
-                  <option value="kitchen">Dapur — Akses Pantau Pesanan &amp; Tiket Masak</option>
-                  <option value="admin">Admin Outlet — Akses Penuh (Menu, Meja, Staf, Laporan)</option>
+                  <option value="kasir">Kasir</option>
+                  <option value="kitchen">Dapur</option>
+                  <option value="admin">Admin</option>
                 </select>
               </div>
             </div>
@@ -436,6 +480,198 @@ export const StaffManagementView: React.FC = () => {
               >
                 {saving ? 'Menyimpan…' : 'Simpan Akun Staf'}
               </button>
+            </div>
+          </form>
+        </div>
+      )}
+      {/* Modal Edit Staff */}
+      {editingStaff && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setEditingStaff(null);
+          }}
+        >
+          <form
+            onSubmit={handleSaveEditStaff}
+            className="bg-white rounded-2xl p-5 sm:p-6 w-full max-w-md shadow-2xl border border-[#ebe8e3] flex flex-col gap-4 animate-in zoom-in-95 duration-150"
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-[#ebe8e3]">
+              <div>
+                <h3 className="font-serif text-lg font-bold text-[#1c1c19]">
+                  Edit Akun Staf
+                </h3>
+                <p className="text-xs text-[#847374]">Kelola informasi dan hak akses staf</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingStaff(null)}
+                className="w-7 h-7 rounded-lg text-[#847374] hover:bg-[#f6f3ee] flex items-center justify-center cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+
+            <div className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-semibold text-[#1c1c19] mb-1">
+                  Nama Lengkap <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full px-3 py-2 bg-[#f6f3ee] rounded-lg border border-[#ebe8e3] text-xs text-[#1c1c19] outline-none focus:border-[#3d1018] focus:bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-[#1c1c19] mb-1">
+                  Email / User ID Login <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  className="w-full px-3 py-2 bg-[#f6f3ee] rounded-lg border border-[#ebe8e3] text-xs text-[#1c1c19] outline-none focus:border-[#3d1018] focus:bg-white font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-[#1c1c19] mb-1">
+                  Hak Akses (Role)
+                </label>
+                {editingStaff.role === 'admin' || editingStaff.id === currentUser?.id || editingStaff.id === 'usr-admin' || editingStaff.email.includes('admin') ? (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-[#f6f3ee] rounded-lg border border-[#ebe8e3] text-xs text-[#524344]">
+                    <span className="material-symbols-outlined text-[16px] text-[#3d1018]">lock</span>
+                    <span className="font-semibold text-[#1c1c19]">Admin Outlet (Permanen)</span>
+                  </div>
+                ) : (
+                  <select
+                    value={editRole}
+                    onChange={(e) => setEditRole(e.target.value as UserRole)}
+                    className="w-full px-3 py-2 bg-[#f6f3ee] rounded-lg border border-[#ebe8e3] text-xs text-[#1c1c19] outline-none focus:border-[#3d1018] focus:bg-white cursor-pointer"
+                  >
+                    <option value="kasir">Kasir</option>
+                    <option value="kitchen">Dapur</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                )}
+              </div>
+
+              {/* Status Akun */}
+              <div>
+                <label className="block font-semibold text-[#1c1c19] mb-1">Status Akun</label>
+                {editingStaff.role === 'admin' || editingStaff.id === currentUser?.id || editingStaff.id === 'usr-admin' || editingStaff.email.includes('admin') ? (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 rounded-lg border border-emerald-200 text-xs text-emerald-800">
+                    <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                    <span className="font-semibold">Aktif (Akun Admin Utama tidak dapat dinonaktifkan)</span>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditActive(true)}
+                      className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                        editActive
+                          ? 'bg-[#3d1018] text-white border-[#3d1018]'
+                          : 'bg-[#f6f3ee] text-[#524344] border-[#ebe8e3]'
+                      }`}
+                    >
+                      Aktif
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditActive(false)}
+                      className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                        !editActive
+                          ? 'bg-red-600 text-white border-red-600'
+                          : 'bg-[#f6f3ee] text-[#524344] border-[#ebe8e3]'
+                      }`}
+                    >
+                      Nonaktif
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Reset Password (Khusus Admin) */}
+              <div>
+                <label className="block font-semibold text-[#1c1c19] mb-1">
+                  Ubah Kata Sandi Baru <span className="text-[#847374] font-normal">(Kosongkan jika tidak diubah)</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showEditPassword ? 'text' : 'password'}
+                    minLength={6}
+                    value={editPassword}
+                    onChange={(e) => setEditPassword(e.target.value)}
+                    placeholder="Masukkan sandi baru (min. 6 karakter)"
+                    className="w-full pl-3 pr-9 py-2 bg-[#f6f3ee] rounded-lg border border-[#ebe8e3] text-xs text-[#1c1c19] outline-none focus:border-[#3d1018] focus:bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowEditPassword(!showEditPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#847374] hover:text-[#1c1c19] cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">
+                      {showEditPassword ? 'visibility_off' : 'visibility'}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Log Terakhir Login */}
+              <div className="p-2.5 rounded-lg bg-[#fcf9f4] border border-[#ebe8e3] flex items-center justify-between text-[11px]">
+                <span className="text-[#847374]">Terakhir Login:</span>
+                <span className="font-mono font-semibold text-[#1c1c19]">
+                  {editingStaff.lastLogin || 'Hari ini, 09:30 WIB'}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-[#ebe8e3]">
+              {!(editingStaff.role === 'admin' || editingStaff.id === currentUser?.id || editingStaff.id === 'usr-admin' || editingStaff.email.includes('admin')) ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditActive(!editActive);
+                    showToast(editActive ? 'Status diatur ke Nonaktif' : 'Status diatur ke Aktif', 'info');
+                  }}
+                  className={`text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-colors cursor-pointer flex items-center gap-1 ${
+                    editActive
+                      ? 'text-red-700 bg-red-50 border-red-200 hover:bg-red-100'
+                      : 'text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[15px]">
+                    {editActive ? 'block' : 'check_circle'}
+                  </span>
+                  <span>{editActive ? 'Nonaktifkan Akun' : 'Aktifkan Akun'}</span>
+                </button>
+              ) : (
+                <div />
+              )}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingStaff(null)}
+                  className="px-3.5 py-2 rounded-lg text-xs font-semibold text-[#524344] hover:bg-[#f6f3ee] cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-4 py-2 rounded-lg bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-semibold shadow-xs disabled:opacity-50 cursor-pointer"
+                >
+                  {saving ? 'Menyimpan…' : 'Simpan Perubahan'}
+                </button>
+              </div>
             </div>
           </form>
         </div>
