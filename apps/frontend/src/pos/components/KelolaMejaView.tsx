@@ -156,11 +156,11 @@ const KelolaMejaViewInner: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabel Meja Compact dengan Scroll Mandiri */}
+      {/* Tabel Meja Compact */}
       <div className="bg-white rounded-xl border border-[#ebe8e3] shadow-xs overflow-hidden">
-        <div className="overflow-x-auto max-h-[calc(100vh-250px)] overflow-y-auto custom-scrollbar">
+        <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
-            <thead className="bg-[#f6f3ee] text-[#524344] uppercase tracking-wider text-[10px] font-bold border-b border-[#ebe8e3] sticky top-0 z-10">
+            <thead className="bg-[#f6f3ee] text-[#524344] uppercase tracking-wider text-[10px] font-bold border-b border-[#ebe8e3]">
               <tr>
                 <th className="py-2.5 px-4">No. Meja</th>
                 <th className="py-2.5 px-4">Status Meja</th>

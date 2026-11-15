@@ -223,11 +223,11 @@ export const StaffManagementView: React.FC = () => {
         </div>
       </div>
 
-      {/* Staff Table dengan Scroll Mandiri */}
+      {/* Staff Table */}
       <div className="bg-white rounded-xl border border-[#ebe8e3] overflow-hidden shadow-2xs">
-        <div className="overflow-x-auto max-h-[calc(100vh-320px)] overflow-y-auto custom-scrollbar">
+        <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-[#f6f3ee] border-b border-[#ebe8e3] text-[11px] font-bold text-[#847374] uppercase tracking-wider sticky top-0 z-10">
+            <thead className="bg-[#f6f3ee] border-b border-[#ebe8e3] text-[11px] font-bold text-[#847374] uppercase tracking-wider">
               <tr>
                 <th className="py-2.5 px-4">Nama Staf</th>
                 <th className="py-2.5 px-4">Email / ID Pengguna</th>
