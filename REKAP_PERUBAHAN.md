@@ -25,20 +25,24 @@ Dokumen ini merangkum seluruh pembaruan, perbaikan bug, penyesuaian tata letak (
 
 ## 2. Pengaturan Sistem Outlet (`PengaturanView.tsx`)
 
-- **Restrukturisasi Modul Fitur Modular**:
-  - Memindahkan kartu **Modal Awal Kasir di Laci (Cash Drawer)** ke dalam kelompok **"Kendali Saklar Modul Fitur Restoran"**, diposisikan **tepat di atas modul WiFi**.
-  - Urutan saklar modul operasional menjadi terpusat:
-    1. *Pemesanan Mandiri Tamu (Self-Ordering)*
-    2. *Pantau Pesanan Dapur (KDS)*
-    3. *Pelacakan Stok Bahan Baku Otomatis*
-    4. *Modal Awal Kasir di Laci (Cash Drawer)*
-    5. *WiFi Tamu Restoran (QR & Meja)*
-- **Modul WiFi Tamu Restoran**:
-  - Penambahan saklar on/off untuk mengaktifkan/menonaktifkan info WiFi tamu di meja.
-  - Input kustomisasi Nama / SSID WiFi dan Kata Sandi (Password) WiFi langsung dari kasir, tersimpan di pengaturan lokal outlet.
-- **Penyelarasan Desain Simulasi Tagihan Kasir**:
-  - Kotak simulasi perhitungan pesanan Rp 50.000 dikembalikan ke posisi seimbang di **kolom kanan (tepat di bawah Aturan Pembulatan)**.
-  - Mengganti warna hijau menjadi warna tema Heritage (`#fcf9f4`, `#ebe8e3`, `#3d1018`, `#994703`) dan menghapus badge *LIVE PREVIEW*.
+- **Jam Buka & Operasional Harian**:
+  - Menghapus badge jam di pojok kanan atas kartu jam buka dan jam tutup.
+  - Menghapus tombol saran jam / *quick pick presets* (`[07:00] [08:00]...` dan `[20:00] [21:00]...`), sehingga tampilan *roller drum* waktu menjadi sangat ringkas, bersih, dan fokus.
+- **Penyelarasan Suara & Audio Notifikasi**:
+  - Merapikan kartu Suara & Notifikasi agar rata atas (*flush alignment*) sejajar dengan kartu jam operasional, menghilangkan rongga/gap kosong yang sebelumnya terbentuk karena regangan tinggi kolom (*stretch*).
+- **Penyederhanaan Modul Pajak & Biaya Layanan**:
+  - Menghapus **Aturan Pembulatan (Round Up)** dan menghapus kotak **Simulasi Kasir (Pesanan Rp 50.000)**.
+  - Menghapus tombol *preset* cepat pada Pajak Restoran dan Biaya Layanan.
+  - Menata Pajak Restoran dan Biaya Layanan berdampingan dalam *grid* 2 kolom yang simetris dan rapi.
+- **Perbaikan Responsif Mobile pada Saklar & Deskripsi**:
+  - Memperbaiki tombol saklar (toggle switch) dengan menambahkan `shrink-0` sehingga lingkaran tombol *on/off* tidak lagi terdorong keluar / *overflow* di layar HP/tablet.
+  - Menambahkan `shrink-0` pada kontainer ikon/logo agar tidak terhimpit pada layar kecil.
+  - Meringkas teks deskripsi pada Pajak (*"Dikenakan pada kasir & pesanan QR meja"*) dan Biaya Layanan (*"Biaya operasional & kebersihan resto"*).
+- **Pembersihan & Penataan Kendali Saklar Modul Fitur Restoran**:
+  - Menghapus modul **Pelacakan Bahan Baku** dan modul **Modal Awal Kasir di Laci (Cash Drawer)**.
+  - Menata modul yang tersisa menjadi tata letak yang proporsional:
+    - Baris atas (2 kolom): **Pemesanan Mandiri Tamu (Self-Ordering QR)** & **Pantau Pesanan Dapur (KDS)**.
+    - Baris bawah: **WiFi Tamu Restoran (QR & Meja)** dengan pengaturan SSID & Kata Sandi.
 
 ---
 
@@ -82,3 +86,4 @@ Dokumen ini merangkum seluruh pembaruan, perbaikan bug, penyesuaian tata letak (
 ---
 
 *Terakhir diperbarui: 15 November 2026*
+
