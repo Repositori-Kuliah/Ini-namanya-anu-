@@ -47,7 +47,7 @@ export const QrCodeModal: React.FC = () => {
         </button>
 
         {/* Printable Stand Card Preview */}
-        <div className="w-full bg-[#fffdfa] border-2 border-[#3d1018] rounded-2xl p-6 flex flex-col items-center text-center shadow-md my-2">
+        <div className="printable-qr-area w-full bg-[#fffdfa] border-2 border-[#3d1018] rounded-2xl p-6 flex flex-col items-center text-center shadow-md my-2">
           <div className="w-12 h-12 rounded-xl bg-[#3d1018] flex items-center justify-center p-1 mb-2 shadow-xs">
             <img
               src="https://lh3.googleusercontent.com/aida-public/AB6AXuC4jDTg2zGsW66D3mPi0LCCgkEKAz6A3C_LyMjRjF33cCX-hxn-FMKJ-VmnANEDzHK36CnYdj065-0rxRIyAzaBK6gX8QPIzL_SZbagw1SD7hPd2ZxzJIZ6yhPlB0wT0wYg5V1QYZIndg6LMBj-RspFW4GjCZKuvGWpMCQZZXFIpvETPHdcZZBqLKJziB4JXaXmcwodTl3uHGVnuzTEmOl9Fam2CBCupu5HozhgUINKbYrxNyF4ccQ9FOYEpUIXWooGFlE"

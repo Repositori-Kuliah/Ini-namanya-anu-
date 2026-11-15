@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { TableItem, TableStatus } from '../types';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
+import { exportTableQrs, QrExportFormat } from '../lib/qrExport';
 
 const KelolaMejaViewInner: React.FC = () => {
   const { tables, updateTable, addTable, deleteTable, openQrModal, showToast } = useApp();
@@ -22,8 +23,16 @@ const KelolaMejaViewInner: React.FC = () => {
   const [openTableActionId, setOpenTableActionId] = useState<string | null>(null);
   const [deleteTableConfirm, setDeleteTableConfirm] = useState<TableItem | null>(null);
 
+  // Modal Unduh QR Massal
+  const [showQrExportModal, setShowQrExportModal] = useState(false);
+  const [qrExportFormat, setQrExportFormat] = useState<QrExportFormat>('pdf');
+  const [isExportingQr, setIsExportingQr] = useState(false);
+  const [qrExportProgress, setQrExportProgress] = useState<{ done: number; total: number } | null>(null);
+
   // Kunci scroll background saat modal apa pun terbuka
-  useLockBodyScroll(Boolean(showAddModal || editingTable || deleteTableConfirm));
+  useLockBodyScroll(
+    Boolean(showAddModal || editingTable || deleteTableConfirm || showQrExportModal)
+  );
 
   const openEditModal = (tbl: TableItem) => {
     setEditingTable(tbl);
@@ -86,8 +95,26 @@ const KelolaMejaViewInner: React.FC = () => {
     setDeleteTableConfirm(null);
   };
 
-  const handlePrintAllQr = () => {
-    showToast('Semua stiker QR Meja siap dikirim ke printer label.', 'success');
+  const handleExportQrs = async () => {
+    if (isExportingQr || !tables.length) return;
+    setIsExportingQr(true);
+    setQrExportProgress({ done: 0, total: tables.length });
+    try {
+      await exportTableQrs(tables, qrExportFormat, setQrExportProgress);
+      showToast(
+        qrExportFormat === 'pdf'
+          ? `${tables.length} stand QR diunduh sebagai 1 file PDF`
+          : `${tables.length} QR meja diunduh sebagai ${qrExportFormat.toUpperCase()} (ZIP)`,
+        'success'
+      );
+      setShowQrExportModal(false);
+    } catch (error) {
+      console.error(error);
+      showToast('Gagal menyiapkan file QR. Silakan coba lagi.', 'warning');
+    } finally {
+      setIsExportingQr(false);
+      setQrExportProgress(null);
+    }
   };
 
   // Filter Meja
@@ -114,6 +141,15 @@ const KelolaMejaViewInner: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowQrExportModal(true)}
+            disabled={!tables.length}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-[#ebe8e3] hover:bg-[#f6f3ee] text-[#3d1018] text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span className="material-symbols-outlined text-[16px]">download</span>
+            <span>Unduh QR</span>
+          </button>
           <button
             type="button"
             onClick={() => setShowAddModal(true)}
@@ -410,6 +446,111 @@ const KelolaMejaViewInner: React.FC = () => {
                 className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer shadow-xs transition-colors"
               >
                 Hapus Meja
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Unduh QR Massal */}
+      {showQrExportModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="qr-export-title"
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
+        >
+          <div className="bg-white rounded-2xl p-5 w-full max-w-md shadow-2xl border border-[#ebe8e3] flex flex-col gap-4">
+            <div className="flex items-center justify-between pb-2 border-b border-[#ebe8e3]">
+              <div>
+                <h3 id="qr-export-title" className="font-bold text-base text-[#1c1c19]">
+                  Unduh QR Meja
+                </h3>
+                <p className="text-[11px] text-[#847374] mt-0.5">
+                  {tables.length} stand QR siap diekspor sekaligus.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowQrExportModal(false)}
+                disabled={isExportingQr}
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-[#524344] hover:bg-[#f0ede9] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                aria-label="Tutup modal"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+
+            <fieldset className="space-y-2">
+              <legend className="sr-only">Format unduhan</legend>
+              {(
+                [
+                  {
+                    value: 'pdf',
+                    label: 'PDF — 1 file, 1 meja per halaman',
+                    hint: 'A4, stand di kiri atas dengan margin aman 12 mm. Paling praktis untuk dicetak.',
+                  },
+                  {
+                    value: 'png',
+                    label: 'PNG — ZIP berisi banyak gambar',
+                    hint: 'Satu PNG per meja, resolusi tinggi, latar penuh.',
+                  },
+                  {
+                    value: 'jpeg',
+                    label: 'JPEG — ZIP berisi banyak gambar',
+                    hint: 'Satu JPEG per meja, ukuran file lebih kecil.',
+                  },
+                ] as const
+              ).map((option) => {
+                const selected = qrExportFormat === option.value;
+                return (
+                  <label
+                    key={option.value}
+                    className={`flex items-start gap-2.5 p-3 rounded-xl border transition-colors cursor-pointer ${
+                      selected
+                        ? 'border-[#3d1018] bg-[#fcf9f4]'
+                        : 'border-[#ebe8e3] hover:bg-[#fcf9f4]'
+                    } ${isExportingQr ? 'pointer-events-none opacity-60' : ''}`}
+                  >
+                    <input
+                      type="radio"
+                      name="qr-export-format"
+                      value={option.value}
+                      checked={selected}
+                      onChange={() => setQrExportFormat(option.value)}
+                      className="mt-0.5 accent-[#3d1018]"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-xs font-bold text-[#1c1c19]">{option.label}</span>
+                      <span className="block text-[11px] text-[#847374] leading-relaxed mt-0.5">
+                        {option.hint}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+            </fieldset>
+
+            <div className="flex gap-2 pt-2 border-t border-[#ebe8e3]">
+              <button
+                type="button"
+                onClick={() => setShowQrExportModal(false)}
+                disabled={isExportingQr}
+                className="flex-1 py-2 rounded-lg bg-[#f0ede9] text-[#1c1c19] text-xs font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleExportQrs}
+                disabled={isExportingQr || !tables.length}
+                className="flex-1 py-2 rounded-lg bg-[#3d1018] text-white text-xs font-bold hover:bg-[#58252c] cursor-pointer shadow-xs disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isExportingQr && qrExportProgress
+                  ? `Menyiapkan ${qrExportProgress.done}/${qrExportProgress.total}…`
+                  : qrExportFormat === 'pdf'
+                  ? 'Unduh PDF'
+                  : `Unduh ${qrExportFormat.toUpperCase()}`}
               </button>
             </div>
           </div>
