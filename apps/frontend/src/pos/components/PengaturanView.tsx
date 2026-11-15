@@ -151,7 +151,7 @@ const RollerTimePicker: React.FC<RollerTimePickerProps> = ({ label, value, onCha
           label="Menit"
           value={m}
           max={60}
-          step={5}
+          step={1}
           onChange={handleMinuteChange}
         />
       </div>
