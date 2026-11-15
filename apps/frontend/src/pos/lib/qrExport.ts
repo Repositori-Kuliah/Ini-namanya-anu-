@@ -1,5 +1,6 @@
 import QRCode from 'qrcode';
 import type { TableItem } from '../types';
+import { publicAsset } from '../../lib/publicAsset';
 
 /**
  * Batch QR stand exporter.
@@ -22,9 +23,7 @@ const A4_WIDTH_PT = 595.28;
 const A4_HEIGHT_PT = 841.89;
 const PT_PER_MM = 72 / 25.4;
 
-const BRAND_LOGO_URL =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuC4jDTg2zGsW66D3mPi0LCCgkEKAz6A3C_LyMjRjF33cCX-hxn-FMKJ-VmnANEDzHK36CnYdj065-0rxRIyAzaBK6gX8QPIzL_SZbagw1SD7hPd2ZxzJIZ6yhPlB0wT0wYg5V1QYZIndg6LMBj-RspFW4GjCZKuvGWpMCQZZXFIpvETPHdcZZBqLKJziB4JXaXmcwodTl3uHGVnuzTEmOl9Fam2CBCupu5HozhgUINKbYrxNyF4ccQ9FOYEpUIXWooGFlE';
-const FALLBACK_LOGO_URL = '/logo-rawon.png';
+const LOGO_URL = publicAsset('logo-rawon.png');
 
 const DESC_TEXT =
   'Buka kamera ponsel Anda, arahkan ke QR untuk melihat katalog menu, memilih varian, dan memesan langsung dari meja.';
@@ -553,7 +552,7 @@ export async function exportTableQrs(
   if (!tables.length) throw new Error('Tidak ada meja untuk diekspor');
 
   await ensureFonts();
-  const logo = (await loadImage(BRAND_LOGO_URL)) ?? (await loadImage(FALLBACK_LOGO_URL));
+  const logo = await loadImage(LOGO_URL);
 
   const stamp = fileStamp();
 

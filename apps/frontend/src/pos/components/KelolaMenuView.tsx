@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { MenuItem, RawIngredient } from '../types';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
+import { publicAsset } from '../../lib/publicAsset';
 
 const KelolaMenuViewInner: React.FC = () => {
   const {
@@ -172,7 +173,7 @@ const KelolaMenuViewInner: React.FC = () => {
       category: editCategory,
       price: priceNum,
       description: editDescription.trim(),
-      image: editImage.trim() || editingItem.image || '/logo-rawon.png',
+      image: editImage.trim() || editingItem.image || publicAsset('logo-rawon.png'),
       isRecommended: editIsRecommended,
       isFavorite: editIsRecommended,
       isAvailable: editIsAvailable,
@@ -212,7 +213,7 @@ const KelolaMenuViewInner: React.FC = () => {
       category: newCategory,
       price: priceNum,
       description: newDescription.trim(),
-      image: newImage.trim() || '/logo-rawon.png',
+      image: newImage.trim() || publicAsset('logo-rawon.png'),
       isAvailable: true,
       isFavorite: newIsRecommended,
       isRecommended: newIsRecommended,

@@ -1,3 +1,5 @@
+import { publicAsset } from '../../lib/publicAsset';
+
 // Info statis restoran (menu, harga, dan meja kini berasal dari Supabase).
 export const RESTAURANT_INFO = {
   name: 'Rawon Gusti',
@@ -8,6 +10,6 @@ export const RESTAURANT_INFO = {
   tableAreaAlt: 'Area Ruang Utama (Non-Smoking)',
   wifiSsid: 'RawonGusti_VIP',
   wifiPass: 'rawonenak08',
-  logoUrl: '/logo-rawon.png',
-  profileAvatarUrl: '/logo-rawon.png',
+  logoUrl: publicAsset('logo-rawon.png'),
+  profileAvatarUrl: publicAsset('logo-rawon.png'),
 };

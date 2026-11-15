@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { publicAsset } from '../../lib/publicAsset';
 import {
   Eye,
   EyeOff,
@@ -36,7 +37,7 @@ export const LoginScreen: React.FC = () => {
       className="min-h-screen bg-[#f6f3f0] text-[#302526] flex flex-col justify-between selection:bg-[#64272e] selection:text-white"
       style={{
         backgroundImage:
-          "linear-gradient(rgba(246, 243, 240, 0.78), rgba(246, 243, 240, 0.78)), url('/batik-rawon.jpeg')",
+          `linear-gradient(rgba(246, 243, 240, 0.78), rgba(246, 243, 240, 0.78)), url('${publicAsset('batik-rawon.jpeg')}')`,
         backgroundSize: 'auto, 280px',
         backgroundRepeat: 'repeat',
         backgroundAttachment: 'fixed',
@@ -46,7 +47,7 @@ export const LoginScreen: React.FC = () => {
       <header className="flex h-[72px] items-center justify-between border-b border-[#e8dfd9] bg-white px-4 sm:px-6 md:px-10 shrink-0">
         <div className="flex items-center gap-3">
           <img
-            src="/logo-rawon.png"
+            src={publicAsset('logo-rawon.png')}
             alt="Logo Rawon Gusti"
             className="h-10 w-10 rounded-lg object-contain"
           />

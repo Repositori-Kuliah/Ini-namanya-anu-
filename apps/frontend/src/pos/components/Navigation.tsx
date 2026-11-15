@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp, AppView } from '../context/AppContext';
 import { UserRole } from '../types';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
+import { publicAsset } from '../../lib/publicAsset';
 
 export const HelpModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
   isOpen,
@@ -129,7 +130,7 @@ export const MobileHeader: React.FC = () => {
               <img
                 alt="Logo Rawon Gusti"
                 className="w-full h-full object-contain"
-                src="/logo-rawon.png"
+                src={publicAsset('logo-rawon.png')}
               />
             </div>
             <div className="flex flex-col min-w-0">
@@ -365,7 +366,7 @@ export const DesktopSidebar: React.FC = () => {
           <img
             alt="Logo Rawon Gusti"
             className="w-9 h-9 rounded-lg object-contain bg-white/10 p-1"
-            src="/logo-rawon.png"
+            src={publicAsset('logo-rawon.png')}
             width={36}
             height={36}
           />

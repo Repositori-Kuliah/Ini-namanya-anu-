@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
+import { publicAsset } from '../../lib/publicAsset';
 
 export const ThermalReceiptModal: React.FC = () => {
   const { receiptModalData, closeReceiptModal } = useApp();
@@ -65,7 +66,7 @@ export const ThermalReceiptModal: React.FC = () => {
           {/* Header Toko & Logo */}
           <div className="flex flex-col items-center text-center pb-2">
             <img
-              src="/logo-rawon.png"
+              src={publicAsset('logo-rawon.png')}
               alt="Logo Gusti"
               className="w-11 h-11 object-contain mx-auto mb-1 filter grayscale contrast-125"
             />
