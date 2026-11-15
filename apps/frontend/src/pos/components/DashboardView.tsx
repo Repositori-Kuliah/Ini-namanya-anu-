@@ -311,7 +311,7 @@ export const DashboardView: React.FC = () => {
   const totalItemsSold = bestSellers.reduce((acc, curr) => acc + curr.qty, 0);
 
   return (
-    <div className="flex flex-col w-full p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1540px] mx-auto pb-24 md:pb-8">
+    <div className="flex flex-col w-full p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1540px] mx-auto pb-4 md:pb-8">
       {/* Top Action Bar & Title Block */}
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
         <div>

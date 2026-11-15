@@ -125,17 +125,13 @@ export const StatusScreen: React.FC = () => {
             </p>
           </div>
 
-          <div className="text-right shrink-0">
-            <span
-              className={`font-sans text-[11px] px-3 py-1.5 rounded-xl font-bold border inline-block ${
-                isPaid
-                  ? 'bg-[#e8f5e9] text-[#1b5e20] border-[#c8e6c9]'
-                  : 'bg-[#ffdbc9] text-[#753400] border-[#fc934f]'
-              }`}
-            >
-              {activeOrder.paymentStatus}
-            </span>
-          </div>
+          {isPaid && (
+            <div className="text-right shrink-0">
+              <span className="font-sans text-[11px] px-3 py-1.5 rounded-xl font-bold border inline-block bg-[#e8f5e9] text-[#1b5e20] border-[#c8e6c9]">
+                LUNAS
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Tombol Aksi Cepat Meja */}

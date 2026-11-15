@@ -82,7 +82,7 @@ const MejaPelangganViewInner: React.FC = () => {
   );
 
   return (
-    <div className="flex flex-col w-full p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1540px] mx-auto pb-24 md:pb-8">
+    <div className="flex flex-col w-full p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1540px] mx-auto pb-4 md:pb-8">
       {/* Top Header & Action Bar (Aligned with DashboardView) */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
@@ -237,7 +237,7 @@ const MejaPelangganViewInner: React.FC = () => {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[calc(100vh-280px)] overflow-y-auto pr-1 scrollbar-thin">
               {filteredTables.map((table) => {
                 const isSelected = selectedTable?.number === table.number;
                 const isKosong = table.status === 'kosong';

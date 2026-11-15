@@ -100,7 +100,7 @@ const KelolaMejaViewInner: React.FC = () => {
   });
 
   return (
-    <div className="flex flex-col w-full pb-20 md:pb-8 max-w-[1600px] mx-auto px-4 sm:px-6 pt-3 space-y-4">
+    <div className="flex flex-col w-full pb-4 md:pb-8 max-w-[1600px] mx-auto px-4 sm:px-6 pt-3 space-y-4">
       {/* Header Halaman & Aksi Utama */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#ebe8e3]">
         <div>
@@ -156,11 +156,11 @@ const KelolaMejaViewInner: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabel Meja Compact */}
-      <div className="bg-white rounded-xl border border-[#ebe8e3] shadow-xs">
-        <div className="overflow-x-auto">
+      {/* Tabel Meja Compact dengan Scroll Mandiri */}
+      <div className="bg-white rounded-xl border border-[#ebe8e3] shadow-xs overflow-hidden">
+        <div className="overflow-x-auto max-h-[calc(100vh-250px)] overflow-y-auto scrollbar-thin">
           <table className="w-full text-left text-xs border-collapse">
-            <thead className="bg-[#f6f3ee] text-[#524344] uppercase tracking-wider text-[10px] font-bold border-b border-[#ebe8e3]">
+            <thead className="bg-[#f6f3ee] text-[#524344] uppercase tracking-wider text-[10px] font-bold border-b border-[#ebe8e3] sticky top-0 z-10">
               <tr>
                 <th className="py-2.5 px-4">No. Meja</th>
                 <th className="py-2.5 px-4">Status Meja</th>

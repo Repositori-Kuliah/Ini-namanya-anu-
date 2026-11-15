@@ -190,7 +190,7 @@ export const KitchenDisplayView: React.FC = () => {
   );
 
   return (
-    <div className="flex flex-col w-full min-h-screen pb-20 md:pb-8 max-w-[1720px] mx-auto px-4 sm:px-6 pt-3">
+    <div className="flex flex-col w-full min-h-screen pb-4 md:pb-8 max-w-[1720px] mx-auto px-4 sm:px-6 pt-3">
       {/* Top Bar Kontrol Dapur */}
       <div className="flex flex-col md:flex-row md:items-center justify-between pb-3 mb-4 gap-3 border-b border-[#ebe8e3]">
         <div>

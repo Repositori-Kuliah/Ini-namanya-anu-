@@ -129,7 +129,7 @@ export const StaffManagementView: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col w-full p-4 sm:p-6 lg:p-8 space-y-5 max-w-[1540px] mx-auto pb-28 md:pb-8">
+    <div className="flex flex-col w-full p-4 sm:p-6 lg:p-8 space-y-5 max-w-[1540px] mx-auto pb-4 md:pb-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1 border-b border-[#ebe8e3]">
         <div>
@@ -223,11 +223,11 @@ export const StaffManagementView: React.FC = () => {
         </div>
       </div>
 
-      {/* Staff Table */}
+      {/* Staff Table dengan Scroll Mandiri */}
       <div className="bg-white rounded-xl border border-[#ebe8e3] overflow-hidden shadow-2xs">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto max-h-[calc(100vh-320px)] overflow-y-auto scrollbar-thin">
           <table className="w-full text-left text-xs">
-            <thead className="bg-[#f6f3ee] border-b border-[#ebe8e3] text-[11px] font-bold text-[#847374] uppercase tracking-wider">
+            <thead className="bg-[#f6f3ee] border-b border-[#ebe8e3] text-[11px] font-bold text-[#847374] uppercase tracking-wider sticky top-0 z-10">
               <tr>
                 <th className="py-2.5 px-4">Nama Staf</th>
                 <th className="py-2.5 px-4">Email / ID Pengguna</th>

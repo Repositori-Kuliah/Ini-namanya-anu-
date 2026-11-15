@@ -158,7 +158,7 @@ export const CheckoutView: React.FC = () => {
   ).filter((val) => val >= billTotal).slice(0, 4);
 
   return (
-    <div className="flex flex-col w-full pb-20 md:pb-8 max-w-[1600px] mx-auto px-4 sm:px-6 pt-3">
+    <div className="flex flex-col w-full pb-4 md:pb-8 max-w-[1600px] mx-auto px-4 sm:px-6 pt-3">
       {/* Header Halaman */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 mb-4 border-b border-[#ebe8e3]">
         <div>
@@ -253,8 +253,8 @@ export const CheckoutView: React.FC = () => {
             )}
           </div>
 
-          {/* Daftar Tagihan Ringkas (Compact Horizontal List) */}
-          <div className="flex flex-col gap-2">
+          {/* Daftar Tagihan Ringkas (Compact Horizontal List dengan Scroll Mandiri) */}
+          <div className="flex flex-col gap-2 max-h-[calc(100vh-220px)] overflow-y-auto pr-1 scrollbar-thin">
             {queueTab === 'unpaid' ? (
               filteredBills.length === 0 ? (
                 <div className="bg-white rounded-xl p-8 text-center border border-[#ebe8e3]">
@@ -409,7 +409,7 @@ export const CheckoutView: React.FC = () => {
            ========================================================================= */}
         <section
           aria-label="Detail Pembayaran Tagihan Terpilih"
-          className="lg:col-span-7 bg-white rounded-xl border border-[#ebe8e3] p-4 sm:p-5 flex flex-col gap-4"
+          className="lg:col-span-7 bg-white rounded-xl border border-[#ebe8e3] p-4 sm:p-5 flex flex-col gap-4 lg:sticky lg:top-20"
         >
           {/* Header Rincian Tagihan Terpilih */}
           <div className="flex items-start justify-between pb-3 border-b border-[#ebe8e3]">

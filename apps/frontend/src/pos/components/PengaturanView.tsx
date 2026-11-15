@@ -271,7 +271,7 @@ export const PengaturanView: React.FC = () => {
   const isInventoryActive = storeSettings.enableInventoryTracking ?? storeSettings.autoInventoryDeduction ?? true;
 
   return (
-    <div className="flex flex-col w-full pb-24 md:pb-8 max-w-[1540px] mx-auto px-4 sm:px-6 lg:px-8 pt-3 space-y-6">
+    <div className="flex flex-col w-full pb-4 md:pb-8 max-w-[1540px] mx-auto px-4 sm:px-6 lg:px-8 pt-3 space-y-6">
       {/* Header Halaman */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#ebe8e3]">
         <div>
@@ -439,82 +439,7 @@ export const PengaturanView: React.FC = () => {
         </div>
       </div>
 
-      {/* ================= BARIS 2: MODAL AWAL KASIR DI LACI (DRAWER TERDEDIKASI) ================= */}
-      <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs">
-        <form onSubmit={handleSaveDrawerCash} className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#3d1018] text-white flex items-center justify-center shadow-xs shrink-0 mt-0.5">
-              <span className="material-symbols-outlined text-[20px]">point_of_sale</span>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="font-bold text-sm text-[#1c1c19]">Modal Awal Kasir di Laci (Cash Drawer)</h2>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                  isDrawerCashActive ? 'bg-amber-100 text-[#3d1018] border border-amber-200' : 'bg-stone-100 text-[#847374]'
-                }`}>
-                  {isDrawerCashActive ? 'Modul Aktif' : 'Modul Nonaktif'}
-                </span>
-              </div>
-              <p className="text-xs text-[#524344] mt-0.5 max-w-xl">
-                Nominal kas awal pecahan kecil kembalian di laci kasir. Otomatis masuk sebagai modal awal pada Rincian Transaksi Selesai di Laporan Transaksi jika modul aktif.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0 self-end md:self-auto w-full md:w-auto">
-            {/* Toggle Saklar Modular */}
-            <button
-              type="button"
-              onClick={() => {
-                const next = !isDrawerCashActive;
-                updateStoreSettings({ enableDrawerCash: next });
-                showToast(`Modal kasir di laci ${next ? 'diaktifkan' : 'dinonaktifkan (disembunyikan dari Laporan)'}`, 'info');
-              }}
-              className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
-                isDrawerCashActive ? 'bg-[#3d1018]' : 'bg-[#e0dcd8]'
-              }`}
-              title={isDrawerCashActive ? 'Klik untuk menonaktifkan modal laci' : 'Klik untuk mengaktifkan modal laci'}
-              aria-pressed={isDrawerCashActive}
-            >
-              <div
-                className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
-                  isDrawerCashActive ? 'translate-x-6' : 'translate-x-0'
-                }`}
-              />
-            </button>
-
-            <div className={`relative flex-1 md:w-48 transition-opacity ${!isDrawerCashActive ? 'opacity-40 pointer-events-none' : ''}`}>
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#847374]">Rp</span>
-              <input
-                id="drawer-cash-input"
-                type="text"
-                inputMode="numeric"
-                disabled={!isDrawerCashActive}
-                value={drawerCashInput.toLocaleString('id-ID')}
-                onChange={(e) => {
-                  const num = parseInt(e.target.value.replace(/\D/g, ''), 10) || 0;
-                  setDrawerCashInput(num);
-                }}
-                className="w-full pl-9 pr-3 py-2 bg-[#fcf9f4] border border-[#ebe8e3] rounded-xl text-xs font-bold text-[#1c1c19] text-right focus:outline-none focus:border-[#3d1018] shadow-2xs"
-                placeholder="200.000"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={!isDrawerCashActive}
-              className={`px-4 py-2 text-xs font-bold rounded-xl transition-all shadow-xs whitespace-nowrap cursor-pointer ${
-                isDrawerCashActive
-                  ? 'bg-[#3d1018] hover:bg-[#58252c] text-white'
-                  : 'bg-[#ebe8e3] text-[#847374] opacity-50 cursor-not-allowed'
-              }`}
-            >
-              Simpan Modal Laci
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* ================= BARIS: PAJAK, BIAYA LAYANAN & PEMBULATAN ================= */}
+      {/* ================= BARIS 2: PAJAK, BIAYA LAYANAN & PEMBULATAN ================= */}
       <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs space-y-4">
         {/* Header Modul Finansial */}
         <div className="flex items-center gap-2.5 pb-3 border-b border-[#ebe8e3]">
@@ -1019,7 +944,88 @@ export const PengaturanView: React.FC = () => {
           </div>
         </div>
 
-        {/* ================= MODUL 4: WIFI TAMU RESTORAN (DIBAWAH SAKLAR MODUL) ================= */}
+        {/* ================= MODUL 4: MODAL AWAL KASIR DI LACI (DRAWER) ================= */}
+        <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs mt-5">
+          <form onSubmit={handleSaveDrawerCash} className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#3d1018] text-white flex items-center justify-center shadow-xs shrink-0 mt-0.5">
+                <span className="material-symbols-outlined text-[20px]">point_of_sale</span>
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-sm text-[#1c1c19]">Modal Awal Kasir di Laci (Cash Drawer)</h3>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    isDrawerCashActive ? 'bg-amber-100 text-[#3d1018] border border-amber-200' : 'bg-stone-100 text-[#847374]'
+                  }`}>
+                    {isDrawerCashActive ? 'Modul Aktif' : 'Modul Nonaktif'}
+                  </span>
+                </div>
+                <p className="text-xs text-[#524344] mt-0.5 max-w-xl">
+                  Nominal kas awal pecahan kecil kembalian di laci kasir. Otomatis masuk sebagai modal awal pada Rincian Transaksi Selesai di Laporan Transaksi jika modul aktif.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0 w-full lg:w-auto">
+              {/* Toggle Saklar Modular */}
+              <div className="flex items-center gap-2 justify-between sm:justify-start">
+                <span className="text-xs font-bold text-[#1c1c19] sm:hidden">Aktifkan Modal Laci</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !isDrawerCashActive;
+                    updateStoreSettings({ enableDrawerCash: next });
+                    showToast(`Modal kasir di laci ${next ? 'diaktifkan' : 'dinonaktifkan (disembunyikan dari Laporan)'}`, 'info');
+                  }}
+                  className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
+                    isDrawerCashActive ? 'bg-[#3d1018]' : 'bg-[#e0dcd8]'
+                  }`}
+                  title={isDrawerCashActive ? 'Klik untuk menonaktifkan modal laci' : 'Klik untuk mengaktifkan modal laci'}
+                  aria-pressed={isDrawerCashActive}
+                >
+                  <div
+                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
+                      isDrawerCashActive ? 'translate-x-6' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className={`flex flex-col sm:flex-row items-center gap-2 transition-opacity ${!isDrawerCashActive ? 'opacity-40 pointer-events-none' : ''}`}>
+                <div className="relative w-full sm:w-48">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#847374]">Rp</span>
+                  <input
+                    id="drawer-cash-input"
+                    type="text"
+                    inputMode="numeric"
+                    disabled={!isDrawerCashActive}
+                    value={drawerCashInput.toLocaleString('id-ID')}
+                    onChange={(e) => {
+                      const num = parseInt(e.target.value.replace(/\D/g, ''), 10) || 0;
+                      setDrawerCashInput(num);
+                    }}
+                    className="w-full h-9 pl-9 pr-3 text-xs font-bold rounded-lg border border-[#ebe8e3] bg-white text-[#1c1c19] outline-none focus:border-[#3d1018]"
+                    placeholder="200.000"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={!isDrawerCashActive}
+                  className={`w-full sm:w-auto h-9 px-4 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1.5 ${
+                    isDrawerCashActive
+                      ? 'bg-[#3d1018] hover:bg-[#58252c] text-white'
+                      : 'bg-[#ebe8e3] text-[#847374] opacity-50 cursor-not-allowed'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[15px]">save</span>
+                  <span>Simpan Modal Laci</span>
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        {/* ================= MODUL 5: WIFI TAMU RESTORAN (DIBAWAH SAKLAR MODUL) ================= */}
         <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs mt-5">
           <form onSubmit={handleSaveWifi} className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="flex items-start gap-3">
