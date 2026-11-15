@@ -238,5 +238,23 @@ Dokumen ini merangkum seluruh pembaruan, perbaikan bug, penyesuaian tata letak (
 
 ---
 
-*Terakhir diperbarui: 15 November 2026*
+## 12. Pembersihan Modal Admin, Backdrop Lock & Halaman Login Hero Makanan
+
+- **Pembersihan Modal Edit Akun Admin (`StaffManagementView.tsx`)**:
+  - Menghapus total kotak lencana *"Admin Outlet (Permanen)"* dan kotak hijau *"Aktif (Akun Admin Utama tidak dapat dinonaktifkan)"* saat mengedit akun Admin.
+  - Form edit khusus Admin kini sangat ringkas dan bersih: hanya menampilkan Nama Lengkap, Email/User ID, Ubah Kata Sandi Baru (opsional), dan Terakhir Login.
+  - Pilihan Role dan Status Akun hanya ditampilkan saat mengedit staf reguler (Kasir & Dapur) yang memang relevan untuk diatur.
+- **Pengamanan Backdrop Modal (*Disable Backdrop Click to Close*)**:
+  - Menghapus fitur penutupan modal saat mengklik area luar gelap (*backdrop*) di seluruh sistem modal (`StaffManagementView`, `CheckoutView`, `MejaPelangganView`, `ThermalReceiptModal`).
+  - Mencegah hilangnya data input kasir secara tidak sengaja akibat sentuhan jempol yang meleset di layar HP/tablet. Modal kini hanya dapat ditutup secara sadar melalui tombol silang (**✕**), tombol **Batal**, atau tombol konfirmasi/simpan.
+- **Pembaruan Total Halaman Login Modern (`LoginScreen.tsx`)**:
+  - Mengganti pola batik berulang dengan desain modern sesuai arahan PM:
+    - **Desktop/Tablet Lebar (`lg:`)**: Mengusung tata letak *Split 50/50*:
+      - Sisi Kiri: Foto hidangan signature *hero rawon daging* beresolusi tinggi dengan *gradient shadow*, logo Rawon Gusti Surabaya, tipografi *headline* elegan *"Rasa asli, sepenuh hati."*, serta *tagline* operasional restoran.
+      - Sisi Kanan: Form otentikasi login bersih dengan latar krem hangat (`#fcf9f4`), tipografi serif elegan, input email & kata sandi, checkbox "Ingat saya", serta tombol maroon khas Rawon Gusti.
+    - **Mobile/Smartphone (`< lg`)**: Sisi foto otomatis disembunyikan agar ringan dan hemat ruang; layar langsung menampilkan logo Rawon Gusti, judul selamat datang, form login, dan footer hak cipta yang rapi tanpa *header bar* tebal yang membuang ruang layar.
+
+---
+
+*Terakhir diperbarui: 16 November 2026*
 

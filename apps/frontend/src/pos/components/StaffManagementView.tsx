@@ -489,9 +489,9 @@ export const StaffManagementView: React.FC = () => {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setEditingStaff(null);
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150 touch-none"
+          onTouchMove={(e) => {
+            if (e.target === e.currentTarget) e.preventDefault();
           }}
         >
           <form
@@ -541,63 +541,54 @@ export const StaffManagementView: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <label className="block font-semibold text-[#1c1c19] mb-1">
-                  Hak Akses (Role)
-                </label>
-                {editingStaff.role === 'admin' || editingStaff.id === currentUser?.id || editingStaff.id === 'usr-admin' || editingStaff.email.includes('admin') ? (
-                  <div className="flex items-center gap-2 px-3 py-2 bg-[#f6f3ee] rounded-lg border border-[#ebe8e3] text-xs text-[#524344]">
-                    <span className="material-symbols-outlined text-[16px] text-[#3d1018]">lock</span>
-                    <span className="font-semibold text-[#1c1c19]">Admin Outlet (Permanen)</span>
+              {/* Hak Akses & Status Akun (Hanya tampil untuk staf biasa: Kasir & Dapur) */}
+              {!(editingStaff.role === 'admin' || editingStaff.id === currentUser?.id || editingStaff.id === 'usr-admin' || editingStaff.email.includes('admin')) && (
+                <>
+                  <div>
+                    <label className="block font-semibold text-[#1c1c19] mb-1">
+                      Hak Akses (Role)
+                    </label>
+                    <select
+                      value={editRole}
+                      onChange={(e) => setEditRole(e.target.value as UserRole)}
+                      className="w-full px-3 py-2 bg-[#f6f3ee] rounded-lg border border-[#ebe8e3] text-xs text-[#1c1c19] outline-none focus:border-[#3d1018] focus:bg-white cursor-pointer"
+                    >
+                      <option value="kasir">Kasir</option>
+                      <option value="kitchen">Dapur</option>
+                      <option value="admin">Admin</option>
+                    </select>
                   </div>
-                ) : (
-                  <select
-                    value={editRole}
-                    onChange={(e) => setEditRole(e.target.value as UserRole)}
-                    className="w-full px-3 py-2 bg-[#f6f3ee] rounded-lg border border-[#ebe8e3] text-xs text-[#1c1c19] outline-none focus:border-[#3d1018] focus:bg-white cursor-pointer"
-                  >
-                    <option value="kasir">Kasir</option>
-                    <option value="kitchen">Dapur</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                )}
-              </div>
 
-              {/* Status Akun */}
-              <div>
-                <label className="block font-semibold text-[#1c1c19] mb-1">Status Akun</label>
-                {editingStaff.role === 'admin' || editingStaff.id === currentUser?.id || editingStaff.id === 'usr-admin' || editingStaff.email.includes('admin') ? (
-                  <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 rounded-lg border border-emerald-200 text-xs text-emerald-800">
-                    <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                    <span className="font-semibold">Aktif (Akun Admin Utama tidak dapat dinonaktifkan)</span>
+                  {/* Status Akun */}
+                  <div>
+                    <label className="block font-semibold text-[#1c1c19] mb-1">Status Akun</label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditActive(true)}
+                        className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                          editActive
+                            ? 'bg-[#3d1018] text-white border-[#3d1018]'
+                            : 'bg-[#f6f3ee] text-[#524344] border-[#ebe8e3]'
+                        }`}
+                      >
+                        Aktif
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditActive(false)}
+                        className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                          !editActive
+                            ? 'bg-red-600 text-white border-red-600'
+                            : 'bg-[#f6f3ee] text-[#524344] border-[#ebe8e3]'
+                        }`}
+                      >
+                        Nonaktif
+                      </button>
+                    </div>
                   </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setEditActive(true)}
-                      className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                        editActive
-                          ? 'bg-[#3d1018] text-white border-[#3d1018]'
-                          : 'bg-[#f6f3ee] text-[#524344] border-[#ebe8e3]'
-                      }`}
-                    >
-                      Aktif
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEditActive(false)}
-                      className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                        !editActive
-                          ? 'bg-red-600 text-white border-red-600'
-                          : 'bg-[#f6f3ee] text-[#524344] border-[#ebe8e3]'
-                      }`}
-                    >
-                      Nonaktif
-                    </button>
-                  </div>
-                )}
-              </div>
+                </>
+              )}
 
               {/* Reset Password (Khusus Admin) */}
               <div>

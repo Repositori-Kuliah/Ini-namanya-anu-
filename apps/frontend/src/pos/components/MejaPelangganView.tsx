@@ -330,9 +330,6 @@ const MejaPelangganViewInner: React.FC = () => {
           role="dialog"
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs lg:hidden animate-in fade-in duration-150 touch-none"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setMobileDrawerOpen(false);
-          }}
           onTouchMove={(e) => {
             if (e.target === e.currentTarget) e.preventDefault();
           }}

@@ -282,7 +282,10 @@ const KelolaMejaViewInner: React.FC = () => {
           role="dialog"
           aria-modal="true"
           aria-labelledby="edit-table-title"
-          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 touch-none"
+          onTouchMove={(e) => {
+            if (e.target === e.currentTarget) e.preventDefault();
+          }}
         >
           <form
             onSubmit={handleSaveTable}
