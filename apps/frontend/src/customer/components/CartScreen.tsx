@@ -31,14 +31,13 @@ export const CartScreen: React.FC = () => {
     setTableNotes,
   } = useApp();
 
-  const [paymentMode, setPaymentMode] = useState<'qris' | 'cashier'>('cashier');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleOrderSubmission = async () => {
     if (isSubmitting || cartItems.length === 0) return;
     setIsSubmitting(true);
 
-    const ok = await submitOrder(paymentMode, tableNotes);
+    const ok = await submitOrder('cashier', tableNotes);
     if (!ok) {
       setIsSubmitting(false);
       return;
@@ -277,67 +276,22 @@ export const CartScreen: React.FC = () => {
 
           {/* Right Column: Payment Preference + POS Financial Breakdown + Submit CTA */}
           <div className="md:col-span-5 md:sticky md:top-20 space-y-4">
-            {/* Preferensi Metode Pembayaran */}
-            <fieldset className="bg-white rounded-2xl p-4 shadow-xs border border-[#ebe8e3] space-y-3">
-              <legend className="font-serif font-bold text-sm text-[#3d1018] px-1 flex items-center gap-1.5">
+            {/* Informasi Pembayaran Kasir */}
+            <div className="bg-white rounded-2xl p-4 shadow-xs border border-[#ebe8e3] flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-[#f6f3ee] text-[#3d1018] flex items-center justify-center shrink-0 border border-[#ebe8e3]">
                 <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
-                  payments
+                  point_of_sale
                 </span>
-                <span>Preferensi Pembayaran</span>
-              </legend>
-
-              <div className="space-y-2.5">
-                <label
-                  className={`flex items-start gap-3 p-3.5 rounded-xl cursor-pointer transition-colors border ${
-                    paymentMode === 'qris'
-                      ? 'bg-[#f0ede9] border-[#3d1018]'
-                      : 'bg-[#fcf9f4] border-[#ebe8e3] hover:bg-[#f6f3ee]'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="payment_mode"
-                    value="qris"
-                    checked={paymentMode === 'qris'}
-                    onChange={() => setPaymentMode('qris')}
-                    className="mt-0.5 w-4 h-4 accent-[#3d1018] cursor-pointer shrink-0"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <span className="font-sans font-bold text-xs text-[#1c1c19] block">
-                      Bayar via QRIS (Konfirmasi Kasir)
-                    </span>
-                    <p className="font-sans text-[11px] text-[#524344] mt-1 leading-relaxed">
-                      Pesanan langsung dikirim ke dapur. Kasir akan menyediakan kode QRIS untuk menyelesaikan pembayaran Anda.
-                    </p>
-                  </div>
-                </label>
-
-                <label
-                  className={`flex items-start gap-3 p-3.5 rounded-xl cursor-pointer transition-colors border ${
-                    paymentMode === 'cashier'
-                      ? 'bg-[#f0ede9] border-[#3d1018]'
-                      : 'bg-[#fcf9f4] border-[#ebe8e3] hover:bg-[#f6f3ee]'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="payment_mode"
-                    value="cashier"
-                    checked={paymentMode === 'cashier'}
-                    onChange={() => setPaymentMode('cashier')}
-                    className="mt-0.5 w-4 h-4 accent-[#3d1018] cursor-pointer shrink-0"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <span className="font-sans font-bold text-xs text-[#1c1c19] block">
-                      Bayar Nanti di Kasir (Tunai / Kartu)
-                    </span>
-                    <p className="font-sans text-[11px] text-[#524344] mt-1 leading-relaxed">
-                      Pesanan langsung dikirim ke dapur, pembayaran diselesaikan di kasir setelah Anda selesai bersantap.
-                    </p>
-                  </div>
-                </label>
               </div>
-            </fieldset>
+              <div className="min-w-0">
+                <span className="font-sans font-bold text-xs text-[#1c1c19] block">
+                  Pembayaran di Kasir
+                </span>
+                <p className="font-sans text-[11px] text-[#524344] mt-0.5 leading-relaxed">
+                  Pesanan langsung dikirim ke dapur. Pembayaran diselesaikan di kasir setelah Anda selesai bersantap (Tunai, QRIS, atau Kartu).
+                </p>
+              </div>
+            </div>
 
             {/* Rincian Pembayaran (Selaras dengan POS CheckoutView) */}
             <section
@@ -427,13 +381,6 @@ export const CartScreen: React.FC = () => {
                   </>
                 )}
               </button>
-
-              <p className="text-center font-sans text-[11px] text-[#524344] flex items-center justify-center gap-1.5 font-medium">
-                <span className="material-symbols-outlined text-[14px] text-[#994703]" aria-hidden="true">
-                  schedule
-                </span>
-                <span>Estimasi penyajian: 12 – 18 menit</span>
-              </p>
             </div>
           </div>
         </div>

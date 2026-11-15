@@ -719,13 +719,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const menuCategories = useMemo(() => categories.map((c) => c.name as string), [categories]);
 
   // ---------- turunan: meja, tagihan, tiket dapur ----------
-  const tables: TableItem[] = useMemo(() => rawTables.map((t) => {
-    const s = sessions.find((x) => x.table_id === t.table_id);
-    const base: TableItem = {
-      id: `tbl-${pad(t.table_number)}`, dbId: t.table_id, qrToken: t.qr_token, number: pad(t.table_number),
-      capacity: 4, area: 'Ruang Restoran', status: 'kosong', statusLabel: STATUS_LABEL.kosong,
-      qrCodeId: `RG-M${pad(t.table_number)}`, qrUrl: tableUrl(t.qr_token),
-    };
+  const tables: TableItem[] = useMemo(() => {
+    // Deduplikasi rawTables berdasarkan table_number agar tidak ada baris ganda
+    const seen = new Set<string>();
+    const uniqueRawTables = rawTables.filter((t) => {
+      const numStr = pad(t.table_number);
+      if (seen.has(numStr)) return false;
+      seen.add(numStr);
+      return true;
+    });
+
+    return uniqueRawTables.map((t) => {
+      const s = sessions.find((x) => x.table_id === t.table_id);
+      const base: TableItem = {
+        id: `tbl-${pad(t.table_number)}`, dbId: t.table_id, qrToken: t.qr_token, number: pad(t.table_number),
+        capacity: 4, area: 'Ruang Restoran', status: 'kosong', statusLabel: STATUS_LABEL.kosong,
+        qrCodeId: `RG-M${pad(t.table_number)}`, qrUrl: tableUrl(t.qr_token),
+      };
     if (!s) return base;
     const live = (s.orders || []).filter((o: any) => o.order_status !== 'draft');
     const drafts = (s.orders || []).filter((o: any) => o.order_status === 'draft');
@@ -745,7 +755,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const totalRaw = shown.reduce((a: number, o: any) => a + Number(o.total), 0);
     return { ...base, status, statusLabel: STATUS_LABEL[status], name: s.customer_name || undefined, guestCount: s.guest_count,
       totalRaw, totalFormatted: rp(totalRaw), billId: `${status === 'draf' ? 'D' : 'B'}-${s.session_id}`, infoSubtitle: info, sessionId: s.session_id, items };
-  }), [rawTables, sessions, requests, now]); // eslint-disable-line react-hooks/exhaustive-deps
+    });
+  }, [rawTables, sessions, requests, now]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const bills: BillItem[] = useMemo(() => sessions.flatMap((s) => {
     const live = (s.orders || []).filter((o: any) => o.order_status !== 'draft');

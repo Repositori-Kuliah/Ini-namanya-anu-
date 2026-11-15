@@ -179,10 +179,11 @@ const KelolaMejaViewInner: React.FC = () => {
                 filtered.map((tbl, idx) => {
                   const isOccupied = tbl.status !== 'kosong';
                   const isCheckout = tbl.status === 'checkout';
-                  const isBottomRow = idx >= Math.max(1, filtered.length - 4);
+                  const isBottomRow = idx >= Math.max(1, filtered.length - 3);
+                  const actionKey = tbl.dbId ? `tbl-${tbl.dbId}` : `tbl-${tbl.number}-${idx}`;
 
                   return (
-                    <tr key={tbl.id} className="hover:bg-[#fcf9f4] transition-colors">
+                    <tr key={tbl.dbId ? `row-${tbl.dbId}` : `row-${tbl.number}-${idx}`} className="hover:bg-[#fcf9f4] transition-colors">
                       <td className="py-2.5 px-4 font-bold text-[#1c1c19] text-sm tabular-nums">
                         {tbl.number}
                       </td>
@@ -216,22 +217,22 @@ const KelolaMejaViewInner: React.FC = () => {
                         <div className="relative inline-block text-left">
                           <button
                             type="button"
-                            onClick={() => setOpenTableActionId(openTableActionId === tbl.id ? null : tbl.id)}
+                            onClick={() => setOpenTableActionId(openTableActionId === actionKey ? null : actionKey)}
                             className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-[#f6f3ee] hover:bg-[#ebe8e3] text-[#1c1c19] border border-[#ebe8e3] text-xs font-semibold cursor-pointer transition-colors"
                           >
                             <span>Aksi</span>
                             <span className="material-symbols-outlined text-[14px] text-[#524344]">
-                              {openTableActionId === tbl.id ? 'expand_less' : 'expand_more'}
+                              {openTableActionId === actionKey ? 'expand_less' : 'expand_more'}
                             </span>
                           </button>
 
-                          {openTableActionId === tbl.id && (
+                          {openTableActionId === actionKey && (
                             <>
                               <div
                                 className="fixed inset-0 z-20"
                                 onClick={() => setOpenTableActionId(null)}
                               />
-                              <div className={`absolute right-0 ${isBottomRow ? 'bottom-full mb-1 origin-bottom-right' : 'top-full mt-1 origin-top-right'} w-44 bg-white rounded-xl shadow-xl border border-[#ebe8e3] py-1 z-30 text-left divide-y divide-[#ebe8e3] animate-in fade-in zoom-in-95 duration-100`}>
+                              <div className={`absolute right-0 ${isBottomRow ? 'bottom-full mb-1 origin-bottom-right' : 'top-full mt-1 origin-top-right'} w-40 bg-white rounded-xl shadow-xl border border-[#ebe8e3] py-1 z-30 text-left divide-y divide-[#ebe8e3] animate-in fade-in zoom-in-95 duration-100`}>
                                 <div className="py-1">
                                   <button
                                     type="button"
@@ -243,17 +244,6 @@ const KelolaMejaViewInner: React.FC = () => {
                                   >
                                     <span className="material-symbols-outlined text-[15px] text-[#524344]">edit</span>
                                     <span>Edit Meja</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenTableActionId(null);
-                                      openQrModal(tbl);
-                                    }}
-                                    className="w-full px-3 py-1.5 text-xs font-medium text-[#1c1c19] hover:bg-[#f6f3ee] flex items-center gap-2 cursor-pointer"
-                                  >
-                                    <span className="material-symbols-outlined text-[15px] text-[#994703]">qr_code_2</span>
-                                    <span>Lihat Stiker QR</span>
                                   </button>
                                 </div>
                                 <div className="py-1">

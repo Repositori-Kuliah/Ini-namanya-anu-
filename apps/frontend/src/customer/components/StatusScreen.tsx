@@ -159,10 +159,10 @@ export const StatusScreen: React.FC = () => {
 
               <div className="px-3 py-2 rounded-xl bg-[#f6f3ee] text-right border border-[#ebe8e3] shrink-0">
                 <span className="block font-sans text-[10px] text-[#524344] font-semibold uppercase tracking-wider">
-                  {stage === 4 ? 'Status' : 'Estimasi Siap'}
+                  Status
                 </span>
-                <span className="font-serif text-sm sm:text-base text-[#3d1018] font-bold tabular-nums">
-                  {stage === 4 ? 'Tersaji' : activeOrder.estimatedMinutes}
+                <span className="font-serif text-sm sm:text-base text-[#3d1018] font-bold">
+                  {stageMeta[stage].title}
                 </span>
               </div>
             </div>

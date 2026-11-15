@@ -1,7 +1,7 @@
 node_modules
 dist
 docs
-test
+supabase
 .next
 .env
 .env.local

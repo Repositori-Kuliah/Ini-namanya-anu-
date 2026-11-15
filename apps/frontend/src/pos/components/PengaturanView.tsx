@@ -721,9 +721,52 @@ export const PengaturanView: React.FC = () => {
                   </button>
                 </div>
               </div>
+
+              {/* Simulasi Kasir (Di bawah Biaya Layanan, Selaras Tema Heritage) */}
+              <div className="p-4 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3] space-y-2.5 shadow-2xs">
+                <div className="flex items-center gap-2 pb-1.5 border-b border-[#ebe8e3]">
+                  <span className="material-symbols-outlined text-[17px] text-[#994703]">calculate</span>
+                  <span className="text-xs font-bold text-[#1c1c19]">
+                    Simulasi Kasir: Pesanan Rp 50.000 (1x Rawon Spesial)
+                  </span>
+                </div>
+
+                <div className="space-y-1.5 text-xs text-[#524344]">
+                  <div className="flex justify-between">
+                    <span>Subtotal Menu:</span>
+                    <span className="font-semibold text-[#1c1c19] tabular-nums">Rp {simSubtotal.toLocaleString('id-ID')}</span>
+                  </div>
+                  <div className="flex justify-between text-[11px]">
+                    <span>Biaya Layanan ({enableServiceInput ? `${serviceRateInput}%` : 'Nonaktif'}):</span>
+                    <span className="font-medium tabular-nums text-[#994703]">
+                      {enableServiceInput ? `+Rp ${simServiceAmt.toLocaleString('id-ID')}` : 'Rp 0'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-[11px]">
+                    <span>{taxNameInput || 'PB1'} ({enableTaxInput ? `${taxRateInput}%` : 'Nonaktif'}):</span>
+                    <span className="font-medium tabular-nums text-[#994703]">
+                      {enableTaxInput ? `+Rp ${simTaxAmt.toLocaleString('id-ID')}` : 'Rp 0'}
+                    </span>
+                  </div>
+                  {simRoundDiff !== 0 && (
+                    <div className="flex justify-between text-[11px] text-[#847374] font-medium">
+                      <span>Penyesuaian Pembulatan:</span>
+                      <span className="tabular-nums">
+                        {simRoundDiff > 0 ? `+Rp ${simRoundDiff.toLocaleString('id-ID')}` : `-Rp ${Math.abs(simRoundDiff).toLocaleString('id-ID')}`}
+                      </span>
+                    </div>
+                  )}
+                  <div className="pt-2 border-t border-[#ebe8e3] flex justify-between items-baseline font-bold">
+                    <span className="text-xs text-[#1c1c19]">Total Tagihan Akhir:</span>
+                    <span className="text-xl text-[#3d1018] font-serif tabular-nums font-bold">
+                      Rp {simTotal.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Kolom Kanan: Aturan Pembulatan & Live Simulasi */}
+            {/* Kolom Kanan: Aturan Pembulatan & Tombol Simpan */}
             <div className="space-y-4">
               {/* Aturan Pembulatan */}
               <div className="p-4 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3] space-y-2.5">
@@ -772,57 +815,11 @@ export const PengaturanView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Live Simulation Box */}
-              <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-200 space-y-2">
-                <div className="flex items-center justify-between pb-1 border-b border-emerald-200">
-                  <span className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[16px] text-emerald-700">calculate</span>
-                    Simulasi Kasir: Pesanan Rp 50.000 (1x Rawon Spesial)
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900 text-[10px] font-bold">
-                    LIVE PREVIEW
-                  </span>
-                </div>
-
-                <div className="space-y-1 text-xs text-emerald-900">
-                  <div className="flex justify-between">
-                    <span>Subtotal:</span>
-                    <span className="font-semibold tabular-nums">Rp {simSubtotal.toLocaleString('id-ID')}</span>
-                  </div>
-                  <div className="flex justify-between text-[11px]">
-                    <span>Biaya Layanan ({enableServiceInput ? `${serviceRateInput}%` : 'Nonaktif'}):</span>
-                    <span className="font-medium tabular-nums text-emerald-800">
-                      {enableServiceInput ? `+Rp ${simServiceAmt.toLocaleString('id-ID')}` : 'Rp 0'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-[11px]">
-                    <span>{taxNameInput || 'PB1'} ({enableTaxInput ? `${taxRateInput}%` : 'Nonaktif'}):</span>
-                    <span className="font-medium tabular-nums text-emerald-800">
-                      {enableTaxInput ? `+Rp ${simTaxAmt.toLocaleString('id-ID')}` : 'Rp 0'}
-                    </span>
-                  </div>
-                  {simRoundDiff !== 0 && (
-                    <div className="flex justify-between text-[11px] text-amber-800 font-medium">
-                      <span>Penyesuaian Pembulatan:</span>
-                      <span className="tabular-nums">
-                        {simRoundDiff > 0 ? `+Rp ${simRoundDiff.toLocaleString('id-ID')}` : `-Rp ${Math.abs(simRoundDiff).toLocaleString('id-ID')}`}
-                      </span>
-                    </div>
-                  )}
-                  <div className="pt-2 border-t border-emerald-200 flex justify-between items-baseline font-bold">
-                    <span className="text-xs text-emerald-950">Total Tagihan Akhir:</span>
-                    <span className="text-lg text-emerald-900 font-serif tabular-nums">
-                      Rp {simTotal.toLocaleString('id-ID')}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
               {/* Tombol Simpan Pengaturan Finansial */}
-              <div className="flex justify-end pt-1">
+              <div className="flex justify-end pt-2">
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+                  className="w-full sm:w-auto px-6 py-2.5 bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <span className="material-symbols-outlined text-[16px]">save</span>
                   <span>Simpan Pengaturan Finansial</span>
