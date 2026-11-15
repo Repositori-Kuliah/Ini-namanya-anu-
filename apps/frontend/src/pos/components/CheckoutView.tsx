@@ -669,57 +669,25 @@ export const CheckoutView: React.FC = () => {
                       <label className="text-[10px] text-[#847374] font-bold uppercase block mt-1">
                         Nominal 1 (Rp):
                       </label>
-                      <div className="flex items-center gap-1.5 bg-[#fcf9f4] border border-[#ebe8e3] rounded px-2 py-1">
+                      <div className="flex items-center gap-1.5 bg-[#fcf9f4] border border-[#ebe8e3] rounded-lg px-2.5 py-1.5 focus-within:border-[#3d1018] focus-within:bg-white transition-colors">
                         <span className="text-xs font-bold text-[#847374]">Rp</span>
                         <input
+                          id="split-amount-1-input"
                           type="text"
                           inputMode="numeric"
-                          value={splitAmount1 ? splitAmount1.toLocaleString('id-ID') : '0'}
+                          placeholder="0"
+                          value={splitAmount1 === 0 ? '' : splitAmount1.toLocaleString('id-ID')}
                           onChange={(e) => {
-                            const raw = parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0;
+                            const clean = e.target.value.replace(/\D/g, '');
+                            if (!clean) {
+                              setSplitAmount1(0);
+                              return;
+                            }
+                            const raw = parseInt(clean, 10) || 0;
                             setSplitAmount1(Math.min(currentBill.total, raw));
                           }}
                           className="w-full bg-transparent text-xs font-bold tabular-nums outline-none text-[#1c1c19]"
                         />
-                      </div>
-
-                      {/* Tombol Cepat Pecah */}
-                      <div className="flex items-center gap-1 flex-wrap pt-1">
-                        <button
-                          type="button"
-                          onClick={() => setSplitAmount1(Math.round(currentBill.total / 2))}
-                          className="px-1.5 py-0.5 rounded bg-[#f6f3ee] hover:bg-[#ebe8e3] text-[10px] font-bold text-[#3d1018] cursor-pointer"
-                        >
-                          50%
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSplitAmount1((prev) => Math.min(currentBill.total, prev + 10000))}
-                          className="px-1.5 py-0.5 rounded bg-[#f6f3ee] hover:bg-[#ebe8e3] text-[10px] font-bold text-[#1c1c19] cursor-pointer"
-                        >
-                          +10rb
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSplitAmount1((prev) => Math.min(currentBill.total, prev + 50000))}
-                          className="px-1.5 py-0.5 rounded bg-[#f6f3ee] hover:bg-[#ebe8e3] text-[10px] font-bold text-[#1c1c19] cursor-pointer"
-                        >
-                          +50rb
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSplitAmount1(currentBill.total)}
-                          className="px-1.5 py-0.5 rounded bg-[#f6f3ee] hover:bg-[#ebe8e3] text-[10px] font-bold text-[#994703] cursor-pointer"
-                        >
-                          Pas
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSplitAmount1(0)}
-                          className="px-1.5 py-0.5 rounded bg-[#f6f3ee] hover:bg-red-50 text-[10px] font-bold text-red-700 cursor-pointer"
-                        >
-                          C
-                        </button>
                       </div>
                     </div>
 
