@@ -11,6 +11,9 @@ export const PesananBaruView: React.FC = () => {
     setOrderTableNumber,
     orderSecondaryTables,
     setOrderSecondaryTables,
+    orderType,
+    setOrderType,
+    takeawayNextQueue,
     orderCustomerName,
     setOrderCustomerName,
     orderGuestCount,
@@ -67,18 +70,18 @@ export const PesananBaruView: React.FC = () => {
   else if (storeSettings?.roundingRule === '500') grandTotal = Math.round(grandTotal / 500) * 500;
   else if (storeSettings?.roundingRule === '1000') grandTotal = Math.ceil(grandTotal / 1000) * 1000;
 
-  const handleKirimKitchen = () => {
-    if (cartItems.length === 0) return;
+  const handleKirimKitchen = async () => {
+    if (cartItems.length === 0 || isSending) return;
     setIsSending(true);
-    setTimeout(() => {
-      setIsSending(false);
+    const ok = await sendOrderToKitchen();
+    setIsSending(false);
+    if (ok) {
       setIsSuccessSent(true);
-      sendOrderToKitchen();
       setTimeout(() => {
         setIsSuccessSent(false);
         setMobileTab('catalog');
       }, 1500);
-    }, 400);
+    }
   };
 
   const openNoteEditor = (menuItem: MenuItem, currentNote = '') => {
@@ -340,111 +343,97 @@ export const PesananBaruView: React.FC = () => {
             mobileTab === 'catalog' ? 'hidden lg:flex' : 'flex'
           }`}
         >
-          {/* Selector Meja & Gabung Meja Rombongan (Compact Horizontal Grid) */}
-          <div className="pb-3 border-b border-[#ebe8e3] space-y-2">
-            <div>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#524344]">
-                Target Meja &amp; Tamu
-              </span>
-            </div>
+          {/* Switcher Tipe Layanan: Santap di Tempat vs Bawa Pulang */}
+          <div className="grid grid-cols-2 p-1 bg-[#f0ede9] rounded-xl text-xs font-bold shrink-0">
+            <button
+              type="button"
+              onClick={() => setOrderType('dine_in')}
+              className={`py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                orderType === 'dine_in'
+                  ? 'bg-white text-[#3d1018] shadow-xs'
+                  : 'text-[#847374] hover:text-[#1c1c19]'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">restaurant</span>
+              <span>Santap di Tempat</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setOrderType('takeaway')}
+              className={`py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                orderType === 'takeaway'
+                  ? 'bg-[#3d1018] text-white shadow-xs'
+                  : 'text-[#847374] hover:text-[#1c1c19]'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">takeout_dining</span>
+              <span>Bawa Pulang</span>
+            </button>
+          </div>
 
-            <div className="grid grid-cols-3 gap-2">
-              {/* Dropdown Meja Utama */}
-              <div>
-                <label htmlFor="order-table" className="text-[10px] text-[#847374] block mb-0.5">
-                  No. Meja Utama
-                </label>
-                <select
-                  id="order-table"
-                  value={orderTableNumber}
-                  onChange={(e) => setOrderTableNumber(e.target.value)}
-                  className="w-full bg-[#fcf9f4] border border-[#ebe8e3] rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#1c1c19] outline-none cursor-pointer focus:border-[#3d1018]"
-                >
-                  {tables.map((t) => (
-                    <option key={t.number} value={t.number}>
-                      Meja {t.number}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Selector Gabung Meja (Pengganti Jumlah Pelanggan) */}
-              <div>
-                <label className="text-[10px] text-[#847374] block mb-0.5">
-                  Gabung Meja
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowMultiTableSelector(!showMultiTableSelector)}
-                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg border text-xs font-bold cursor-pointer transition-colors ${
-                    orderSecondaryTables.length > 0
-                      ? 'bg-[#3d1018] text-white border-[#3d1018]'
-                      : 'bg-[#fcf9f4] border-[#ebe8e3] text-[#524344] hover:bg-[#f0ede9]'
-                  }`}
-                  title="Klik untuk memilih meja gabungan"
-                >
-                  <span className="truncate">
-                    {orderSecondaryTables.length > 0
-                      ? `${orderSecondaryTables.length} Meja`
-                      : 'Gabung'}
-                  </span>
-                  <span className="material-symbols-outlined text-[14px]">
-                    {showMultiTableSelector ? 'expand_less' : 'expand_more'}
-                  </span>
-                </button>
-              </div>
-
-              {/* Input Nama Tamu */}
-              <div>
-                <label htmlFor="order-customer" className="text-[10px] text-[#847374] block mb-0.5">
-                  Nama Tamu / Rombongan
-                </label>
-                <input
-                  id="order-customer"
-                  type="text"
-                  value={orderCustomerName}
-                  onChange={(e) => setOrderCustomerName(e.target.value)}
-                  placeholder="Opsional..."
-                  className="w-full bg-[#fcf9f4] border border-[#ebe8e3] rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#1c1c19] outline-none focus:border-[#3d1018]"
-                />
-              </div>
-            </div>
-
-            {/* Panel Selector Gabung Meja */}
-            {showMultiTableSelector && (
-              <div className="p-2.5 bg-[#fcf9f4] rounded-lg border border-[#ebe8e3] space-y-1.5">
+          {/* Target Meja / Antrean Bungkus */}
+          <div className="pb-3 border-b border-[#ebe8e3]">
+            {orderType === 'dine_in' ? (
+              <div className="grid grid-cols-2 gap-2.5 items-start">
+                {/* Dropdown Meja Utama */}
                 <div>
-                  <span className="text-[10px] font-bold text-[#3d1018]">
-                    Pilih Meja Gabungan:
-                  </span>
+                  <label htmlFor="order-table" className="text-[10px] text-[#847374] block mb-0.5 h-4 leading-4 truncate whitespace-nowrap">
+                    No. Meja
+                  </label>
+                  <select
+                    id="order-table"
+                    value={orderTableNumber}
+                    onChange={(e) => setOrderTableNumber(e.target.value)}
+                    className="w-full bg-[#fcf9f4] border border-[#ebe8e3] rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#1c1c19] outline-none cursor-pointer focus:border-[#3d1018]"
+                  >
+                    {tables.map((t) => (
+                      <option key={t.number} value={t.number}>
+                        Meja {t.number}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <div className="grid grid-cols-4 sm:grid-cols-6 gap-1">
-                  {tables
-                    .filter((t) => t.number !== orderTableNumber)
-                    .map((t) => {
-                      const num = t.number;
-                      const isSelected = orderSecondaryTables.includes(num);
-                      return (
-                        <button
-                          key={num}
-                          type="button"
-                          onClick={() => {
-                            if (isSelected) {
-                              setOrderSecondaryTables(orderSecondaryTables.filter((n) => n !== num));
-                            } else {
-                              setOrderSecondaryTables([...orderSecondaryTables, num]);
-                            }
-                          }}
-                          className={`py-1 px-1.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
-                            isSelected
-                              ? 'bg-[#3d1018] text-white shadow-2xs'
-                              : 'bg-white border border-[#ebe8e3] text-[#524344] hover:bg-[#f0ede9]'
-                          }`}
-                        >
-                          {num}
-                        </button>
-                      );
-                    })}
+
+                {/* Input Nama Pemesan */}
+                <div>
+                  <label htmlFor="order-customer" className="text-[10px] text-[#847374] block mb-0.5 h-4 leading-4 truncate whitespace-nowrap">
+                    Nama Pemesan (Opsional)
+                  </label>
+                  <input
+                    id="order-customer"
+                    type="text"
+                    value={orderCustomerName}
+                    onChange={(e) => setOrderCustomerName(e.target.value)}
+                    placeholder="Opsional..."
+                    className="w-full bg-[#fcf9f4] border border-[#ebe8e3] rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#1c1c19] outline-none focus:border-[#3d1018]"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2.5 items-start">
+                {/* No. Antrean */}
+                <div>
+                  <label className="text-[10px] text-[#847374] block mb-0.5 h-4 leading-4 truncate whitespace-nowrap">
+                    No. Antrean
+                  </label>
+                  <div className="w-full bg-[#f0ede9] border border-[#ebe8e3] rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#3d1018] truncate">
+                    {takeawayNextQueue}
+                  </div>
+                </div>
+
+                {/* Nama Pemesan */}
+                <div>
+                  <label htmlFor="takeaway-customer" className="text-[10px] text-[#847374] block mb-0.5 h-4 leading-4 truncate whitespace-nowrap">
+                    Nama Pemesan (Opsional)
+                  </label>
+                  <input
+                    id="takeaway-customer"
+                    type="text"
+                    value={orderCustomerName}
+                    onChange={(e) => setOrderCustomerName(e.target.value)}
+                    placeholder="Opsional..."
+                    className="w-full bg-[#fcf9f4] border border-[#ebe8e3] rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#1c1c19] outline-none focus:border-[#3d1018]"
+                  />
                 </div>
               </div>
             )}
@@ -611,8 +600,12 @@ export const PesananBaruView: React.FC = () => {
                 </>
               ) : (
                 <>
-                  <span className="material-symbols-outlined text-[18px]">soup_kitchen</span>
-                  <span>Kirim ke Kitchen (Rp {grandTotal.toLocaleString('id-ID')})</span>
+                  <span className="material-symbols-outlined text-[18px]">
+                    {orderType === 'takeaway' ? 'takeout_dining' : 'soup_kitchen'}
+                  </span>
+                  <span>
+                    {orderType === 'takeaway' ? 'Kirim Pesanan Bungkus' : 'Kirim ke Kitchen'} (Rp {grandTotal.toLocaleString('id-ID')})
+                  </span>
                 </>
               )}
             </button>
@@ -626,9 +619,14 @@ export const PesananBaruView: React.FC = () => {
           role="dialog"
           aria-modal="true"
           aria-labelledby="note-modal-title"
-          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 lg:cursor-pointer"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && typeof window !== 'undefined' && window.innerWidth >= 1024) {
+              setEditingNoteItem(null);
+            }
+          }}
         >
-          <div className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl flex flex-col gap-3 border border-[#ebe8e3]">
+          <div className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl flex flex-col gap-3 border border-[#ebe8e3] cursor-default">
             <div className="flex items-center justify-between border-b border-[#ebe8e3] pb-2">
               <h3 id="note-modal-title" className="font-bold text-sm text-[#3d1018]">
                 Catatan: {editingNoteItem.name}

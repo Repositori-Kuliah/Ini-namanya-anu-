@@ -1,41 +1,62 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { MenuItem } from '../types';
-import { CustomizationModal } from './CustomizationModal';
 import { placeholderImage } from '../../lib/placeholder';
-import foodRawonImg from '../../assets/images/food_rawon_daging_signature_1794405798486.jpg';
+import confetti from 'canvas-confetti';
 
 export const MenuScreen: React.FC = () => {
   const {
-    selectedTable,
-    tableArea,
     cartItems,
     cartCount,
     cartTotal,
-    quickAddToCart,
-    openDetail,
-    navigate,
-    callWaiter,
-    waiterCalled,
-    waiterCooldown,
     formatRupiah,
     menuItems,
     menuCategories,
+    addToCart,
+    updateCartQuantity,
+    updateCartItemDetails,
+    submitOrder,
+    navigate,
+    kitchenGeneralNote,
   } = useApp();
 
-  const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [activeCategory, setActiveCategory] = useState<string>('Semua');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [customizingItem, setCustomizingItem] = useState<MenuItem | null>(null);
+  const [isSending, setIsSending] = useState<boolean>(false);
 
-  const categories = useMemo(
-    () => [
-      { id: 'all', label: 'Semua Menu' },
-      ...menuCategories.filter((c) => menuItems.some((m) => m.category === c.id)),
-    ],
-    [menuCategories, menuItems]
-  );
+  // Modal edit catatan per item
+  const [editingNoteItem, setEditingNoteItem] = useState<{
+    cartItemId: string;
+    name: string;
+    note: string;
+  } | null>(null);
 
-  // Map per-item total quantity currently in cart
+  // Daftar Kategori
+  const categories = useMemo(() => {
+    return [
+      'Semua',
+      'Favorit',
+      ...menuCategories.map((c) => c.label).filter((c) => c !== 'Semua' && c !== 'Favorit'),
+    ];
+  }, [menuCategories]);
+
+  // Filter Menu
+  const filteredMenu = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return menuItems.filter((item) => {
+      const matchesSearch =
+        q === '' ||
+        item.name.toLowerCase().includes(q) ||
+        item.description.toLowerCase().includes(q) ||
+        item.category.toLowerCase().includes(q);
+
+      if (!matchesSearch) return false;
+      if (activeCategory === 'Semua') return true;
+      if (activeCategory === 'Favorit') return !!item.badge;
+      return item.category === activeCategory;
+    });
+  }, [searchQuery, activeCategory, menuItems]);
+
+  // Map kuantitas di keranjang per menuItemId
   const cartQtyByMenuId = useMemo(() => {
     const map: Record<string, number> = {};
     for (const c of cartItems) {
@@ -44,326 +65,220 @@ export const MenuScreen: React.FC = () => {
     return map;
   }, [cartItems]);
 
-  // Filtered menu items
-  const filteredItems = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    return menuItems.filter((item) => {
-      const matchesCategory =
-        activeCategory === 'all' || item.categories.includes(activeCategory);
-      const matchesSearch =
-        q === '' ||
-        item.name.toLowerCase().includes(q) ||
-        item.description.toLowerCase().includes(q) ||
-        item.tags.some((t) => t.toLowerCase().includes(q));
-
-      return matchesCategory && matchesSearch;
+  const handleOpenNote = (item: typeof cartItems[number]) => {
+    setEditingNoteItem({
+      cartItemId: item.cartItemId,
+      name: item.name,
+      note: item.customization?.kitchenNotes || '',
     });
-  }, [activeCategory, searchQuery, menuItems]);
+  };
 
-  const featured = menuItems.find((m) => m.badge?.type === 'best_seller') || menuItems[0];
+  const handleSaveNote = () => {
+    if (!editingNoteItem) return;
+    const target = cartItems.find((c) => c.cartItemId === editingNoteItem.cartItemId);
+    if (target) {
+      const matched = menuItems.find((m) => m.id === target.menuItemId) || {
+        id: target.menuItemId,
+        name: target.name,
+        price: target.basePrice,
+        description: '',
+        category: '',
+        categories: [],
+        tags: [],
+        image: target.image,
+      };
+      updateCartItemDetails(
+        target.cartItemId,
+        matched,
+        {
+          ...target.customization,
+          kitchenNotes: editingNoteItem.note.trim() || undefined,
+        },
+        target.quantity
+      );
+    }
+    setEditingNoteItem(null);
+  };
 
-  const handleImgError = (e: React.SyntheticEvent<HTMLImageElement>, name: string) => {
-    const img = e.currentTarget;
-    if (img.dataset.fallbackApplied) return;
-    img.dataset.fallbackApplied = '1';
-    img.src = placeholderImage(name);
+  // Langsung kirim pesanan ke dapur
+  const handleKirimKeDapur = async () => {
+    if (cartItems.length === 0 || isSending) return;
+    setIsSending(true);
+
+    const ok = await submitOrder('cashier', kitchenGeneralNote);
+    setIsSending(false);
+
+    if (ok) {
+      try {
+        confetti({
+          particleCount: 50,
+          spread: 60,
+          origin: { y: 0.6 },
+          colors: ['#3d1018', '#994703', '#fc934f', '#ffdbc9'],
+        });
+      } catch {}
+
+      navigate('status');
+    }
   };
 
   return (
-    <div
-      className={`flex flex-col w-full pt-16 bg-[#fcf9f4] min-h-screen ${
-        cartCount > 0 ? 'pb-36' : 'pb-24'
-      }`}
-    >
-      {/* Table Location & Call Waiter Action Card */}
-      <section className="px-4 md:px-6 pt-3" aria-label="Status Meja & Pelayan">
-        <div className="bg-white rounded-2xl p-3.5 sm:p-4 shadow-xs flex items-center justify-between gap-3 border border-[#ebe8e3]">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-[#f6f3ee] text-[#3d1018] flex items-center justify-center shrink-0 border border-[#ebe8e3]">
-              <span className="material-symbols-outlined text-[20px]" aria-hidden="true">
-                table_restaurant
-              </span>
-            </div>
-            <div className="min-w-0">
-              <span className="font-serif font-bold text-sm text-[#1c1c19] block">
-                Meja {selectedTable}
-              </span>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={callWaiter}
-            aria-label={waiterCalled ? 'Pelayan sedang dipanggil' : 'Panggil pelayan ke meja'}
-            className={`min-h-[44px] px-3.5 py-2 rounded-xl flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer shrink-0 focus-visible:ring-2 focus-visible:ring-[#3d1018] focus-visible:outline-none text-xs font-semibold ${
-              waiterCooldown > 0
-                ? 'bg-[#ffdbc9] text-[#753400] border border-[#fc934f]'
-                : 'bg-[#f0ede9] text-[#3d1018] hover:bg-[#ebe8e3] border border-[#ebe8e3]'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
-              {waiterCooldown > 0 ? 'hourglass_top' : 'notifications_active'}
-            </span>
-            <span className="whitespace-nowrap tabular-nums">
-              {waiterCooldown > 0 ? `Dipanggil (${waiterCooldown}d)` : 'Panggil Pelayan'}
-            </span>
-          </button>
-        </div>
-      </section>
-
-      {/* Search Bar & Category Filter */}
-      <div className="px-4 md:px-6 pt-3 space-y-3">
-        <section aria-label="Pencarian Menu">
-          <div className="relative w-full">
-            <label htmlFor="menu-search-input" className="sr-only">
-              Cari menu makanan atau minuman
-            </label>
-            <span
-              className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#524344] text-[20px]"
-              aria-hidden="true"
+    <div className={`flex flex-col w-full pt-14 min-h-screen bg-[#fcf9f4] ${cartCount > 0 ? 'pb-36' : 'pb-20'}`}>
+      {/* Baris Pencarian & Kategori Horizontal Sticky */}
+      <div className="sticky top-14 z-30 bg-[#fcf9f4]/95 backdrop-blur-md px-4 sm:px-6 pt-3 pb-2.5 border-b border-[#ebe8e3] space-y-2">
+        {/* Input Pencarian */}
+        <div className="relative flex items-center bg-white px-3.5 py-2 rounded-xl border border-[#ebe8e3] focus-within:border-[#3d1018] shadow-2xs transition-colors">
+          <span className="material-symbols-outlined text-[18px] text-[#847374] mr-2">
+            search
+          </span>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Cari menu kesukaan Anda..."
+            className="bg-transparent w-full text-xs sm:text-sm text-[#1c1c19] placeholder-[#847374] outline-none font-sans"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="text-[#847374] hover:text-[#1c1c19] text-xs cursor-pointer p-0.5"
             >
-              search
-            </span>
-            <input
-              id="menu-search-input"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari rawon, empal, sambal, minuman..."
-              type="search"
-              className="w-full h-11 pl-11 pr-12 rounded-xl bg-white text-[#1c1c19] text-xs font-medium placeholder:text-[#847374] border border-[#ebe8e3] focus:outline-none focus:ring-2 focus:ring-[#3d1018] transition-colors"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                aria-label="Hapus kata kunci pencarian"
-                className="absolute right-1 top-1/2 -translate-y-1/2 text-[#524344] hover:text-[#1c1c19] min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg cursor-pointer focus-visible:ring-2 focus-visible:ring-[#3d1018] focus-visible:outline-none"
-              >
-                <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
-                  close
-                </span>
-              </button>
-            )}
-          </div>
-        </section>
+              <span className="material-symbols-outlined text-[16px]">close</span>
+            </button>
+          )}
+        </div>
 
-        {/* Category Filter Buttons */}
-        <section aria-label="Kategori Menu" className="-mx-4 md:-mx-6">
-          <div className="flex items-center gap-2 overflow-x-auto px-4 md:px-6 pb-1 no-scrollbar">
-            {categories.map((cat) => {
-              const isActive = activeCategory === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setActiveCategory(cat.id)}
-                  aria-pressed={isActive}
-                  className={`whitespace-nowrap min-h-[44px] px-4 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#3d1018] focus-visible:outline-none ${
-                    isActive
-                      ? 'bg-[#3d1018] text-white shadow-xs'
-                      : 'bg-white text-[#524344] hover:text-[#1c1c19] hover:bg-[#f6f3ee] border border-[#ebe8e3]'
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              );
-            })}
-          </div>
-        </section>
+        {/* Filter Kategori Horizontal */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setActiveCategory(cat)}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer font-sans ${
+                activeCategory === cat
+                  ? 'bg-[#3d1018] text-white shadow-xs'
+                  : 'bg-white text-[#6b5a5b] hover:bg-[#f0ede9] hover:text-[#1c1c19] border border-[#ebe8e3]'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Featured Editorial Highlight Card */}
-      {activeCategory === 'all' && !searchQuery && featured && (
-        <section className="px-4 md:px-6 pt-3" aria-label="Menu Unggulan">
-          <button
-            type="button"
-            onClick={() => openDetail(featured)}
-            className="w-full text-left bg-[#3d1018] hover:bg-[#58252c] text-white rounded-2xl p-4 sm:p-5 flex items-center justify-between gap-4 shadow-sm border border-[#58252c] cursor-pointer group transition-colors focus-visible:ring-2 focus-visible:ring-[#3d1018] focus-visible:outline-none"
-          >
-            <div className="space-y-1.5 flex-1 min-w-0">
-              <span className="text-[10px] font-bold text-[#fc934f] uppercase tracking-widest block">
-                Resep Warisan 1982
-              </span>
-              <h2 className="font-serif text-lg sm:text-xl font-bold text-white leading-tight truncate">
-                {featured.name}
-              </h2>
-              <p className="text-xs text-white/80 line-clamp-2 leading-relaxed">
-                {featured.description}
-              </p>
-              <div className="pt-1 flex items-center gap-3">
-                <span className="font-serif font-bold text-base text-[#ffdbc9] tabular-nums">
-                  {formatRupiah(featured.price)}
-                </span>
-                <span className="text-[11px] font-semibold text-white/85 inline-flex items-center gap-1">
-                  Lihat &amp; Atur Opsi
-                  <span className="material-symbols-outlined text-[14px]" aria-hidden="true">
-                    chevron_right
-                  </span>
-                </span>
-              </div>
+      {/* Daftar Menu (Murni Scroll Menu) */}
+      <main className="max-w-2xl w-full mx-auto p-4 sm:p-6">
+        <div className="bg-white rounded-3xl border border-[#ebe8e3] divide-y divide-[#ebe8e3] overflow-hidden shadow-xs">
+          {filteredMenu.length === 0 ? (
+            <div className="p-10 text-center text-xs text-[#847374] font-sans">
+              Tidak ada menu yang sesuai dengan kata kunci &ldquo;{searchQuery}&rdquo;.
             </div>
+          ) : (
+            filteredMenu.map((item) => {
+              const quantity = cartQtyByMenuId[item.id] || 0;
+              const cartItem = cartItems.find((c) => c.menuItemId === item.id);
 
-            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden bg-black/20 shrink-0 border border-white/15">
-              <img
-                src={featured.image || foodRawonImg}
-                alt={featured.name}
-                onError={(e) => handleImgError(e, featured.name)}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                referrerPolicy="no-referrer"
-              />
-            </div>
-          </button>
-        </section>
-      )}
-
-      {/* Menu Catalog Grid */}
-      <section className="px-4 md:px-6 pt-4" aria-label="Daftar Menu Makanan dan Minuman">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-          {filteredItems.map((item) => {
-            const qtyInCart = cartQtyByMenuId[item.id] || 0;
-            return (
-              <article
-                key={item.id}
-                className="bg-white rounded-2xl p-4 shadow-xs border border-[#ebe8e3] flex flex-col justify-between gap-3 hover:border-[#d7c2c2] transition-colors"
-              >
-                <div className="flex gap-3.5">
-                  {/* Thumbnail */}
-                  <button
-                    type="button"
-                    onClick={() => openDetail(item)}
-                    aria-label={`Lihat detail ${item.name}`}
-                    className="relative w-24 h-24 shrink-0 rounded-xl overflow-hidden bg-[#f6f3ee] border border-[#ebe8e3] cursor-pointer group focus-visible:ring-2 focus-visible:ring-[#3d1018] focus-visible:outline-none"
-                  >
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      onError={(e) => handleImgError(e, item.name)}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      loading="lazy"
-                      decoding="async"
-                      referrerPolicy="no-referrer"
-                    />
-                  </button>
-
-                  {/* Item Info */}
-                  <div className="flex-1 flex flex-col justify-between min-w-0">
-                    <button
-                      type="button"
-                      onClick={() => openDetail(item)}
-                      className="text-left cursor-pointer focus-visible:ring-2 focus-visible:ring-[#3d1018] focus-visible:outline-none rounded-md"
-                    >
-                      {item.badge && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#994703] mb-0.5">
-                          <span
-                            className="material-symbols-outlined text-[13px]"
-                            style={{ fontVariationSettings: "'FILL' 1" }}
-                            aria-hidden="true"
-                          >
-                            {item.badge.type === 'best_seller' ? 'star' : 'favorite'}
-                          </span>
-                          <span>{item.badge.text}</span>
+              return (
+                <div
+                  key={item.id}
+                  className="p-3.5 sm:p-4 flex items-center justify-between gap-3 hover:bg-[#fcf9f4] transition-colors"
+                >
+                  {/* Foto & Info Menu */}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-12 h-12 rounded-2xl overflow-hidden shrink-0 bg-[#f0ede9] border border-[#ebe8e3]">
+                      <img
+                        src={item.image || placeholderImage(item.name)}
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                        onError={(e) => {
+                          e.currentTarget.src = placeholderImage(item.name);
+                        }}
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-serif font-bold text-xs sm:text-sm text-[#1c1c19] truncate">
+                          {item.name}
                         </span>
-                      )}
-                      <h3 className="font-serif font-bold text-base text-[#1c1c19] leading-snug line-clamp-1">
-                        {item.name}
-                      </h3>
-                      <p className="text-xs text-[#524344] line-clamp-2 mt-0.5 leading-relaxed">
-                        {item.description}
-                      </p>
-                    </button>
-
-                    <div className="pt-1.5 flex items-baseline justify-between gap-2">
-                      <span className="font-serif font-bold text-base text-[#3d1018] tabular-nums">
-                        {formatRupiah(item.price)}
+                        {item.badge && (
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-[#ffdbc9] text-[#753400] font-bold shrink-0 font-sans">
+                            {item.badge.text}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[11px] text-[#847374] block truncate font-sans">
+                        {item.description || item.category}
                       </span>
-                      {qtyInCart > 0 && (
-                        <span className="text-[11px] font-bold text-[#994703] tabular-nums">
-                          {qtyInCart} di keranjang
+                      {cartItem?.customization?.kitchenNotes && (
+                        <span className="text-[10px] text-[#994703] font-medium block truncate font-sans italic mt-0.5">
+                          "{cartItem.customization.kitchenNotes}"
                         </span>
                       )}
                     </div>
                   </div>
-                </div>
 
-                {/* Bottom Row: Category & Actions */}
-                <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-[#f0ede9]">
-                  <span className="text-xs text-[#524344] font-medium truncate">
-                    {item.category}
-                  </span>
+                  {/* Harga & Stepper Kuantitas */}
+                  <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+                    <span className="font-serif font-extrabold text-xs sm:text-sm text-[#3d1018] tabular-nums">
+                      {formatRupiah(item.price)}
+                    </span>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => openDetail(item)}
-                      aria-label={`Atur opsi ${item.name}`}
-                      className="min-h-[44px] px-3 py-2 rounded-xl bg-[#f0ede9] text-[#1c1c19] hover:bg-[#ebe8e3] text-xs font-semibold active:scale-95 transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-[#3d1018] focus-visible:outline-none"
-                    >
-                      Pilih Opsi
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => quickAddToCart(item)}
-                      aria-label={`Tambah ${item.name} ke keranjang`}
-                      className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#3d1018] text-white hover:bg-[#58252c] text-xs font-semibold flex items-center gap-1 active:scale-95 transition-all shadow-xs cursor-pointer focus-visible:ring-2 focus-visible:ring-[#3d1018] focus-visible:outline-none"
-                    >
-                      <span className="material-symbols-outlined text-[17px]" aria-hidden="true">
-                        add
-                      </span>
-                      <span>Tambah</span>
-                    </button>
+                    {quantity > 0 ? (
+                      <div className="flex items-center bg-[#f0ede9] rounded-xl p-0.5 border border-[#e0dcd8]">
+                        <button
+                          type="button"
+                          onClick={() => updateCartQuantity(item.id, -1)}
+                          className="w-7 h-7 rounded-lg bg-white text-[#1c1c19] flex items-center justify-center font-bold text-xs hover:bg-[#ebe8e3] active:scale-95 cursor-pointer shadow-2xs"
+                          aria-label={`Kurangi ${item.name}`}
+                        >
+                          <span className="material-symbols-outlined text-[14px]">remove</span>
+                        </button>
+                        <span className="w-7 text-center font-bold text-xs text-[#1c1c19] tabular-nums font-sans">
+                          {quantity}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => updateCartQuantity(item.id, 1)}
+                          className="w-7 h-7 rounded-lg bg-[#3d1018] text-white flex items-center justify-center font-bold text-xs hover:bg-[#58252c] active:scale-95 cursor-pointer shadow-2xs"
+                          aria-label={`Tambah ${item.name}`}
+                        >
+                          <span className="material-symbols-outlined text-[14px]">add</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => addToCart(item, { kuah: 'campur', pedas: '1', sayur: 'lengkap', extras: [] }, 1)}
+                        className="w-8 h-8 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white flex items-center justify-center active:scale-90 transition-all cursor-pointer shadow-xs"
+                        aria-label={`Tambahkan ${item.name}`}
+                      >
+                        <span className="material-symbols-outlined text-[18px]">add</span>
+                      </button>
+                    )}
                   </div>
                 </div>
-              </article>
-            );
-          })}
+              );
+            })
+          )}
         </div>
+      </main>
 
-        {filteredItems.length === 0 && (
-          <div className="bg-white rounded-2xl border border-[#ebe8e3] text-center py-12 px-4 text-[#524344]">
-            <span
-              className="material-symbols-outlined text-4xl mb-2 text-[#847374]"
-              aria-hidden="true"
-            >
-              search_off
-            </span>
-            <p className="font-serif font-bold text-base text-[#1c1c19]">
-              Menu tidak ditemukan
-            </p>
-            <p className="text-xs text-[#524344] mt-1">
-              Tidak ada hidangan yang cocok dengan kata kunci atau kategori ini.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setSearchQuery('');
-                setActiveCategory('all');
-              }}
-              className="mt-4 min-h-[44px] px-4 py-2 rounded-xl bg-[#f0ede9] text-[#3d1018] hover:bg-[#ebe8e3] text-xs font-bold cursor-pointer focus-visible:ring-2 focus-visible:ring-[#3d1018] focus-visible:outline-none transition-colors"
-            >
-              Tampilkan Semua Menu
-            </button>
-          </div>
-        )}
-      </section>
-
-      {/* Sticky Floating Bottom Cart Bar */}
+      {/* Floating Bar: Langsung Kirim ke Dapur */}
       {cartCount > 0 && (
-        <div className="fixed bottom-18 left-0 right-0 z-30 px-4 pointer-events-none pb-safe">
-          <div className="w-full max-w-md md:max-w-3xl lg:max-w-5xl mx-auto pointer-events-auto bg-[#3d1018] text-white rounded-2xl p-3 shadow-xl flex items-center justify-between gap-3 border border-[#58252c]">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="relative w-10 h-10 rounded-xl bg-[#994703] text-white flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-[20px]" aria-hidden="true">
-                  shopping_basket
-                </span>
-                <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-white text-[#3d1018] rounded-full text-[10px] font-extrabold leading-none flex items-center justify-center tabular-nums">
-                  {cartCount}
-                </span>
+        <div className="fixed bottom-16 sm:bottom-18 inset-x-0 z-30 px-4 pointer-events-none pb-safe animate-in slide-in-from-bottom duration-200">
+          <div className="w-full max-w-md mx-auto pointer-events-auto bg-[#3d1018] text-white rounded-2xl p-3 shadow-xl flex items-center justify-between gap-3 border border-[#58252c]">
+            <div className="flex items-center gap-2.5 min-w-0 pl-1">
+              <div className="w-9 h-9 rounded-xl bg-[#994703] flex items-center justify-center text-white shrink-0">
+                <span className="material-symbols-outlined text-[18px]">restaurant</span>
               </div>
               <div className="flex flex-col min-w-0">
-                <span className="text-[11px] text-white/80 font-medium truncate">
-                  {cartCount} Porsi di Keranjang
+                <span className="text-[11px] text-[#ffdbc9] font-medium font-sans">
+                  {cartCount} Menu Dipilih
                 </span>
-                <span className="font-serif text-base text-white font-bold tabular-nums">
+                <span className="font-serif text-sm font-bold tabular-nums">
                   {formatRupiah(cartTotal)}
                 </span>
               </div>
@@ -371,26 +286,94 @@ export const MenuScreen: React.FC = () => {
 
             <button
               type="button"
-              onClick={() => navigate('cart')}
-              aria-label="Lihat keranjang pesanan"
-              className="bg-[#994703] hover:bg-[#753400] text-white min-h-[44px] px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs active:scale-95 transition-all cursor-pointer shrink-0 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+              onClick={handleKirimKeDapur}
+              disabled={isSending}
+              className="h-10 px-4 rounded-xl bg-[#994703] hover:bg-[#753400] text-white text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer shrink-0 shadow-xs"
             >
-              <span>Lihat Pesanan</span>
-              <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
-                arrow_forward
-              </span>
+              {isSending ? (
+                <>
+                  <span className="material-symbols-outlined text-[16px] animate-spin">sync</span>
+                  <span>Mengirim...</span>
+                </>
+              ) : (
+                <>
+                  <span>Kirim ke Dapur</span>
+                  <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                </>
+              )}
             </button>
           </div>
         </div>
       )}
 
-      {/* Customization Drawer Modal (retained for quick modal triggers if needed) */}
-      {customizingItem && (
-        <CustomizationModal
-          isOpen={!!customizingItem}
-          onClose={() => setCustomizingItem(null)}
-          item={customizingItem}
-        />
+      {/* Modal Edit Catatan Per-Item */}
+      {editingNoteItem && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="note-modal-title"
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setEditingNoteItem(null);
+          }}
+        >
+          <div className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl flex flex-col gap-3 border border-[#ebe8e3]">
+            <div className="flex items-center justify-between border-b border-[#ebe8e3] pb-2">
+              <h3 id="note-modal-title" className="font-serif font-bold text-sm text-[#3d1018]">
+                Catatan: {editingNoteItem.name}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditingNoteItem(null)}
+                className="w-6 h-6 rounded-full bg-[#f0ede9] flex items-center justify-center text-[#524344] cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">close</span>
+              </button>
+            </div>
+
+            <label className="text-xs text-[#524344] font-sans">
+              Instruksi masak khusus koki:
+            </label>
+
+            <input
+              type="text"
+              value={editingNoteItem.note}
+              onChange={(e) => setEditingNoteItem({ ...editingNoteItem, note: e.target.value })}
+              placeholder="Contoh: Tidak pedas / Sambal pisah / Less ice..."
+              className="w-full h-10 px-3 bg-[#fcf9f4] text-xs text-[#1c1c19] rounded-xl outline-none border border-[#ebe8e3] focus:border-[#3d1018] font-sans"
+            />
+
+            <div className="flex flex-wrap gap-1 pt-1 font-sans">
+              {['Tidak pedas', 'Pedas sedang', 'Sambal pisah', 'Kuah pisah', 'Less ice'].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setEditingNoteItem({ ...editingNoteItem, note: preset })}
+                  className="px-2 py-1 rounded-lg bg-[#f0ede9] hover:bg-[#ebe8e3] text-[11px] font-medium text-[#1c1c19] cursor-pointer"
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex gap-2 pt-2 font-sans">
+              <button
+                type="button"
+                onClick={() => setEditingNoteItem(null)}
+                className="flex-1 h-9 rounded-xl bg-[#f0ede9] text-[#1c1c19] text-xs font-semibold cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveNote}
+                className="flex-1 h-9 rounded-xl bg-[#3d1018] text-white text-xs font-semibold shadow-xs cursor-pointer"
+              >
+                Simpan
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

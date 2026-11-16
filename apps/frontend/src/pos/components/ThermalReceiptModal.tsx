@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
+import { publicAsset } from '../../lib/publicAsset';
 
 export const ThermalReceiptModal: React.FC = () => {
   const { receiptModalData, closeReceiptModal } = useApp();
@@ -30,12 +31,15 @@ export const ThermalReceiptModal: React.FC = () => {
       role="dialog"
       aria-modal="true"
       aria-labelledby="receipt-modal-title"
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in touch-none"
-      onTouchMove={(e) => {
-        if (e.target === e.currentTarget) e.preventDefault();
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in lg:cursor-pointer"
+      onClick={(e) => {
+        // Hanya tutup via klik void di PC desktop (>= 1024px)
+        if (e.target === e.currentTarget && typeof window !== 'undefined' && window.innerWidth >= 1024) {
+          closeReceiptModal();
+        }
       }}
     >
-      <div className="bg-white rounded-2xl max-w-sm w-full max-h-[88vh] p-4 sm:p-5 shadow-2xl border border-[#ebe8e3] flex flex-col my-auto animate-in zoom-in-95 duration-150">
+      <div className="bg-white rounded-2xl max-w-sm w-full max-h-[88vh] p-4 sm:p-5 shadow-2xl border border-[#ebe8e3] flex flex-col my-auto animate-in zoom-in-95 duration-150 cursor-default">
         {/* Header Modal Ringkas */}
         <div className="flex items-center justify-between pb-3 border-b border-[#ebe8e3] shrink-0">
           <div className="flex items-center gap-2">
@@ -59,14 +63,9 @@ export const ThermalReceiptModal: React.FC = () => {
 
         {/* Thermal Paper Simulation Container (Scrollable Preview dengan boundary overscroll-contain) */}
         <div className="printable-receipt-area w-full flex-1 overflow-y-auto overscroll-contain my-3 p-3.5 sm:p-4 bg-[#faf9f6] rounded-xl border border-dashed border-stone-300 font-mono text-[11px] text-black flex flex-col">
-          {/* Header Toko & Logo */}
+          {/* Header Toko (Tanpa Logo) */}
           <div className="flex flex-col items-center text-center pb-2">
-            <img
-              src="/logo-rawon.png"
-              alt="Logo Gusti"
-              className="w-11 h-11 object-contain mx-auto mb-1 filter grayscale contrast-125"
-            />
-            <h4 className="font-bold text-xs tracking-widest text-black uppercase">
+            <h4 className="font-bold text-sm tracking-widest text-black uppercase">
               RAWON GUSTI
             </h4>
             <p className="text-[10px] leading-tight text-black mt-0.5">Ruko Sentra</p>
@@ -97,8 +96,12 @@ export const ThermalReceiptModal: React.FC = () => {
               <span className="font-mono">{bill.billNumber.startsWith('ORD-') ? bill.billNumber : `ORD-${bill.billNumber}`}</span>
             </div>
             <div className="flex justify-between">
-              <span>Meja</span>
-              <span>{String(bill.tableNumber).replace(/[^0-9]/g, '').padStart(2, '0') || bill.tableNumber}</span>
+              <span>Layanan</span>
+              <span className="font-bold">{bill.isTakeaway ? 'BAWA PULANG' : 'SANTAP DI TEMPAT'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>{bill.isTakeaway ? 'No. Antrean' : 'Meja'}</span>
+              <span>{bill.isTakeaway ? (bill.takeawayQueue || bill.tableNumber) : (String(bill.tableNumber).replace(/[^0-9]/g, '').padStart(2, '0') || bill.tableNumber)}</span>
             </div>
             <div className="flex justify-between">
               <span>Pelanggan</span>

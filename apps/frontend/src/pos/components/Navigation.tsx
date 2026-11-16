@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp, AppView } from '../context/AppContext';
 import { UserRole } from '../types';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
+import { publicAsset } from '../../lib/publicAsset';
 
 export const HelpModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
   isOpen,
@@ -123,15 +124,8 @@ export const MobileHeader: React.FC = () => {
     <>
       <header className="fixed top-0 inset-x-0 z-40 bg-[#3d1018] text-white pt-safe border-b border-white/10 shadow-sm">
         <div className="h-16 px-4 flex items-center justify-between gap-2 max-w-[1720px] mx-auto">
-          {/* Brand Left */}
+          {/* Brand Left (Tanpa Logo) */}
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg overflow-hidden bg-white/10 flex items-center justify-center p-0.5 shrink-0 border border-white/10">
-              <img
-                alt="Logo Rawon Gusti"
-                className="w-full h-full object-contain"
-                src="/logo-rawon.png"
-              />
-            </div>
             <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className="font-bold text-sm text-white truncate">
@@ -360,15 +354,8 @@ export const DesktopSidebar: React.FC = () => {
       }`}
     >
       <div className="flex flex-col flex-1 min-h-0">
-        {/* Brand Header */}
+        {/* Brand Header (Tanpa Logo) */}
         <div className="p-4 flex items-center gap-3 bg-[#3d1018]/80 border-b border-white/10 shrink-0">
-          <img
-            alt="Logo Rawon Gusti"
-            className="w-9 h-9 rounded-lg object-contain bg-white/10 p-1"
-            src="/logo-rawon.png"
-            width={36}
-            height={36}
-          />
           <div className="flex flex-col overflow-hidden">
             <span className="font-bold text-sm text-[#ffdadc] leading-tight tracking-wide truncate">
               Rawon Gusti

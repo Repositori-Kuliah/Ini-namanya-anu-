@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { publicAsset } from '../../lib/publicAsset';
 import heroRawonImg from '../../assets/images/hero_rawon_daging_1794405798124.jpg';
 
 export const LoginScreen: React.FC = () => {
@@ -45,17 +46,10 @@ export const LoginScreen: React.FC = () => {
         {/* Gradient Shadow Overlay untuk Kontras Teks Maksimal */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-black/60" />
 
-        {/* Header Branding Kiri Atas */}
+        {/* Header Branding Kiri Atas (Tanpa Logo) */}
         <div className="relative z-10 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#3d1018]/80 backdrop-blur-md p-1 border border-white/20 flex items-center justify-center shrink-0 shadow-sm">
-            <img
-              src="/logo-rawon.png"
-              alt="Logo Rawon Gusti"
-              className="w-full h-full object-contain"
-            />
-          </div>
           <div>
-            <h2 className="font-bold text-sm text-white leading-tight">Rawon Gusti</h2>
+            <h2 className="font-bold text-base text-white leading-tight">Rawon Gusti</h2>
             <p className="text-[11px] text-white/70">Surabaya</p>
           </div>
         </div>
@@ -79,17 +73,10 @@ export const LoginScreen: React.FC = () => {
           Form Login Bersih & Responsif
          ========================================================================= */}
       <main className="w-full lg:w-1/2 min-h-screen flex flex-col justify-between p-6 sm:p-10 lg:p-14 bg-[#fcf9f4]">
-        {/* Mobile Header Branding (Hanya Tampil di Layar < lg) */}
+        {/* Mobile Header Branding (Tanpa Logo) */}
         <div className="flex lg:hidden items-center gap-3 pt-2">
-          <div className="w-10 h-10 rounded-xl bg-[#3d1018] p-1 flex items-center justify-center shrink-0 shadow-sm">
-            <img
-              src="/logo-rawon.png"
-              alt="Logo Rawon Gusti"
-              className="w-full h-full object-contain"
-            />
-          </div>
           <div>
-            <h2 className="font-bold text-sm text-[#1c1c19] leading-tight">Rawon Gusti</h2>
+            <h2 className="font-bold text-base text-[#1c1c19] leading-tight">Rawon Gusti</h2>
             <p className="text-[11px] text-[#847374]">Rasa asli, sepenuh hati.</p>
           </div>
         </div>

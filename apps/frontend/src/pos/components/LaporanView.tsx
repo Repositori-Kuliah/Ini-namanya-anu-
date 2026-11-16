@@ -241,11 +241,11 @@ export const LaporanView: React.FC = () => {
     if (isMonthMode) {
       // 3. Cukup minggu saja (Minggu 1 s/d Minggu 5)
       const buckets = [
-        { label: 'Mg 1 (1–7)', startDay: 1, endDay: 7, amount: 0 },
-        { label: 'Mg 2 (8–14)', startDay: 8, endDay: 14, amount: 0 },
-        { label: 'Mg 3 (15–21)', startDay: 15, endDay: 21, amount: 0 },
-        { label: 'Mg 4 (22–28)', startDay: 22, endDay: 28, amount: 0 },
-        { label: 'Mg 5 (29–31)', startDay: 29, endDay: 31, amount: 0 },
+        { label: 'Mg 1 (1–7)', shortLabel: 'Mg 1', startDay: 1, endDay: 7, amount: 0 },
+        { label: 'Mg 2 (8–14)', shortLabel: 'Mg 2', startDay: 8, endDay: 14, amount: 0 },
+        { label: 'Mg 3 (15–21)', shortLabel: 'Mg 3', startDay: 15, endDay: 21, amount: 0 },
+        { label: 'Mg 4 (22–28)', shortLabel: 'Mg 4', startDay: 22, endDay: 28, amount: 0 },
+        { label: 'Mg 5 (29–31)', shortLabel: 'Mg 5', startDay: 29, endDay: 31, amount: 0 },
       ];
 
       filteredTransactions.forEach((t) => {
@@ -483,14 +483,15 @@ export const LaporanView: React.FC = () => {
           </div>
 
           <div className="pt-6 pb-2">
-            <div className="h-40 w-full flex items-end justify-between gap-2 px-2">
+            {/* Area Batang Grafik: Seluruh batang memiliki dasar baseline horizontal rata */}
+            <div className="h-32 w-full flex items-end justify-between gap-2 px-2 border-b border-[#ebe8e3] pb-1">
               {trendBuckets.map((bucket, i) => {
-                const heightPx = maxBucket > 0 ? Math.max(6, Math.round((bucket.amount / maxBucket) * 120)) : 4;
+                const heightPx = maxBucket > 0 ? Math.max(6, Math.round((bucket.amount / maxBucket) * 90)) : 4;
                 const hasSales = bucket.amount > 0;
                 return (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+                  <div key={i} className="flex-1 flex flex-col items-center gap-1.5 group">
                     <span
-                      className={`text-[10px] tabular-nums transition-colors ${
+                      className={`text-[10px] tabular-nums transition-colors whitespace-nowrap ${
                         hasSales ? 'font-bold text-[#3d1018]' : 'text-[#847374]'
                       }`}
                     >
@@ -498,20 +499,28 @@ export const LaporanView: React.FC = () => {
                     </span>
                     <div
                       style={{ height: `${heightPx}px` }}
-                      className={`w-full max-w-[48px] rounded-t transition-all ${
+                      className={`w-full max-w-[40px] rounded-t transition-all ${
                         hasSales ? 'bg-[#58252c] group-hover:bg-[#3d1018]' : 'bg-[#f0ede9]'
                       }`}
                     />
-                    <span
-                      className={`text-[10px] sm:text-[11px] ${
-                        hasSales ? 'font-bold text-[#1c1c19]' : 'text-[#524344]'
-                      }`}
-                    >
-                      {bucket.label}
-                    </span>
                   </div>
                 );
               })}
+            </div>
+
+            {/* Area Label Tanggal / Periode: Rata sempurna dengan tinggi tetap (mencegah teks melompat naik-turun di mobile) */}
+            <div className="w-full flex justify-between gap-1.5 px-2 pt-2.5">
+              {trendBuckets.map((bucket, i) => (
+                <div key={i} className="flex-1 text-center min-w-0 h-5 flex items-center justify-center">
+                  <span
+                    className="text-[9px] sm:text-[11px] text-[#524344] font-medium whitespace-nowrap truncate block"
+                    title={bucket.label}
+                  >
+                    <span className="hidden sm:inline">{bucket.label}</span>
+                    <span className="sm:hidden">{(bucket as any).shortLabel || bucket.label}</span>
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -582,7 +591,7 @@ export const LaporanView: React.FC = () => {
           <div>
             <h3 className="text-xs font-bold text-[#1c1c19] uppercase tracking-wider">Rincian Transaksi Selesai</h3>
             <span className="text-[11px] text-[#847374]">
-              {startDate === endDate ? formatIDDate(startDate) : `${formatIDDate(startDate)} s/d ${formatIDDate(endDate)}`} • {methodFilter} • {filteredTransactions.length} transaksi
+              {startDate === endDate ? formatIDDate(startDate) : `${formatIDDate(startDate)} s/d ${formatIDDate(endDate)}`}
             </span>
           </div>
 
@@ -606,7 +615,8 @@ export const LaporanView: React.FC = () => {
           )}
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Desktop Table View (Tampil pada layar >= md) */}
+        <div className="overflow-x-auto hidden md:block">
           <table className="w-full text-left text-xs">
             <thead className="bg-[#f6f3ee] border-b border-[#ebe8e3] text-[11px] font-bold text-[#847374] uppercase tracking-wider">
               <tr>
@@ -699,24 +709,83 @@ export const LaporanView: React.FC = () => {
           </table>
         </div>
 
-        {/* Table Bottom Totals */}
-        <div className="p-3 bg-[#f6f3ee] border-t border-[#ebe8e3] flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="text-[11px] text-[#847374]">
-            Total <strong className="text-[#1c1c19]">{filteredTransactions.length} transaksi lunas</strong>
-          </div>
-          <div className="flex items-center gap-4 text-xs">
-            <span className="text-[#524344]">
-              Subtotal: <strong className="text-[#1c1c19]">Rp {totalSubtotal.toLocaleString('id-ID')}</strong>
-            </span>
-            {storeSettings.enableTax !== false && (
-              <span className="text-[#524344]">
-                {storeSettings.taxName || 'PB1'}: <strong className="text-[#1c1c19]">Rp {totalPajak.toLocaleString('id-ID')}</strong>
-              </span>
-            )}
-            <span className="text-[#3d1018] font-serif font-bold text-sm">
-              Total: Rp {totalPenjualan.toLocaleString('id-ID')}
-            </span>
-          </div>
+        {/* Mobile Card List View (Tampil pada layar < md, tanpa scroll samping) */}
+        <div className="md:hidden divide-y divide-[#ebe8e3]">
+          {filteredTransactions.length === 0 ? (
+            <div className="py-8 text-center text-xs text-[#847374] px-4">
+              Tidak ada data transaksi yang sesuai dengan filter tanggal atau metode ini.
+            </div>
+          ) : (
+            filteredTransactions.map((trx) => {
+              const bill = trx.billData || {
+                id: trx.id,
+                billNumber: trx.code.replace('#', ''),
+                tableNumber: trx.typeMeja.replace('Meja ', ''),
+                customerName: 'Pelanggan',
+                guestCount: 1,
+                itemCount: 1,
+                items: [{ name: 'Pesanan Meja Restoran', quantity: 1, price: trx.subtotal }],
+                subtotal: trx.subtotal,
+                serviceFee: Math.round(trx.subtotal * 0.05),
+                tax: trx.tax,
+                total: trx.total,
+                requestedAt: trx.time,
+                elapsedMinutesAgo: 0,
+                waiterName: trx.source,
+                openedAtTime: `${trx.time} WIB`,
+                status: 'lunas',
+                paymentMethod: trx.method.toLowerCase() as any,
+                paidAtTime: `${trx.at ? new Date(trx.at).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''} ${trx.time} WIB`,
+              };
+
+              return (
+                <div key={trx.id} className="p-3.5 space-y-2 hover:bg-[#fcfaf7] transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-xs text-[#3d1018]">{trx.code}</span>
+                      <span className="text-[#847374] text-[11px] font-mono">• {trx.time} WIB</span>
+                    </div>
+                    <span
+                      className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
+                        trx.method === 'Tunai'
+                          ? 'bg-amber-50 text-amber-900 border-amber-200'
+                          : trx.method === 'QRIS'
+                          ? 'bg-orange-50 text-orange-900 border-orange-200'
+                          : 'bg-blue-50 text-blue-900 border-blue-200'
+                      }`}
+                    >
+                      {trx.method}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-0.5">
+                    <div>
+                      <span className="font-medium text-xs text-[#1c1c19] block">{trx.typeMeja}</span>
+                      <span className="text-[11px] text-[#847374]">
+                        Subtotal Rp {trx.subtotal.toLocaleString('id-ID')}
+                        {storeSettings.enableTax !== false && ` • PB1 Rp ${trx.tax.toLocaleString('id-ID')}`}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-right">
+                      <span className="font-bold text-sm text-[#1c1c19] tabular-nums">
+                        Rp {trx.total.toLocaleString('id-ID')}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => openReceiptModal(bill)}
+                        className="p-1.5 rounded-lg border border-[#ebe8e3] bg-[#f6f3ee] hover:bg-[#3d1018] text-[#3d1018] hover:text-white transition cursor-pointer"
+                        title="Cetak Ulang Struk"
+                        aria-label="Cetak Ulang Struk"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">print</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
     </div>

@@ -4,51 +4,65 @@ import { StaffUser, UserRole } from '../types';
 import { supabase } from '../../lib/supabase';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) || 'http://localhost:3001';
+
+const callStaffApi = async (method: string, query: string, body?: unknown): Promise<{ data?: any; error?: string }> => {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) return { error: 'Sesi berakhir, silakan login ulang.' };
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/staff${query}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: json.error ?? `Permintaan gagal (${res.status})` };
+    return { data: json };
+  } catch {
+    return { error: 'Tidak dapat terhubung ke server.' };
+  }
+};
+
+const formatLastLogin = (iso: string) =>
+  `${new Date(iso).toLocaleString('id-ID', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Asia/Jakarta',
+  })} WIB`;
+
 export const StaffManagementView: React.FC = () => {
   const { showToast, currentUser } = useApp();
   type Row = StaffUser & { active: boolean; lastLogin?: string };
   const [staffList, setStaffList] = useState<Row[]>([]);
   const [saving, setSaving] = useState(false);
-  const ROLE: Record<string, UserRole> = { admin: 'admin', staff: 'kasir', kitchen: 'kitchen' };
 
   const loadStaff = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('role', ['admin', 'staff', 'kitchen'])
-        .order('created_at');
-      if (error || !data || data.length === 0) {
-        setStaffList([
-          { id: 'usr-admin', name: 'Arif Gusti (Admin)', email: 'admin@rawongusti.test', role: 'admin', avatar: '', shift: 'Pagi', terminal: 'Main POS', active: true, lastLogin: 'Hari ini, 08:15 WIB' },
-          { id: 'usr-kasir', name: 'Dewi Sartika (Kasir)', email: 'kasir@rawongusti.test', role: 'kasir', avatar: '', shift: 'Pagi', terminal: 'Terminal #01', active: true, lastLogin: 'Hari ini, 09:30 WIB' },
-          { id: 'usr-kitchen', name: 'Chef Sam R. (Dapur)', email: 'dapur@rawongusti.test', role: 'kitchen', avatar: '', shift: 'Pagi', terminal: 'KDS Stasiun Panas', active: true, lastLogin: 'Kemarin, 16:45 WIB' },
-        ]);
-        return;
-      }
-      setStaffList(
-        data.map((p: any) => ({
-          id: p.id,
-          name: p.full_name || 'Tanpa Nama',
-          email: p.email || '-',
-          role: ROLE[p.role] || 'kasir',
-          avatar: '',
-          shift: p.shift || 'Reguler',
-          terminal: p.terminal || 'POS-01',
-          active: p.is_active ?? true,
-          lastLogin: p.last_sign_in_at
-            ? `${new Date(p.last_sign_in_at).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' })} ${new Date(p.last_sign_in_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':')} WIB`
-            : 'Hari ini, 09:30 WIB',
-        }))
-      );
-    } catch {
-      setStaffList([
-        { id: 'usr-admin', name: 'Arif Gusti (Admin)', email: 'admin@rawongusti.test', role: 'admin', avatar: '', shift: 'Pagi', terminal: 'Main POS', active: true, lastLogin: 'Hari ini, 08:15 WIB' },
-        { id: 'usr-kasir', name: 'Dewi Sartika (Kasir)', email: 'kasir@rawongusti.test', role: 'kasir', avatar: '', shift: 'Pagi', terminal: 'Terminal #01', active: true, lastLogin: 'Hari ini, 09:30 WIB' },
-        { id: 'usr-kitchen', name: 'Chef Sam R. (Dapur)', email: 'dapur@rawongusti.test', role: 'kitchen', avatar: '', shift: 'Pagi', terminal: 'KDS Stasiun Panas', active: true, lastLogin: 'Kemarin, 16:45 WIB' },
-      ]);
+    const res = await callStaffApi('GET', '');
+    if (res.error) {
+      showToast(res.error, 'warning');
+      return;
     }
-  }, []);
+    setStaffList(
+      res.data.staff.map((s: any) => ({
+        id: s.id,
+        name: s.full_name || 'Tanpa Nama',
+        email: s.username || '-',
+        role: s.role as UserRole,
+        avatar: '',
+        shift: '',
+        terminal: '',
+        active: s.is_active,
+        lastLogin: s.last_login ? formatLastLogin(s.last_login) : 'Belum pernah login',
+      }))
+    );
+  }, [showToast]);
 
   useEffect(() => {
     loadStaff();
@@ -65,13 +79,13 @@ export const StaffManagementView: React.FC = () => {
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [newRole, setNewRole] = useState<UserRole>('kasir');
+  const [newRole, setNewRole] = useState<UserRole>('cashier');
 
   // Edit Modal State
   const [editingStaff, setEditingStaff] = useState<Row | null>(null);
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
-  const [editRole, setEditRole] = useState<UserRole>('kasir');
+  const [editRole, setEditRole] = useState<UserRole>('cashier');
   const [editActive, setEditActive] = useState(true);
   const [editPassword, setEditPassword] = useState('');
   const [showEditPassword, setShowEditPassword] = useState(false);
@@ -101,15 +115,15 @@ export const StaffManagementView: React.FC = () => {
       return;
     }
     setSaving(true);
-    const { data, error } = await supabase.rpc('admin_create_staff', {
-      p_email: newEmail.trim(),
-      p_password: newPassword,
-      p_name: newName.trim(),
-      p_role: newRole === 'kasir' ? 'staff' : newRole,
+    const res = await callStaffApi('POST', '', {
+      full_name: newName.trim(),
+      email: newEmail.trim(),
+      password: newPassword,
+      role: newRole,
     });
     setSaving(false);
-    if (error || data?.error) {
-      showToast(error?.message || data?.error, 'warning');
+    if (res.error) {
+      showToast(res.error, 'warning');
       return;
     }
     setShowAddModal(false);
@@ -126,13 +140,9 @@ export const StaffManagementView: React.FC = () => {
       showToast('Tidak dapat menonaktifkan akun yang sedang digunakan saat ini', 'warning');
       return;
     }
-    const { error } = await supabase
-      .from('profiles')
-      .update({ is_active: !staf.active, updated_at: new Date().toISOString() })
-      .eq('id', staf.id);
-
-    if (error) {
-      showToast(error.message, 'warning');
+    const res = await callStaffApi('PATCH', `?id=${encodeURIComponent(staf.id)}`, { is_active: !staf.active });
+    if (res.error) {
+      showToast(res.error, 'warning');
       return;
     }
     showToast(`${staf.name} berhasil ${staf.active ? 'dinonaktifkan' : 'diaktifkan kembali'}`, 'info');
@@ -165,52 +175,29 @@ export const StaffManagementView: React.FC = () => {
     const finalRole = isStaffAdmin ? 'admin' : editRole;
     const finalActive = isStaffAdmin ? true : editActive;
 
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          full_name: editName.trim(),
-          email: editEmail.trim(),
-          role: finalRole === 'kasir' ? 'staff' : finalRole,
-          is_active: finalActive,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', editingStaff.id);
-
-      if (error) {
-        showToast(error.message, 'warning');
-      } else {
-        if (editPassword.trim()) {
-          if (editPassword.length < 6) {
-            showToast('Kata sandi baru minimal 6 karakter', 'warning');
-            setSaving(false);
-            return;
-          }
-          try {
-            await supabase.rpc('admin_reset_password', {
-              p_user_id: editingStaff.id,
-              p_new_password: editPassword.trim(),
-            });
-          } catch {}
-        }
-        showToast(`Akun ${editName} berhasil diperbarui`, 'success');
-        setEditingStaff(null);
-        loadStaff();
-      }
-    } catch {
-      setStaffList((prev) =>
-        prev.map((s) =>
-          s.id === editingStaff.id
-            ? { ...s, name: editName.trim(), email: editEmail.trim(), role: finalRole, active: finalActive }
-            : s
-        )
-      );
-      setEditingStaff(null);
-      showToast(`Akun ${editName} berhasil diperbarui`, 'success');
-    } finally {
-      setSaving(false);
+    const password = editPassword.trim();
+    if (password && password.length < 6) {
+      showToast('Kata sandi baru minimal 6 karakter', 'warning');
+      return;
     }
+
+    setSaving(true);
+    const res = await callStaffApi('PATCH', `?id=${encodeURIComponent(editingStaff.id)}`, {
+      full_name: editName.trim(),
+      email: editEmail.trim(),
+      role: finalRole,
+      is_active: finalActive,
+      ...(password ? { password } : {}),
+    });
+    setSaving(false);
+
+    if (res.error) {
+      showToast(res.error, 'warning');
+      return;
+    }
+    showToast(`Akun ${editName} berhasil diperbarui`, 'success');
+    setEditingStaff(null);
+    loadStaff();
   };
 
   return (
@@ -259,7 +246,7 @@ export const StaffManagementView: React.FC = () => {
               className="py-1.5 px-2.5 rounded-lg border border-[#ebe8e3] bg-[#f6f3ee] text-[#1c1c19] font-medium text-xs outline-none focus:border-[#3d1018] cursor-pointer"
             >
               <option value="all">Semua Peran</option>
-              <option value="kasir">Kasir</option>
+              <option value="cashier">Kasir</option>
               <option value="kitchen">Dapur</option>
               <option value="admin">Admin</option>
             </select>
@@ -338,19 +325,13 @@ export const StaffManagementView: React.FC = () => {
                               : 'bg-rose-50 text-[#3d1018] border-rose-200'
                           }`}
                         >
-                          {staf.role === 'admin'
-                            ? 'Admin'
-                            : staf.role === 'kitchen'
-                            ? 'Dapur'
-                            : 'Kasir'}
+                          {staf.role === 'admin' ? 'Admin' : staf.role === 'kitchen' ? 'Dapur' : 'Kasir'}
                         </span>
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center">
                           <span
-                            className={`text-xs font-semibold ${
-                              staf.active ? 'text-[#1c1c19]' : 'text-[#847374]'
-                            }`}
+                            className={`text-xs font-semibold ${staf.active ? 'text-[#1c1c19]' : 'text-[#847374]'}`}
                           >
                             {staf.active ? 'Aktif' : 'Nonaktif'}
                           </span>
@@ -358,7 +339,7 @@ export const StaffManagementView: React.FC = () => {
                       </td>
                       <td className="py-3 px-4">
                         <span className="font-mono text-[11px] text-[#524344]">
-                          {staf.lastLogin || 'Hari ini, 09:30 WIB'}
+                          {staf.lastLogin || 'Belum pernah login'}
                         </span>
                       </td>
                     </tr>
@@ -379,9 +360,7 @@ export const StaffManagementView: React.FC = () => {
           >
             <div className="flex items-center justify-between pb-3 border-b border-[#ebe8e3]">
               <div>
-                <h3 className="font-serif text-lg font-bold text-[#1c1c19]">
-                  Tambah Akun Staf Baru
-                </h3>
+                <h3 className="font-serif text-lg font-bold text-[#1c1c19]">Tambah Akun Staf Baru</h3>
                 <p className="text-xs text-[#847374]">Buat kredensial login untuk staf restoran</p>
               </div>
               <button
@@ -458,7 +437,7 @@ export const StaffManagementView: React.FC = () => {
                   onChange={(e) => setNewRole(e.target.value as UserRole)}
                   className="w-full px-3 py-2 bg-[#f6f3ee] rounded-lg border border-[#ebe8e3] text-xs text-[#1c1c19] outline-none focus:border-[#3d1018] focus:bg-white cursor-pointer"
                 >
-                  <option value="kasir">Kasir</option>
+                  <option value="cashier">Kasir</option>
                   <option value="kitchen">Dapur</option>
                   <option value="admin">Admin</option>
                 </select>
@@ -489,9 +468,9 @@ export const StaffManagementView: React.FC = () => {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150 touch-none"
-          onTouchMove={(e) => {
-            if (e.target === e.currentTarget) e.preventDefault();
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setEditingStaff(null);
           }}
         >
           <form
@@ -500,9 +479,7 @@ export const StaffManagementView: React.FC = () => {
           >
             <div className="flex items-center justify-between pb-3 border-b border-[#ebe8e3]">
               <div>
-                <h3 className="font-serif text-lg font-bold text-[#1c1c19]">
-                  Edit Akun Staf
-                </h3>
+                <h3 className="font-serif text-lg font-bold text-[#1c1c19]">Edit Akun Staf</h3>
                 <p className="text-xs text-[#847374]">Kelola informasi dan hak akses staf</p>
               </div>
               <button
@@ -541,59 +518,73 @@ export const StaffManagementView: React.FC = () => {
                 />
               </div>
 
-              {/* Hak Akses & Status Akun (Hanya tampil untuk staf biasa: Kasir & Dapur) */}
-              {!(editingStaff.role === 'admin' || editingStaff.id === currentUser?.id || editingStaff.id === 'usr-admin' || editingStaff.email.includes('admin')) && (
-                <>
-                  <div>
-                    <label className="block font-semibold text-[#1c1c19] mb-1">
-                      Hak Akses (Role)
-                    </label>
-                    <select
-                      value={editRole}
-                      onChange={(e) => setEditRole(e.target.value as UserRole)}
-                      className="w-full px-3 py-2 bg-[#f6f3ee] rounded-lg border border-[#ebe8e3] text-xs text-[#1c1c19] outline-none focus:border-[#3d1018] focus:bg-white cursor-pointer"
-                    >
-                      <option value="kasir">Kasir</option>
-                      <option value="kitchen">Dapur</option>
-                      <option value="admin">Admin</option>
-                    </select>
+              <div>
+                <label className="block font-semibold text-[#1c1c19] mb-1">Hak Akses (Role)</label>
+                {editingStaff.role === 'admin' ||
+                editingStaff.id === currentUser?.id ||
+                editingStaff.id === 'usr-admin' ||
+                editingStaff.email.includes('admin') ? (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-[#f6f3ee] rounded-lg border border-[#ebe8e3] text-xs text-[#524344]">
+                    <span className="material-symbols-outlined text-[16px] text-[#3d1018]">lock</span>
+                    <span className="font-semibold text-[#1c1c19]">Admin Outlet (Permanen)</span>
                   </div>
+                ) : (
+                  <select
+                    value={editRole}
+                    onChange={(e) => setEditRole(e.target.value as UserRole)}
+                    className="w-full px-3 py-2 bg-[#f6f3ee] rounded-lg border border-[#ebe8e3] text-xs text-[#1c1c19] outline-none focus:border-[#3d1018] focus:bg-white cursor-pointer"
+                  >
+                    <option value="cashier">Kasir</option>
+                    <option value="kitchen">Dapur</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                )}
+              </div>
 
-                  {/* Status Akun */}
-                  <div>
-                    <label className="block font-semibold text-[#1c1c19] mb-1">Status Akun</label>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setEditActive(true)}
-                        className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                          editActive
-                            ? 'bg-[#3d1018] text-white border-[#3d1018]'
-                            : 'bg-[#f6f3ee] text-[#524344] border-[#ebe8e3]'
-                        }`}
-                      >
-                        Aktif
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditActive(false)}
-                        className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                          !editActive
-                            ? 'bg-red-600 text-white border-red-600'
-                            : 'bg-[#f6f3ee] text-[#524344] border-[#ebe8e3]'
-                        }`}
-                      >
-                        Nonaktif
-                      </button>
-                    </div>
+              {/* Status Akun */}
+              <div>
+                <label className="block font-semibold text-[#1c1c19] mb-1">Status Akun</label>
+                {editingStaff.role === 'admin' ||
+                editingStaff.id === currentUser?.id ||
+                editingStaff.id === 'usr-admin' ||
+                editingStaff.email.includes('admin') ? (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 rounded-lg border border-emerald-200 text-xs text-emerald-800">
+                    <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                    <span className="font-semibold">Aktif (Akun Admin Utama tidak dapat dinonaktifkan)</span>
                   </div>
-                </>
-              )}
+                ) : (
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditActive(true)}
+                      className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                        editActive
+                          ? 'bg-[#3d1018] text-white border-[#3d1018]'
+                          : 'bg-[#f6f3ee] text-[#524344] border-[#ebe8e3]'
+                      }`}
+                    >
+                      Aktif
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditActive(false)}
+                      className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                        !editActive
+                          ? 'bg-red-600 text-white border-red-600'
+                          : 'bg-[#f6f3ee] text-[#524344] border-[#ebe8e3]'
+                      }`}
+                    >
+                      Nonaktif
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {/* Reset Password (Khusus Admin) */}
               <div>
                 <label className="block font-semibold text-[#1c1c19] mb-1">
-                  Ubah Kata Sandi Baru <span className="text-[#847374] font-normal">(Kosongkan jika tidak diubah)</span>
+                  Ubah Kata Sandi Baru{' '}
+                  <span className="text-[#847374] font-normal">(Kosongkan jika tidak diubah)</span>
                 </label>
                 <div className="relative">
                   <input
@@ -620,13 +611,18 @@ export const StaffManagementView: React.FC = () => {
               <div className="p-2.5 rounded-lg bg-[#fcf9f4] border border-[#ebe8e3] flex items-center justify-between text-[11px]">
                 <span className="text-[#847374]">Terakhir Login:</span>
                 <span className="font-mono font-semibold text-[#1c1c19]">
-                  {editingStaff.lastLogin || 'Hari ini, 09:30 WIB'}
+                  {editingStaff.lastLogin || 'Belum pernah login'}
                 </span>
               </div>
             </div>
 
             <div className="flex items-center justify-between pt-2 border-t border-[#ebe8e3]">
-              {!(editingStaff.role === 'admin' || editingStaff.id === currentUser?.id || editingStaff.id === 'usr-admin' || editingStaff.email.includes('admin')) ? (
+              {!(
+                editingStaff.role === 'admin' ||
+                editingStaff.id === currentUser?.id ||
+                editingStaff.id === 'usr-admin' ||
+                editingStaff.email.includes('admin')
+              ) ? (
                 <button
                   type="button"
                   onClick={() => {
@@ -639,9 +635,7 @@ export const StaffManagementView: React.FC = () => {
                       : 'text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[15px]">
-                    {editActive ? 'block' : 'check_circle'}
-                  </span>
+                  <span className="material-symbols-outlined text-[15px]">{editActive ? 'block' : 'check_circle'}</span>
                   <span>{editActive ? 'Nonaktifkan Akun' : 'Aktifkan Akun'}</span>
                 </button>
               ) : (

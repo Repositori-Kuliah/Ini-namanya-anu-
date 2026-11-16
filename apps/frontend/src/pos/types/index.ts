@@ -1,4 +1,4 @@
-export type UserRole = 'kasir' | 'admin' | 'kitchen';
+export type UserRole = 'kasir' | 'cashier' | 'admin' | 'kitchen';
 
 export interface StaffUser {
   id: string;
@@ -152,6 +152,9 @@ export interface BillItem {
   paidAtTime?: string;
   isAllServed?: boolean;
   unservedCount?: number;
+  orderType?: 'dine_in' | 'takeaway';
+  isTakeaway?: boolean;
+  takeawayQueue?: string;
 }
 
 export interface TransactionRecord {
@@ -175,6 +178,7 @@ export interface KitchenTicketItem {
   quantity: number;
   notes?: string;
   isDone?: boolean;
+  isDrink?: boolean;
 }
 
 export interface KitchenTicket {
@@ -193,6 +197,9 @@ export interface KitchenTicket {
   totalAmount?: number;
   readySecondsAgo?: number;
   notesBanner?: string;
+  takeawayQueue?: string;
+  customerName?: string;
+  orderTime?: string;
 }
 
 export interface RawIngredient {

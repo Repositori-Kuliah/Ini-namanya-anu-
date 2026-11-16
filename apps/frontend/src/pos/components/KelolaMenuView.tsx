@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { MenuItem, RawIngredient } from '../types';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
+import { publicAsset } from '../../lib/publicAsset';
 
 const KelolaMenuViewInner: React.FC = () => {
   const {
@@ -110,6 +111,12 @@ const KelolaMenuViewInner: React.FC = () => {
   );
   useLockBodyScroll(isAnyModalOpen);
 
+  // Hitung jumlah menu favorit
+  const favoriteMenuCount = useMemo(
+    () => menuItems.filter((i) => i.isFavorite || i.isRecommended).length,
+    [menuItems]
+  );
+
   // --- Filter Logic: Menu ---
   const filteredMenuItems = menuItems.filter((item) => {
     const matchesSearch =
@@ -117,7 +124,11 @@ const KelolaMenuViewInner: React.FC = () => {
       item.code.toLowerCase().includes(searchMenuQuery.toLowerCase());
     if (!matchesSearch) return false;
 
-    if (filterMenuCategory !== 'Semua' && item.category !== filterMenuCategory) return false;
+    if (filterMenuCategory === 'Favorit') {
+      if (!item.isFavorite && !item.isRecommended) return false;
+    } else if (filterMenuCategory !== 'Semua' && item.category !== filterMenuCategory) {
+      return false;
+    }
 
     if (filterMenuAvailability === 'tersedia' && !item.isAvailable) return false;
     if (filterMenuAvailability === 'habis' && item.isAvailable) return false;
@@ -172,7 +183,7 @@ const KelolaMenuViewInner: React.FC = () => {
       category: editCategory,
       price: priceNum,
       description: editDescription.trim(),
-      image: editImage.trim() || editingItem.image || '/logo-rawon.png',
+      image: editImage.trim() || editingItem.image || publicAsset('logo-rawon.png'),
       isRecommended: editIsRecommended,
       isFavorite: editIsRecommended,
       isAvailable: editIsAvailable,
@@ -212,7 +223,7 @@ const KelolaMenuViewInner: React.FC = () => {
       category: newCategory,
       price: priceNum,
       description: newDescription.trim(),
-      image: newImage.trim() || '/logo-rawon.png',
+      image: newImage.trim() || publicAsset('logo-rawon.png'),
       isAvailable: true,
       isFavorite: newIsRecommended,
       isRecommended: newIsRecommended,
@@ -379,6 +390,7 @@ const KelolaMenuViewInner: React.FC = () => {
                 className="bg-[#fcf9f4] border border-[#ebe8e3] rounded-lg px-2.5 py-1 text-xs font-semibold text-[#1c1c19] outline-none cursor-pointer focus:border-[#3d1018]"
               >
                 <option value="Semua">Semua Kategori</option>
+                <option value="Favorit">⭐ Favorit ({favoriteMenuCount})</option>
                 {menuCategories.map((c) => (
                   <option key={c} value={c}>
                     {c}
@@ -401,6 +413,47 @@ const KelolaMenuViewInner: React.FC = () => {
               </select>
             </div>
           </div>
+        </div>
+
+        {/* Tab Pills Kategori Cepat (Semua, ⭐ Favorit, Kategori Resto) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar">
+          <button
+            type="button"
+            onClick={() => setFilterMenuCategory('Semua')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer ${
+              filterMenuCategory === 'Semua'
+                ? 'bg-[#3d1018] text-white shadow-2xs'
+                : 'bg-white text-[#524344] border border-[#ebe8e3] hover:bg-[#f0ede9]'
+            }`}
+          >
+            Semua ({menuItems.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterMenuCategory('Favorit')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer ${
+              filterMenuCategory === 'Favorit'
+                ? 'bg-[#3d1018] text-white shadow-2xs'
+                : 'bg-white text-[#524344] border border-[#ebe8e3] hover:bg-[#f0ede9]'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[14px] text-amber-500">star</span>
+            <span>Favorit ({favoriteMenuCount})</span>
+          </button>
+          {menuCategories.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setFilterMenuCategory(c)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                filterMenuCategory === c
+                  ? 'bg-[#3d1018] text-white shadow-2xs'
+                  : 'bg-white text-[#524344] border border-[#ebe8e3] hover:bg-[#f0ede9]'
+              }`}
+            >
+              {c}
+            </button>
+          ))}
         </div>
 
         {/* Tabel Menu Compact dengan Scroll Mandiri */}
@@ -442,8 +495,8 @@ const KelolaMenuViewInner: React.FC = () => {
                             )}
                             {Boolean(item.isRecommended || item.isFavorite) && (
                               <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 text-[10px] font-bold shrink-0 flex items-center gap-0.5">
-                                <span className="material-symbols-outlined text-[11px]">star</span>
-                                <span>Unggulan</span>
+                                <span className="material-symbols-outlined text-[11px] text-amber-600">star</span>
+                                <span>Favorit</span>
                               </span>
                             )}
                           </div>
@@ -660,11 +713,16 @@ const KelolaMenuViewInner: React.FC = () => {
           role="dialog"
           aria-modal="true"
           aria-labelledby="add-menu-title"
-          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 lg:cursor-pointer"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && typeof window !== 'undefined' && window.innerWidth >= 1024) {
+              setShowAddMenuModal(false);
+            }
+          }}
         >
           <form
             onSubmit={handleCreateMenu}
-            className="bg-white rounded-2xl p-5 w-full max-w-md shadow-2xl border border-[#ebe8e3] flex flex-col gap-3.5"
+            className="bg-white rounded-2xl p-5 w-full max-w-md shadow-2xl border border-[#ebe8e3] flex flex-col gap-3.5 cursor-default"
           >
             <div className="flex items-center justify-between pb-2 border-b border-[#ebe8e3]">
               <h3 id="add-menu-title" className="font-bold text-base text-[#1c1c19]">
@@ -818,7 +876,7 @@ const KelolaMenuViewInner: React.FC = () => {
                   onChange={(e) => setNewIsRecommended(e.target.checked)}
                   className="w-4 h-4 rounded text-[#3d1018] accent-[#3d1018] cursor-pointer"
                 />
-                <span className="font-semibold text-[#1c1c19]">Rekomendasi Makanan (Tandai Menu Unggulan)</span>
+                <span className="font-semibold text-[#1c1c19]">Menu Favorit (Tandai Masuk Kategori Favorit)</span>
               </label>
             </div>
 
@@ -847,11 +905,16 @@ const KelolaMenuViewInner: React.FC = () => {
           role="dialog"
           aria-modal="true"
           aria-labelledby="edit-menu-title"
-          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 lg:cursor-pointer"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && typeof window !== 'undefined' && window.innerWidth >= 1024) {
+              setEditingItem(null);
+            }
+          }}
         >
           <form
             onSubmit={handleSaveEdit}
-            className="bg-white rounded-2xl p-5 w-full max-w-md shadow-2xl border border-[#ebe8e3] flex flex-col gap-3.5"
+            className="bg-white rounded-2xl p-5 w-full max-w-md shadow-2xl border border-[#ebe8e3] flex flex-col gap-3.5 cursor-default"
           >
             <div className="flex items-center justify-between pb-2 border-b border-[#ebe8e3]">
               <h3 id="edit-menu-title" className="font-bold text-base text-[#1c1c19]">
@@ -1023,14 +1086,14 @@ const KelolaMenuViewInner: React.FC = () => {
                 </button>
               </div>
 
-              {/* Saklar Toggle 2: Rekomendasi Menu */}
+              {/* Saklar Toggle 2: Menu Favorit */}
               <div className="flex items-center justify-between p-3 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3]">
                 <div>
                   <span className="font-bold text-xs text-[#1c1c19] block">
-                    Rekomendasi Makanan
+                    Menu Favorit
                   </span>
                   <span className="text-[11px] text-[#524344]">
-                    {editIsRecommended ? 'Ditandai sebagai hidangan favorit/unggulan' : 'Menu reguler standar'}
+                    {editIsRecommended ? 'Ditandai sebagai hidangan favorit (tampil di kategori Favorit)' : 'Menu reguler standar'}
                   </span>
                 </div>
                 <button
@@ -1041,7 +1104,7 @@ const KelolaMenuViewInner: React.FC = () => {
                   className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                     editIsRecommended ? 'bg-[#3d1018]' : 'bg-[#d8d4ce]'
                   }`}
-                  aria-label="Tandai menu rekomendasi"
+                  aria-label="Tandai menu favorit"
                 >
                   <span
                     className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
@@ -1091,11 +1154,16 @@ const KelolaMenuViewInner: React.FC = () => {
           role="dialog"
           aria-modal="true"
           aria-labelledby="restock-title"
-          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 lg:cursor-pointer"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && typeof window !== 'undefined' && window.innerWidth >= 1024) {
+              setRestockItem(null);
+            }
+          }}
         >
           <form
             onSubmit={handleRestockSubmit}
-            className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-2xl border border-[#ebe8e3] flex flex-col gap-3"
+            className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-2xl border border-[#ebe8e3] flex flex-col gap-3 cursor-default"
           >
             <div className="flex items-center justify-between pb-2 border-b border-[#ebe8e3]">
               <h3 id="restock-title" className="font-bold text-base text-[#1c1c19]">
@@ -1166,11 +1234,16 @@ const KelolaMenuViewInner: React.FC = () => {
           role="dialog"
           aria-modal="true"
           aria-labelledby="edit-min-title"
-          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 lg:cursor-pointer"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && typeof window !== 'undefined' && window.innerWidth >= 1024) {
+              setEditMinItem(null);
+            }
+          }}
         >
           <form
             onSubmit={handleEditMinSubmit}
-            className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-2xl border border-[#ebe8e3] flex flex-col gap-3"
+            className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-2xl border border-[#ebe8e3] flex flex-col gap-3 cursor-default"
           >
             <div className="flex items-center justify-between pb-2 border-b border-[#ebe8e3]">
               <h3 id="edit-min-title" className="font-bold text-base text-[#1c1c19]">
@@ -1225,11 +1298,16 @@ const KelolaMenuViewInner: React.FC = () => {
           role="dialog"
           aria-modal="true"
           aria-labelledby="add-ing-title"
-          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 lg:cursor-pointer"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && typeof window !== 'undefined' && window.innerWidth >= 1024) {
+              setShowAddIngredientModal(false);
+            }
+          }}
         >
           <form
             onSubmit={handleCreateIngredient}
-            className="bg-white rounded-2xl p-5 w-full max-w-md shadow-2xl border border-[#ebe8e3] flex flex-col gap-3"
+            className="bg-white rounded-2xl p-5 w-full max-w-md shadow-2xl border border-[#ebe8e3] flex flex-col gap-3 cursor-default"
           >
             <div className="flex items-center justify-between pb-2 border-b border-[#ebe8e3]">
               <h3 id="add-ing-title" className="font-bold text-base text-[#1c1c19]">
@@ -1343,8 +1421,15 @@ const KelolaMenuViewInner: React.FC = () => {
 
       {/* Modal Peringatan Konfirmasi Hapus Menu */}
       {deleteMenuConfirm && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-[#ebe8e3] animate-in fade-in zoom-in-95 duration-150">
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs lg:cursor-pointer"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && typeof window !== 'undefined' && window.innerWidth >= 1024) {
+              setDeleteMenuConfirm(null);
+            }
+          }}
+        >
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-[#ebe8e3] animate-in fade-in zoom-in-95 duration-150 cursor-default">
             <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-3">
               <span className="material-symbols-outlined text-2xl">warning</span>
             </div>
@@ -1379,8 +1464,15 @@ const KelolaMenuViewInner: React.FC = () => {
 
       {/* Modal Peringatan Konfirmasi Hapus Bahan Baku */}
       {deleteIngConfirm && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-[#ebe8e3] animate-in fade-in zoom-in-95 duration-150">
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs lg:cursor-pointer"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && typeof window !== 'undefined' && window.innerWidth >= 1024) {
+              setDeleteIngConfirm(null);
+            }
+          }}
+        >
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-[#ebe8e3] animate-in fade-in zoom-in-95 duration-150 cursor-default">
             <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-3">
               <span className="material-symbols-outlined text-2xl">warning</span>
             </div>

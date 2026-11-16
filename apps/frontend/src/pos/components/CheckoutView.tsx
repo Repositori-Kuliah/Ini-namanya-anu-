@@ -27,17 +27,11 @@ export const CheckoutView: React.FC = () => {
   // Kunci scroll halaman belakang saat modal detail checkout terbuka di mobile
   useLockBodyScroll(mobileDetailOpen);
 
-  const [paymentMethod, setPaymentMethod] = useState<'Tunai' | 'QRIS' | 'Kartu Debit' | 'Split Payment'>('Tunai');
-  const [cashTendered, setCashTendered] = useState<number>(200000);
+  const [paymentMethod, setPaymentMethod] = useState<'Tunai' | 'QRIS' | 'Kartu Debit'>('Tunai');
+  const [cashTendered, setCashTendered] = useState<number>(0);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [showQrisCode, setShowQrisCode] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
-
-  // Split payment state
-  const [splitMethod1, setSplitMethod1] = useState<'Tunai' | 'QRIS' | 'Kartu Debit'>('Tunai');
-  const [splitAmount1, setSplitAmount1] = useState<number>(0);
-  const [splitInputStr, setSplitInputStr] = useState<string>('');
-  const [splitMethod2, setSplitMethod2] = useState<'Tunai' | 'QRIS' | 'Kartu Debit'>('QRIS');
 
   const filteredBills = bills.filter(
     (b) =>
@@ -111,12 +105,12 @@ export const CheckoutView: React.FC = () => {
   const change = cashTendered - currentBill.total;
   const isChangeNegative = change < 0;
 
-  // Split calculation
-  const splitAmount2 = Math.max(0, currentBill.total - splitAmount1);
-
-  const handleCashPreset = (amount: number) => {
-    setCashTendered(amount);
-  };
+  // Set uang tunai otomatis uang pas saat bill dipilih atau total tagihan berubah
+  useEffect(() => {
+    if (currentBill && currentBill.total > 0) {
+      setCashTendered(currentBill.total);
+    }
+  }, [currentBill.id, currentBill.total]);
 
   const handleExecutePayment = () => {
     if (currentBill.isAllServed === false) {
@@ -129,26 +123,11 @@ export const CheckoutView: React.FC = () => {
       return;
     }
 
-    if (paymentMethod === 'Split Payment' && splitAmount1 + splitAmount2 !== currentBill.total) {
-      showToast('Total nominal pecah pembayaran harus sama dengan total tagihan!', 'warning');
-      return;
-    }
-
     setIsProcessing(true);
     setTimeout(() => {
       setIsProcessing(false);
       setMobileDetailOpen(false);
-      if (paymentMethod === 'Split Payment') {
-        const splitDetail: SplitPaymentDetail = {
-          method1: splitMethod1,
-          amount1: splitAmount1,
-          method2: splitMethod2,
-          amount2: splitAmount2,
-        };
-        settlePayment(currentBill.id, 'Split Payment', currentBill.total, splitDetail);
-      } else {
-        settlePayment(currentBill.id, paymentMethod, cashTendered);
-      }
+      settlePayment(currentBill.id, paymentMethod, cashTendered);
     }, 250);
   };
 
@@ -156,19 +135,6 @@ export const CheckoutView: React.FC = () => {
     refresh();
     showToast('Daftar tagihan kasir diperbarui', 'info');
   };
-
-  // Preset pecahan uang tunai dinamis berbasis total tagihan
-  const billTotal = currentBill.total;
-  const next50k = Math.ceil(billTotal / 50000) * 50000;
-  const next100k = Math.ceil(billTotal / 100000) * 100000;
-  const dynamicPresets = Array.from(
-    new Set([
-      billTotal,
-      next50k > billTotal ? next50k : billTotal + 50000,
-      next100k > billTotal ? next100k : billTotal + 100000,
-      next100k + 50000,
-    ])
-  ).filter((val) => val >= billTotal).slice(0, 4);
 
   return (
     <div className="flex flex-col w-full pb-4 md:pb-8 max-w-[1600px] mx-auto px-4 sm:px-6 pt-3">
@@ -373,28 +339,29 @@ export const CheckoutView: React.FC = () => {
                       {/* Badge Meja & Info Tamu */}
                       <div className="flex items-center gap-3 min-w-0">
                         <div
-                          className={`w-11 h-11 rounded-lg flex flex-col items-center justify-center shrink-0 font-bold ${
+                          className={`w-[50px] h-[40px] rounded-lg flex flex-col items-center justify-center shrink-0 font-bold ${
                             isSelected
-                              ? 'bg-[#3d1018] text-white'
-                              : 'bg-[#f0ede9] text-[#1c1c19]'
+                              ? 'bg-[#3d1018] text-white shadow-xs'
+                              : 'bg-[#f0ede9] text-[#1c1c19] border border-[#ebe8e3]'
                           }`}
                         >
-                          <span className="text-[9px] uppercase leading-none opacity-80">Meja</span>
-                          <span className="text-base tabular-nums leading-tight">
-                            {formatTableLabel(bill.tableNumber)}
+                          <span className="text-[8.5px] uppercase font-bold tracking-wider leading-none opacity-85">
+                            {bill.isTakeaway ? 'BUNGKUS' : 'MEJA'}
+                          </span>
+                          <span className="text-xs font-extrabold tabular-nums leading-tight mt-0.5">
+                            {bill.isTakeaway
+                              ? (bill.takeawayQueue ? bill.takeawayQueue.replace(/[^0-9]/g, '').padStart(2, '0') : '01')
+                              : formatTableLabel(bill.tableNumber)}
                           </span>
                         </div>
 
                         <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="font-bold text-xs sm:text-sm text-[#1c1c19] truncate">
-                              {bill.customerName}
+                              {bill.customerName && bill.customerName !== 'Tamu' && bill.customerName !== 'Pelanggan Bungkus'
+                                ? bill.customerName
+                                : bill.billNumber}
                             </span>
-                            {isUnserved && (
-                              <span className="px-1.5 py-0.2 rounded bg-[#ffdadc] text-[#3d1018] text-[10px] font-semibold shrink-0">
-                                Dapur
-                              </span>
-                            )}
                           </div>
                           <p className="text-[11px] text-[#524344] mt-0.5 truncate">
                             <span className="font-mono text-[#847374]">ID: {bill.billNumber}</span> · {bill.itemCount} menu
@@ -411,15 +378,11 @@ export const CheckoutView: React.FC = () => {
                           <span className="lg:hidden text-[10px] text-[#3d1018] font-bold flex items-center">
                             Bayar <span className="material-symbols-outlined text-[13px]">chevron_right</span>
                           </span>
-                          <span
-                            className={`inline-block px-1.5 py-0.2 rounded text-[10px] font-medium ${
-                              bill.status === 'minta_checkout'
-                                ? 'bg-[#ffdbc9] text-[#753400]'
-                                : 'bg-[#f0ede9] text-[#524344]'
-                            }`}
-                          >
-                            {bill.status === 'minta_checkout' ? 'Minta Bayar' : 'Belum Bayar'}
-                          </span>
+                          {bill.status === 'minta_checkout' && (
+                            <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#ffdbc9] text-[#753400]">
+                              Minta Bayar
+                            </span>
+                          )}
                         </div>
                       </div>
                     </button>
@@ -457,21 +420,25 @@ export const CheckoutView: React.FC = () => {
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div
-                        className={`w-11 h-11 rounded-lg flex flex-col items-center justify-center shrink-0 font-bold ${
+                        className={`w-[50px] h-[40px] rounded-lg flex flex-col items-center justify-center shrink-0 font-bold ${
                           isSelected
-                            ? 'bg-[#3d1018] text-white'
-                            : 'bg-[#f0ede9] text-[#1c1c19]'
+                            ? 'bg-[#3d1018] text-white shadow-xs'
+                            : 'bg-[#f0ede9] text-[#1c1c19] border border-[#ebe8e3]'
                         }`}
                       >
-                        <span className="text-[9px] uppercase leading-none opacity-80">Meja</span>
-                        <span className="text-base tabular-nums leading-tight">
-                          {formatTableLabel(bill.tableNumber)}
+                        <span className="text-[8.5px] uppercase font-bold tracking-wider leading-none opacity-85">
+                          {bill.isTakeaway ? 'BUNGKUS' : 'MEJA'}
+                        </span>
+                        <span className="text-xs font-extrabold tabular-nums leading-tight mt-0.5">
+                          {bill.isTakeaway
+                            ? (bill.takeawayQueue ? bill.takeawayQueue.replace(/[^0-9]/g, '').padStart(2, '0') : '01')
+                            : formatTableLabel(bill.tableNumber)}
                         </span>
                       </div>
 
                       <div className="min-w-0">
                         <span className="font-bold text-xs sm:text-sm text-[#3d1018] tracking-wide block truncate">
-                          {(bill.paymentMethod === 'split' || bill.paymentMethod === 'Split Payment'
+                          {((bill.paymentMethod as any) === 'split' || (bill.paymentMethod as any) === 'Split Payment'
                             ? 'Pecah Bayar'
                             : bill.paymentMethod || 'Tunai').toUpperCase()}
                         </span>
@@ -485,14 +452,9 @@ export const CheckoutView: React.FC = () => {
                       <span className="font-bold text-xs sm:text-sm text-[#1c1c19] tabular-nums block">
                         Rp {bill.total.toLocaleString('id-ID')}
                       </span>
-                      <div className="flex items-center gap-1 justify-end mt-0.5">
-                        <span className="lg:hidden text-[10px] text-[#524344] font-medium flex items-center">
-                          Detail <span className="material-symbols-outlined text-[13px]">chevron_right</span>
-                        </span>
-                        <span className="text-[10px] text-[#847374] block">
-                          {bill.paidAtTime || bill.requestedAt}
-                        </span>
-                      </div>
+                      <span className="text-[10px] text-[#847374] block mt-0.5">
+                        {bill.paidAtTime || bill.requestedAt}
+                      </span>
                     </div>
                   </button>
                 );
@@ -511,35 +473,12 @@ export const CheckoutView: React.FC = () => {
           >
             {/* Header Rincian Tagihan Terpilih */}
             <div className="pb-3 border-b border-[#ebe8e3] flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-lg sm:text-xl font-bold text-[#1c1c19]">
-                  Meja {formatTableLabel(currentBill.tableNumber)}
+                  {currentBill.billNumber}
                 </h2>
-                <span className="text-xs font-mono font-semibold text-[#847374] px-2 py-0.5 rounded bg-[#f0ede9]">
-                  ID: {currentBill.billNumber}
-                </span>
               </div>
             </div>
-
-            {/* Alert Status Dapur Jika Masih Ada Pesanan Belum Disajikan */}
-            {currentBill.isAllServed === false && currentBill.status !== 'lunas' && (
-              <div
-                role="alert"
-                className="p-3 rounded-lg bg-[#fcf9f4] border border-[#fc934f] text-xs text-[#3d1018] flex items-start gap-2"
-              >
-                <span className="material-symbols-outlined text-[18px] text-[#994703] shrink-0 mt-0.5">
-                  warning
-                </span>
-                <div>
-                  <strong className="block font-semibold">
-                    Pesanan Belum Selesai Dimasak di Dapur
-                  </strong>
-                  <span className="text-[11px] text-[#524344]">
-                    Tagihan hanya dapat dilunasi setelah seluruh menu disajikan melalui Kitchen Display.
-                  </span>
-                </div>
-              </div>
-            )}
 
             {/* Rincian Menu Yang Dipesan (Tabel Ringkas) */}
             <div>
@@ -651,8 +590,8 @@ export const CheckoutView: React.FC = () => {
                   <span className="text-[11px] font-bold uppercase tracking-wider text-[#524344] block mb-1.5">
                     Metode Pembayaran
                   </span>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {(['Tunai', 'QRIS', 'Kartu Debit', 'Split Payment'] as const).map((method) => {
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['Tunai', 'QRIS', 'Kartu Debit'] as const).map((method) => {
                       const active = paymentMethod === method;
                       return (
                         <button
@@ -661,11 +600,6 @@ export const CheckoutView: React.FC = () => {
                           onClick={() => {
                             setPaymentMethod(method);
                             setShowQrisCode(method === 'QRIS');
-                            if (method === 'Split Payment') {
-                              const half = currentBill.total > 0 ? Math.round(currentBill.total / 2) : 0;
-                              setSplitAmount1(half);
-                              setSplitInputStr(half > 0 ? half.toLocaleString('id-ID') : '');
-                            }
                           }}
                           className={`py-2 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                             active
@@ -679,13 +613,9 @@ export const CheckoutView: React.FC = () => {
                               ? 'payments'
                               : method === 'QRIS'
                               ? 'qr_code_2'
-                              : method === 'Kartu Debit'
-                              ? 'credit_card'
-                              : 'call_split'}
+                              : 'credit_card'}
                           </span>
-                          <span className="truncate">
-                            {method === 'Split Payment' ? 'Pecah Bayar' : method}
-                          </span>
+                          <span className="truncate">{method}</span>
                         </button>
                       );
                     })}
@@ -705,84 +635,6 @@ export const CheckoutView: React.FC = () => {
                     </p>
                     <p className="text-[11px] text-[#524344]">
                       Pelanggan memindai QR dinamis di atas menggunakan aplikasi e-wallet / mobile banking.
-                    </p>
-                  </div>
-                )}
-
-                {/* Tampilan Pecah Pembayaran (Split Payment) */}
-                {paymentMethod === 'Split Payment' && (
-                  <div className="p-3.5 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3] space-y-3">
-                    <span className="text-xs font-bold text-[#3d1018] block">
-                      Pecah Pembayaran (2 Metode Gabungan)
-                    </span>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {/* Pembayaran 1 */}
-                      <div className="p-2.5 bg-white rounded-lg border border-[#ebe8e3] space-y-1.5">
-                        <label className="text-[10px] text-[#847374] font-bold uppercase block">
-                          Metode 1:
-                        </label>
-                        <select
-                          value={splitMethod1}
-                          onChange={(e) => setSplitMethod1(e.target.value as any)}
-                          className="w-full bg-[#fcf9f4] border border-[#ebe8e3] rounded px-2 py-1 text-xs font-bold"
-                        >
-                          <option value="Tunai">Tunai</option>
-                          <option value="QRIS">QRIS</option>
-                          <option value="Kartu Debit">Kartu Debit</option>
-                        </select>
-                        <label className="text-[10px] text-[#847374] font-bold uppercase block mt-1">
-                          Nominal 1 (Rp):
-                        </label>
-                        <div className="flex items-center gap-1.5 bg-[#fcf9f4] border border-[#ebe8e3] rounded-lg px-2.5 py-1.5 focus-within:border-[#3d1018] focus-within:bg-white transition-colors">
-                          <span className="text-xs font-bold text-[#847374]">Rp</span>
-                          <input
-                            id="split-amount-1-input"
-                            type="text"
-                            inputMode="numeric"
-                            placeholder="0"
-                            value={splitInputStr}
-                            onChange={(e) => {
-                              const digits = e.target.value.replace(/\D/g, '');
-                              if (!digits) {
-                                setSplitInputStr('');
-                                setSplitAmount1(0);
-                                return;
-                              }
-                              const num = parseInt(digits, 10);
-                              setSplitInputStr(num.toLocaleString('id-ID'));
-                              setSplitAmount1(num);
-                            }}
-                            className="w-full bg-transparent text-xs font-bold tabular-nums outline-none text-[#1c1c19]"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Pembayaran 2 */}
-                      <div className="p-2.5 bg-white rounded-lg border border-[#ebe8e3] space-y-1.5">
-                        <label className="text-[10px] text-[#847374] font-bold uppercase block">
-                          Metode 2:
-                        </label>
-                        <select
-                          value={splitMethod2}
-                          onChange={(e) => setSplitMethod2(e.target.value as any)}
-                          className="w-full bg-[#fcf9f4] border border-[#ebe8e3] rounded px-2 py-1 text-xs font-bold"
-                        >
-                          <option value="QRIS">QRIS</option>
-                          <option value="Tunai">Tunai</option>
-                          <option value="Kartu Debit">Kartu Debit</option>
-                        </select>
-                        <label className="text-[10px] text-[#847374] font-bold uppercase block mt-1">
-                          Sisa Nominal 2 (Rp):
-                        </label>
-                        <div className="w-full bg-[#f0ede9] border border-[#ebe8e3] rounded px-2 py-1 text-xs font-bold tabular-nums text-[#3d1018]">
-                          Rp {splitAmount2.toLocaleString('id-ID')}
-                        </div>
-                      </div>
-                    </div>
-
-                    <p className="text-[11px] text-[#524344]">
-                      Total bayar: Rp {(splitAmount1 + splitAmount2).toLocaleString('id-ID')} dari tagihan Rp {currentBill.total.toLocaleString('id-ID')}.
                     </p>
                   </div>
                 )}
@@ -808,28 +660,6 @@ export const CheckoutView: React.FC = () => {
                           className="font-bold text-sm text-[#1c1c19] text-right outline-none w-32 tabular-nums"
                         />
                       </div>
-                    </div>
-
-                    {/* Tombol Preset Pecahan */}
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[10px] text-[#847374] font-semibold uppercase">Pecahan:</span>
-                      <button
-                        type="button"
-                        onClick={() => handleCashPreset(billTotal)}
-                        className="px-2 py-1 rounded bg-white hover:bg-[#ebe8e3] text-xs font-semibold text-[#1c1c19] border border-[#ebe8e3] cursor-pointer"
-                      >
-                        Uang Pas
-                      </button>
-                      {dynamicPresets.slice(1).map((amt) => (
-                        <button
-                          key={amt}
-                          type="button"
-                          onClick={() => handleCashPreset(amt)}
-                          className="px-2 py-1 rounded bg-white hover:bg-[#ebe8e3] text-xs font-semibold text-[#1c1c19] border border-[#ebe8e3] cursor-pointer tabular-nums"
-                        >
-                          {amt.toLocaleString('id-ID')}
-                        </button>
-                      ))}
                     </div>
 
                     {/* Baris Kembalian */}
@@ -900,21 +730,15 @@ export const CheckoutView: React.FC = () => {
           <div
             role="dialog"
             aria-modal="true"
-            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs lg:hidden animate-in fade-in duration-150 touch-none"
-            onTouchMove={(e) => {
-              if (e.target === e.currentTarget) e.preventDefault();
-            }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs lg:hidden animate-in fade-in duration-150"
           >
             <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-5 border border-[#ebe8e3] max-w-lg w-full max-h-[92vh] overflow-y-auto overscroll-contain flex flex-col gap-4 animate-in zoom-in-95 duration-150">
               {/* Header Rincian Tagihan Terpilih */}
               <div className="pb-3 border-b border-[#ebe8e3] flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="text-lg font-bold text-[#1c1c19]">
-                    Meja {formatTableLabel(currentBill.tableNumber)}
+                    {currentBill.billNumber}
                   </h2>
-                  <span className="text-xs font-mono font-semibold text-[#847374] px-2 py-0.5 rounded bg-[#f0ede9]">
-                    ID: {currentBill.billNumber}
-                  </span>
                 </div>
                 <button
                   type="button"
@@ -925,26 +749,6 @@ export const CheckoutView: React.FC = () => {
                   <span className="material-symbols-outlined text-[18px]">close</span>
                 </button>
               </div>
-
-              {/* Alert Status Dapur Jika Masih Ada Pesanan Belum Disajikan */}
-              {currentBill.isAllServed === false && currentBill.status !== 'lunas' && (
-                <div
-                  role="alert"
-                  className="p-3 rounded-lg bg-[#fcf9f4] border border-[#fc934f] text-xs text-[#3d1018] flex items-start gap-2"
-                >
-                  <span className="material-symbols-outlined text-[18px] text-[#994703] shrink-0 mt-0.5">
-                    warning
-                  </span>
-                  <div>
-                    <strong className="block font-semibold">
-                      Pesanan Belum Selesai Dimasak di Dapur
-                    </strong>
-                    <span className="text-[11px] text-[#524344]">
-                      Tagihan hanya dapat dilunasi setelah seluruh menu disajikan melalui Kitchen Display.
-                    </span>
-                  </div>
-                </div>
-              )}
 
               {/* Rincian Menu Yang Dipesan (Tabel Ringkas) */}
               <div>
@@ -1064,8 +868,8 @@ export const CheckoutView: React.FC = () => {
                     <span className="text-[11px] font-bold uppercase tracking-wider text-[#524344] block mb-1.5">
                       Metode Pembayaran
                     </span>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {(['Tunai', 'QRIS', 'Kartu Debit', 'Split Payment'] as const).map((method) => {
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['Tunai', 'QRIS', 'Kartu Debit'] as const).map((method) => {
                         const active = paymentMethod === method;
                         return (
                           <button
@@ -1074,11 +878,6 @@ export const CheckoutView: React.FC = () => {
                             onClick={() => {
                               setPaymentMethod(method);
                               setShowQrisCode(method === 'QRIS');
-                              if (method === 'Split Payment') {
-                                const half = currentBill.total > 0 ? Math.round(currentBill.total / 2) : 0;
-                                setSplitAmount1(half);
-                                setSplitInputStr(half > 0 ? half.toLocaleString('id-ID') : '');
-                              }
                             }}
                             className={`py-2 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                               active
@@ -1092,13 +891,9 @@ export const CheckoutView: React.FC = () => {
                                 ? 'payments'
                                 : method === 'QRIS'
                                 ? 'qr_code_2'
-                                : method === 'Kartu Debit'
-                                ? 'credit_card'
-                                : 'call_split'}
+                                : 'credit_card'}
                             </span>
-                            <span className="truncate">
-                              {method === 'Split Payment' ? 'Pecah Bayar' : method}
-                            </span>
+                            <span className="truncate">{method}</span>
                           </button>
                         );
                       })}
@@ -1118,84 +913,6 @@ export const CheckoutView: React.FC = () => {
                       </p>
                       <p className="text-[11px] text-[#524344]">
                         Pelanggan memindai QR dinamis di atas menggunakan aplikasi e-wallet / mobile banking.
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Tampilan Pecah Pembayaran (Split Payment) */}
-                  {paymentMethod === 'Split Payment' && (
-                    <div className="p-3.5 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3] space-y-3">
-                      <span className="text-xs font-bold text-[#3d1018] block">
-                        Pecah Pembayaran (2 Metode Gabungan)
-                      </span>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {/* Pembayaran 1 */}
-                        <div className="p-2.5 bg-white rounded-lg border border-[#ebe8e3] space-y-1.5">
-                          <label className="text-[10px] text-[#847374] font-bold uppercase block">
-                            Metode 1:
-                          </label>
-                          <select
-                            value={splitMethod1}
-                            onChange={(e) => setSplitMethod1(e.target.value as any)}
-                            className="w-full bg-[#fcf9f4] border border-[#ebe8e3] rounded px-2 py-1 text-xs font-bold"
-                          >
-                            <option value="Tunai">Tunai</option>
-                            <option value="QRIS">QRIS</option>
-                            <option value="Kartu Debit">Kartu Debit</option>
-                          </select>
-                          <label className="text-[10px] text-[#847374] font-bold uppercase block mt-1">
-                            Nominal 1 (Rp):
-                          </label>
-                          <div className="flex items-center gap-1.5 bg-[#fcf9f4] border border-[#ebe8e3] rounded-lg px-2.5 py-1.5 focus-within:border-[#3d1018] focus-within:bg-white transition-colors">
-                            <span className="text-xs font-bold text-[#847374]">Rp</span>
-                            <input
-                              id="split-amount-1-input-mob"
-                              type="text"
-                              inputMode="numeric"
-                              placeholder="0"
-                              value={splitInputStr}
-                              onChange={(e) => {
-                                const digits = e.target.value.replace(/\D/g, '');
-                                if (!digits) {
-                                  setSplitInputStr('');
-                                  setSplitAmount1(0);
-                                  return;
-                                }
-                                const num = parseInt(digits, 10);
-                                setSplitInputStr(num.toLocaleString('id-ID'));
-                                setSplitAmount1(num);
-                              }}
-                              className="w-full bg-transparent text-xs font-bold tabular-nums outline-none text-[#1c1c19]"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Pembayaran 2 */}
-                        <div className="p-2.5 bg-white rounded-lg border border-[#ebe8e3] space-y-1.5">
-                          <label className="text-[10px] text-[#847374] font-bold uppercase block">
-                            Metode 2:
-                          </label>
-                          <select
-                            value={splitMethod2}
-                            onChange={(e) => setSplitMethod2(e.target.value as any)}
-                            className="w-full bg-[#fcf9f4] border border-[#ebe8e3] rounded px-2 py-1 text-xs font-bold"
-                          >
-                            <option value="QRIS">QRIS</option>
-                            <option value="Tunai">Tunai</option>
-                            <option value="Kartu Debit">Kartu Debit</option>
-                          </select>
-                          <label className="text-[10px] text-[#847374] font-bold uppercase block mt-1">
-                            Sisa Nominal 2 (Rp):
-                          </label>
-                          <div className="w-full bg-[#f0ede9] border border-[#ebe8e3] rounded px-2 py-1 text-xs font-bold tabular-nums text-[#3d1018]">
-                            Rp {splitAmount2.toLocaleString('id-ID')}
-                          </div>
-                        </div>
-                      </div>
-
-                      <p className="text-[11px] text-[#524344]">
-                        Total bayar: Rp {(splitAmount1 + splitAmount2).toLocaleString('id-ID')} dari tagihan Rp {currentBill.total.toLocaleString('id-ID')}.
                       </p>
                     </div>
                   )}
@@ -1221,28 +938,6 @@ export const CheckoutView: React.FC = () => {
                             className="font-bold text-sm text-[#1c1c19] text-right outline-none w-32 tabular-nums"
                           />
                         </div>
-                      </div>
-
-                      {/* Tombol Preset Pecahan */}
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[10px] text-[#847374] font-semibold uppercase">Pecahan:</span>
-                        <button
-                          type="button"
-                          onClick={() => handleCashPreset(billTotal)}
-                          className="px-2 py-1 rounded bg-white hover:bg-[#ebe8e3] text-xs font-semibold text-[#1c1c19] border border-[#ebe8e3] cursor-pointer"
-                        >
-                          Uang Pas
-                        </button>
-                        {dynamicPresets.slice(1).map((amt) => (
-                          <button
-                            key={amt}
-                            type="button"
-                            onClick={() => handleCashPreset(amt)}
-                            className="px-2 py-1 rounded bg-white hover:bg-[#ebe8e3] text-xs font-semibold text-[#1c1c19] border border-[#ebe8e3] cursor-pointer tabular-nums"
-                          >
-                            {amt.toLocaleString('id-ID')}
-                          </button>
-                        ))}
                       </div>
 
                       {/* Baris Kembalian */}

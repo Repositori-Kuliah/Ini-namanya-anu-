@@ -40,9 +40,14 @@ interface AppContextType {
   setSelectedTableId: (id: string) => void;
   updateTable: (table: TableItem) => void;
   addTable: (tableNumber: number, capacity: number, area: string) => Promise<boolean>;
+  deleteTable: (tableId: number) => Promise<boolean>;
+  rotateTableQr: (tableId: number) => Promise<TableItem | null>;
   clearTableSession: (tableNumberOrSessionId: string | number) => Promise<void>;
 
   cartItems: CartItem[];
+  orderType: 'dine_in' | 'takeaway';
+  setOrderType: (type: 'dine_in' | 'takeaway') => void;
+  takeawayNextQueue: string;
   orderTableNumber: string;
   setOrderTableNumber: (tableNumber: string) => void;
   orderSecondaryTables: string[];
@@ -58,8 +63,8 @@ interface AppContextType {
   updateCartQuantity: (menuItemId: string, delta: number) => void;
   updateCartItemNotes: (menuItemId: string, notes: string) => void;
   clearCart: () => void;
-  sendOrderToKitchen: () => void;
-  saveDraftOrder: () => void;
+  sendOrderToKitchen: () => Promise<boolean>;
+  saveDraftOrder: () => Promise<boolean>;
 
   bills: BillItem[];
   selectedBillId: string;
@@ -82,7 +87,6 @@ interface AppContextType {
   dismissStockWarning: boolean;
   setDismissStockWarning: (dismissed: boolean) => void;
 
-  deleteTable: (tableId: number) => Promise<boolean>;
   deleteMenuItem: (itemId: number | string) => Promise<boolean>;
   deleteRawIngredient: (ingredientId: number | string) => Promise<boolean>;
   refresh: () => Promise<void>;
@@ -204,22 +208,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setDesktopSidebarOpen((prev) => !prev);
   }, []);
 
-  const masterCache = readMasterCache();
+  // Cache dibaca sekali saat mount. useRef agar tidak re-read setiap render.
+  const masterCacheRef = useRef(readMasterCache());
   const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
   // data dari database (dengan fallback awal ke cache offline lokal)
-  const [rawTables, setRawTables] = useState<any[]>(() => masterCache?.tables || []);
+  const [rawTables, setRawTables] = useState<any[]>(() => masterCacheRef.current?.tables || []);
   const [sessions, setSessions] = useState<any[]>([]);
   const [requests, setRequests] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>(() => (masterCache?.products?.length ? masterCache.products : INITIAL_PRODUCTS));
-  const [categories, setCategories] = useState<any[]>(() => (masterCache?.categories?.length ? masterCache.categories : INITIAL_CATEGORIES));
-  const [rawIngredients, setRawIngredients] = useState<RawIngredient[]>(() => masterCache?.ingredients || []);
+  const [products, setProducts] = useState<any[]>(() => (masterCacheRef.current?.products?.length ? masterCacheRef.current.products : INITIAL_PRODUCTS));
+  const [categories, setCategories] = useState<any[]>(() => (masterCacheRef.current?.categories?.length ? masterCacheRef.current.categories : INITIAL_CATEGORIES));
+  const [rawIngredients, setRawIngredients] = useState<RawIngredient[]>(() => masterCacheRef.current?.ingredients || []);
   const [payments, setPayments] = useState<any[]>([]);
   const [now, setNow] = useState(Date.now());
 
   // state UI
   const [selectedTableId, setSelectedTableId] = useState('');
   const [orderTableNumber, setOrderTableNumber] = useState('');
+  const [orderType, setOrderType] = useState<'dine_in' | 'takeaway'>('dine_in');
   const [orderSecondaryTables, setOrderSecondaryTables] = useState<string[]>([]);
   const [orderCustomerName, setOrderCustomerName] = useState('');
   const [orderGuestCount, setOrderGuestCount] = useState(2);
@@ -230,6 +236,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [toast, setToast] = useState<ToastNotification | null>(null);
   const [receiptModalData, setReceiptModalData] = useState<BillItem | null>(null);
   const [qrModalTable, setQrModalTable] = useState<TableItem | null>(null);
+
+  // Penomoran antrean bungkus mandiri otomatis (Antrean 01, Antrean 02, dst.)
+  const takeawayNextQueue = useMemo(() => {
+    const activeTakeaways = sessions.filter(
+      (s) => s.is_takeaway || s.takeaway_queue || s.orders?.some((o: any) => o.note?.includes('[BAWA PULANG]'))
+    );
+    return `Antrean ${String(activeTakeaways.length + 1).padStart(2, '0')}`;
+  }, [sessions]);
 
   // Store Settings (persisten di localStorage)
   const [storeSettings, setStoreSettings] = useState<StoreSettings>(() => {
@@ -425,13 +439,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   currentUserRef.current = currentUser;
 
   const showToast = useCallback((message: string, type: 'success' | 'info' | 'warning' = 'info') => {
-    const id = Date.now().toString() + Math.random();
+    const id = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
     setToast({ id, message, type });
     setTimeout(() => setToast((c) => (c?.id === id ? null : c)), 2800);
   }, []);
 
   const showToastRef = useRef(showToast);
   showToastRef.current = showToast;
+  const playDingSoundRef = useRef(playDingSound);
+  playDingSoundRef.current = playDingSound;
 
   // ---------- muat data katalog statis (hybrid offline-online) ----------
   const loadMasterData = useCallback(async () => {
@@ -483,13 +499,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Simpan ke cache offline lokal
       try {
-        localStorage.setItem(MASTER_CACHE_KEY, JSON.stringify({
-          categories: loadedCats.length ? loadedCats : (masterCache?.categories || []),
-          products: loadedProds.length ? loadedProds : (masterCache?.products || []),
-          tables: loadedTbls.length ? loadedTbls : (masterCache?.tables || []),
-          ingredients: loadedIngs.length ? loadedIngs : (masterCache?.ingredients || []),
+        const prevCache = masterCacheRef.current;
+        const newCache = {
+          categories: loadedCats.length ? loadedCats : (prevCache?.categories || []),
+          products: loadedProds.length ? loadedProds : (prevCache?.products || []),
+          tables: loadedTbls.length ? loadedTbls : (prevCache?.tables || []),
+          ingredients: loadedIngs.length ? loadedIngs : (prevCache?.ingredients || []),
           cachedAt: Date.now(),
-        }));
+        };
+        localStorage.setItem(MASTER_CACHE_KEY, JSON.stringify(newCache));
+        masterCacheRef.current = newCache;
       } catch (err) {
         console.warn('[pos cache write error]', err);
       }
@@ -540,25 +559,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (prev && role !== 'kitchen') {
         const newReqs = reqData.filter((r: any) => !prev.has(r.request_id));
         if (newReqs.length > 0) {
-          try {
-            const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-            if (AudioCtx) {
-              const ctx = new AudioCtx();
-              const osc = ctx.createOscillator();
-              const gain = ctx.createGain();
-              osc.connect(gain);
-              gain.connect(ctx.destination);
-              osc.type = 'triangle';
-              osc.frequency.setValueAtTime(659.25, ctx.currentTime);
-              osc.frequency.exponentialRampToValueAtTime(523.25, ctx.currentTime + 0.2);
-              gain.gain.setValueAtTime(0.25, ctx.currentTime);
-              gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-              osc.start();
-              osc.stop(ctx.currentTime + 0.5);
-            }
-          } catch {
-            // Browser policy ignore
-          }
+          playDingSoundRef.current();
           newReqs.forEach((r: any) => {
             const t = tblData.find((x: any) => x.table_id === r.table_id);
             showToastRef.current(`Meja ${pad(t?.table_number ?? '?')} ${r.kind === 'checkout' ? 'minta tagihan' : 'memanggil pelayan'}`, 'warning');
@@ -816,16 +817,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const staffOrder = live.find((o: any) => o.profiles?.full_name);
     const unservedOrders = live.filter((o: any) => o.order_status !== 'served');
     const isAllServed = unservedOrders.length === 0;
+    const isTakeaway = Boolean(s.is_takeaway) || live.some((o: any) => o.note?.includes('[BAWA PULANG]') || o.note?.includes('[TAKEAWAY]')) || Boolean(t?.area && t.area.toLowerCase().includes('takeaway'));
+    const displayTableNumber = isTakeaway
+      ? (s.takeaway_queue || 'Antrean 01')
+      : pad(t?.table_number ?? '?');
+
+    // Format ID unik permintaan user:
+    // Contoh takeaway: BUNGKUS_161126_01, contoh dine-in: MEJA_01_161126
+    const orderDate = new Date(s.opened_at || Date.now());
+    const dd = String(orderDate.getDate()).padStart(2, '0');
+    const mm = String(orderDate.getMonth() + 1).padStart(2, '0');
+    const yy = String(orderDate.getFullYear()).slice(-2);
+    const dateCode = `${dd}${mm}${yy}`;
+    const numPart = isTakeaway
+      ? String(displayTableNumber).replace(/[^0-9]/g, '').padStart(2, '0') || '01'
+      : pad(t?.table_number ?? '01');
+    const uniqueBillNumber = isTakeaway
+      ? `BUNGKUS_${dateCode}_${numPart}`
+      : `MEJA_${numPart}_${dateCode}`;
+
+    const rawCustName = (s.customer_name || '').trim();
+    const isGenericName = !rawCustName ||
+      rawCustName.toLowerCase() === 'tamu' ||
+      rawCustName.toLowerCase() === 'pelanggan bungkus' ||
+      rawCustName.toLowerCase().includes('tamu (bawa pulang)') ||
+      rawCustName.toLowerCase().includes('pelanggan');
+    const finalCustomerName = isGenericName ? uniqueBillNumber : rawCustName;
 
     return [{
-      id: `bill-${s.session_id}`, sessionId: s.session_id, billNumber: `B-${s.session_id}`, tableNumber: pad(t?.table_number ?? '?'),
-      customerName: s.customer_name || 'Tamu', guestCount: s.guest_count, itemCount: items.reduce((a, i) => a + i.quantity, 0), items,
+      id: `bill-${s.session_id}`, sessionId: s.session_id, billNumber: uniqueBillNumber, tableNumber: displayTableNumber,
+      customerName: finalCustomerName, guestCount: s.guest_count, itemCount: items.reduce((a, i) => a + i.quantity, 0), items,
       subtotal, serviceFee, tax, total,
       requestedAt: req ? hhmmColon(req.created_at) : '-', elapsedMinutesAgo: minsSince(req?.created_at ?? s.opened_at),
       waiterName: staffOrder?.profiles?.full_name || 'QR Meja', openedAtTime: `${hhmm(s.opened_at)} WIB`,
       status: req ? 'minta_checkout' : 'belum_dibayar',
-      isAllServed,
+      isAllServed: true, // Bebas bayar tanpa harus menunggu status KDS
       unservedCount: unservedOrders.length,
+      isTakeaway,
+      takeawayQueue: s.takeaway_queue || (isTakeaway ? displayTableNumber : undefined),
+      orderType: isTakeaway ? 'takeaway' : 'dine_in',
     } as BillItem];
   }).sort((a, b) => (a.status === b.status ? 0 : a.status === 'minta_checkout' ? -1 : 1)), [sessions, rawTables, requests, storeSettings]);
   const selectedBill = bills.find((b) => b.id === selectedBillId) || bills[0];
@@ -834,20 +864,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const isDrinkCategoryOrItem = (catName: string, prodName: string) => {
     const c = (catName || '').toLowerCase();
     const p = (prodName || '').toLowerCase();
-    const drinkKeywords = ['minum', 'teh', 'kopi', 'wedang', 'jus', 'bar', 'beverage', 'drink'];
-    const nameKeywords = ['es ', 'teh', 'kopi', 'sinom', 'jeruk', 'air mineral', 'degan', 'soda', 'kelapa', 'lemon'];
+    const drinkKeywords = ['minum', 'teh', 'kopi', 'wedang', 'jus', 'bar', 'beverage', 'drink', 'beverages'];
+    const nameKeywords = [
+      'es ', 'teh', 'kopi', 'sinom', 'jeruk', 'air mineral', 'degan', 'soda', 'kelapa', 'lemon',
+      'kombucha', 'boba', 'matcha', 'latte', 'cappuccino', 'espresso', 'cola', 'susu', 'shake', 'mocktail'
+    ];
     return drinkKeywords.some((k) => c.includes(k)) || nameKeywords.some((k) => p.includes(k));
   };
 
   const kitchenTickets: KitchenTicket[] = useMemo(() => sessions.flatMap((s) => {
     const t = rawTables.find((x) => x.table_id === s.table_id);
-    const tableNumberStr = `Table ${pad(t?.table_number ?? '?')}`;
+    const tableNumberStr = `Meja ${pad(t?.table_number ?? '?')}`;
 
-    // Hanya tampilkan pesanan yang bukan draf dan sudah dikonfirmasi (cegah order fiktif)
+    // Hanya tampilkan pesanan yang sudah dikonfirmasi ke dapur.
+    // Dapur tidak boleh melihat 'draft' (belum dikirim staf) maupun 'pending'
+    // (pesanan QR menunggu konfirmasi kasir) — ditegakkan juga oleh RLS DB.
     const validOrders = (s.orders || []).filter((o: any) =>
       o.order_status !== 'draft' &&
-      o.order_status !== 'pending_confirmation' &&
-      o.order_status !== 'menunggu_kasir' &&
+      o.order_status !== 'pending' &&
       o.order_status !== 'cancelled'
     );
 
@@ -855,91 +889,63 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const elapsed = Math.max(0, Math.floor((now - new Date(o.created_at).getTime()) / 1000));
       const status = ORDER_TO_TICKET[o.order_status] || 'new';
       const waiter = o.profiles?.full_name || (o.order_source === 'qr' ? 'QR Meja' : 'Staf');
+      const isTakeaway = Boolean(s.is_takeaway) || o.note?.includes('[BAWA PULANG]') || o.note?.includes('[TAKEAWAY]') || Boolean(t?.area && t.area.toLowerCase().includes('takeaway'));
+      const ticketType: 'Santap di Tempat' | 'Bawa Pulang' = isTakeaway ? 'Bawa Pulang' : 'Santap di Tempat';
+      const ticketTableNumber = isTakeaway ? (s.takeaway_queue || (t ? `Antrean ${pad(t.table_number)}` : 'Antrean 01')) : tableNumberStr;
+      const cleanOrderNumber = String(o.order_number || '').replace(/^#+/, '');
+      const rawNote = (o.note || '').replace(/\[BAWA PULANG[^\]]*\]/gi, '').replace(/\[TAKEAWAY[^\]]*\]/gi, '').trim();
+      const cleanUserNote = rawNote.replace(/^Catatan:\s*/i, '').trim();
+      const notesBanner = cleanUserNote.length > 0 ? cleanUserNote : undefined;
+      const orderTimeStr = o.created_at ? `${hhmmColon(o.created_at)} WIB` : undefined;
 
-      const foodItems = (o.order_items || []).filter((i: any) =>
-        !isDrinkCategoryOrItem(productCategory.get(i.product_id) || '', i.product_name)
-      );
-      const drinkItems = (o.order_items || []).filter((i: any) =>
-        isDrinkCategoryOrItem(productCategory.get(i.product_id) || '', i.product_name)
-      );
+      const allItems = (o.order_items || []).map((i: any) => ({
+        name: i.product_name,
+        quantity: i.quantity,
+        notes: i.note || undefined,
+        isDrink: isDrinkCategoryOrItem(productCategory.get(i.product_id) || '', i.product_name),
+      }));
 
-      const tickets: KitchenTicket[] = [];
+      const rawCustName = (s.customer_name || '').trim();
+      const isGenericName = !rawCustName ||
+        rawCustName.toLowerCase() === 'tamu' ||
+        rawCustName.toLowerCase() === 'pelanggan bungkus' ||
+        rawCustName.toLowerCase().includes('tamu (bawa pulang)') ||
+        rawCustName.toLowerCase().includes('pelanggan');
+      const ticketCustName = isGenericName ? undefined : rawCustName;
 
-      // Sub-tiket 1: Dapur Utama (Makanan)
-      if (foodItems.length > 0) {
-        tickets.push({
-          id: `${o.order_id}-food`,
-          orderId: o.order_id,
-          ticketNumber: `#${o.order_number}${drinkItems.length > 0 ? ' [Makanan]' : ''}`,
-          tableNumber: tableNumberStr,
-          type: 'Dine in',
-          waiterName: waiter,
-          elapsedSeconds: elapsed,
-          status,
-          station: 'Dapur Utama (Makanan)',
-          isPriority: elapsed > 900 && (status === 'new' || status === 'preparing'),
-          totalItems: foodItems.reduce((a: number, i: any) => a + i.quantity, 0),
-          totalAmount: Number(o.total),
-          readySecondsAgo: o.ready_at ? Math.max(0, Math.floor((now - new Date(o.ready_at).getTime()) / 1000)) : undefined,
-          notesBanner: o.note ? `Catatan: ${o.note}` : o.order_source === 'qr' ? 'Dipesan via QR meja' : `Dikirim oleh ${waiter}`,
-          items: foodItems.map((i: any) => ({ name: i.product_name, quantity: i.quantity, notes: i.note || undefined })),
-        });
-      }
-
-      // Sub-tiket 2: Bar Minuman
-      if (drinkItems.length > 0) {
-        tickets.push({
-          id: `${o.order_id}-drink`,
-          orderId: o.order_id,
-          ticketNumber: `#${o.order_number}${foodItems.length > 0 ? ' [Minuman]' : ''}`,
-          tableNumber: tableNumberStr,
-          type: 'Dine in',
-          waiterName: waiter,
-          elapsedSeconds: elapsed,
-          status,
-          station: 'Bar Minuman',
-          isPriority: elapsed > 600 && (status === 'new' || status === 'preparing'),
-          totalItems: drinkItems.reduce((a: number, i: any) => a + i.quantity, 0),
-          totalAmount: Number(o.total),
-          readySecondsAgo: o.ready_at ? Math.max(0, Math.floor((now - new Date(o.ready_at).getTime()) / 1000)) : undefined,
-          notesBanner: o.note ? `Catatan: ${o.note}` : o.order_source === 'qr' ? 'Dipesan via QR meja' : `Dikirim oleh ${waiter}`,
-          items: drinkItems.map((i: any) => ({ name: i.product_name, quantity: i.quantity, notes: i.note || undefined })),
-        });
-      }
-
-      // Fallback tiket jika tidak ada item
-      if (tickets.length === 0) {
-        tickets.push({
-          id: String(o.order_id),
-          orderId: o.order_id,
-          ticketNumber: `#${o.order_number}`,
-          tableNumber: tableNumberStr,
-          type: 'Dine in',
-          waiterName: waiter,
-          elapsedSeconds: elapsed,
-          status,
-          station: 'Dapur Utama (Makanan)',
-          isPriority: elapsed > 900 && (status === 'new' || status === 'preparing'),
-          totalItems: (o.order_items || []).reduce((a: number, i: any) => a + i.quantity, 0),
-          totalAmount: Number(o.total),
-          readySecondsAgo: o.ready_at ? Math.max(0, Math.floor((now - new Date(o.ready_at).getTime()) / 1000)) : undefined,
-          notesBanner: o.note ? `Catatan: ${o.note}` : o.order_source === 'qr' ? 'Dipesan via QR meja' : `Dikirim oleh ${waiter}`,
-          items: (o.order_items || []).map((i: any) => ({ name: i.product_name, quantity: i.quantity, notes: i.note || undefined })),
-        });
-      }
-
-      return tickets;
+      return [{
+        id: String(o.order_id),
+        orderId: o.order_id,
+        ticketNumber: cleanOrderNumber,
+        tableNumber: ticketTableNumber,
+        type: ticketType,
+        waiterName: waiter,
+        elapsedSeconds: elapsed,
+        status,
+        station: 'Semua Bagian',
+        isPriority: false,
+        totalItems: allItems.reduce((a: number, i: any) => a + i.quantity, 0),
+        totalAmount: Number(o.total),
+        readySecondsAgo: o.ready_at ? Math.max(0, Math.floor((now - new Date(o.ready_at).getTime()) / 1000)) : undefined,
+        notesBanner,
+        customerName: ticketCustName,
+        takeawayQueue: s.takeaway_queue,
+        orderTime: orderTimeStr,
+        items: allItems,
+      }];
     });
   }).sort((a, b) => b.elapsedSeconds - a.elapsedSeconds), [sessions, rawTables, productCategory, now]);
 
-  // Pesanan QR Masuk Yang Menunggu Konfirmasi Kasir (Anti-Order Fiktif)
+  // Pesanan QR yang menunggu konfirmasi staf sebelum masuk dapur.
+  // Status 'pending' adalah nilai resmi DB (migrasi 0004); filter sumber 'qr' untuk
+  // memastikan hanya pesanan customer yang perlu konfirmasi, bukan draft staf.
   const pendingQrOrders = useMemo(() => {
     return sessions.flatMap((s) => {
       const tbl = rawTables.find((t) => t.table_id === s.table_id);
       return (s.orders || [])
         .filter((o: any) =>
           o.order_source === 'qr' &&
-          (o.order_status === 'pending_confirmation' || o.order_status === 'menunggu_kasir')
+          (o.order_status === 'pending' || o.order_status === 'pending_confirmation')
         )
         .map((o: any) => ({
           orderId: String(o.order_id),
@@ -969,6 +975,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const guestCount = p.orders?.table_sessions?.guest_count || 1;
     const waiter = p.orders?.profiles?.full_name || (p.orders?.order_source === 'qr' ? 'QR meja' : 'Kasir');
     const methodLabel = METHOD_FROM_DB[p.method] ?? 'Tunai';
+    const isTakeaway = p.orders?.note?.includes('[BAWA PULANG]') || p.orders?.note?.includes('[TAKEAWAY]') || Boolean(p.orders?.table_sessions?.tables?.area && p.orders.table_sessions.tables.area.toLowerCase().includes('takeaway'));
 
     const billData: BillItem = {
       id: `paid-bill-${p.payment_id}`,
@@ -992,6 +999,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       cashTendered: Number(p.cash_received) || total,
       changeAmount: Number(p.change_amount) || 0,
       paidAtTime: `${new Date(p.paid_at).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' })} ${hhmmColon(p.paid_at)} WIB`,
+      isTakeaway,
+      orderType: isTakeaway ? 'takeaway' : 'dine_in',
     };
 
     return {
@@ -999,7 +1008,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       code: `#${p.orders?.order_number || p.transaction_code || p.payment_id}`,
       time: hhmmColon(p.paid_at),
       at: p.paid_at,
-      typeMeja: `Meja ${tableNum}`,
+      typeMeja: isTakeaway ? 'Bawa Pulang (Take Away)' : `Meja ${tableNum}`,
       source: p.orders?.order_source === 'qr' ? 'QR meja' : 'Manual',
       method: methodLabel,
       subtotal,
@@ -1071,6 +1080,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       'Meja berhasil dihapus'
     );
   };
+  const rotateTableQr = async (tableId: number): Promise<TableItem | null> => {
+    // Generate token kriptografis 16-hex (64-bit entropy, konsisten dengan schema DB tables.qr_token)
+    const bytes = new Uint8Array(8);
+    crypto.getRandomValues(bytes);
+    const newToken = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+
+    const { error } = await supabase
+      .from('tables')
+      .update({ qr_token: newToken })
+      .eq('table_id', tableId);
+
+    if (error) {
+      showToast(error.message || 'Gagal generate ulang QR meja di database', 'warning');
+      return null;
+    }
+
+    await loadMasterData();
+    showToast('QR Code Meja berhasil di-generate ulang!', 'success');
+
+    const updated = tables.find((t) => t.dbId === tableId);
+    if (updated) {
+      return {
+        ...updated,
+        qrToken: newToken,
+        qrUrl: tableUrl(newToken),
+      };
+    }
+    return null;
+  };
   const clearTableSession = async (tableNumberOrSessionId: string | number) => {
     const target = tables.find((t) => t.number === String(tableNumberOrSessionId) || t.sessionId === Number(tableNumberOrSessionId));
     const targetSessionId = target?.sessionId || (typeof tableNumberOrSessionId === 'number' ? tableNumberOrSessionId : undefined);
@@ -1101,10 +1139,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   const clearCart = () => setCartItems([]);
 
-  const submitStaffOrder = async (draft: boolean) => {
-    if (!cartItems.length) { showToast('Keranjang pesanan masih kosong', 'warning'); return; }
+  const submitStaffOrder = async (draft: boolean): Promise<boolean> => {
+    if (!cartItems.length) { showToast('Keranjang pesanan masih kosong', 'warning'); return false; }
+
+    const isTakeaway = orderType === 'takeaway' ||
+      kitchenGeneralNote.toLowerCase().includes('bungkus') ||
+      kitchenGeneralNote.toLowerCase().includes('takeaway') ||
+      kitchenGeneralNote.includes('[BAWA PULANG]');
+
     const tbl = tables.find((t) => t.number === orderTableNumber);
-    if (!tbl) { showToast('Pilih meja terlebih dahulu', 'warning'); return; }
+    if (!isTakeaway && !tbl) {
+      showToast('Pilih meja terlebih dahulu untuk santap di tempat', 'warning');
+      return false;
+    }
 
     const subtotal = cartItems.reduce((acc, c) => acc + c.menuItem.price * c.quantity, 0);
     const sRate = (storeSettings.enableServiceCharge ?? true) ? ((storeSettings.serviceChargeRate ?? 5) / 100) : 0;
@@ -1116,110 +1163,101 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     else if (storeSettings.roundingRule === '500') total = Math.round(total / 500) * 500;
     else if (storeSettings.roundingRule === '1000') total = Math.ceil(total / 1000) * 1000;
 
-    const formattedTableLabel = orderSecondaryTables.length > 0
-      ? `${orderTableNumber} (+ Meja ${orderSecondaryTables.join(', ')})`
-      : orderTableNumber;
+    const queueLabel = takeawayNextQueue;
+    const targetCustomerName = orderCustomerName.trim() || (isTakeaway ? 'Pelanggan Bungkus' : 'Tamu');
+    const formattedTableLabel = isTakeaway
+      ? queueLabel
+      : (orderSecondaryTables.length > 0 ? `${orderTableNumber} (+ Meja ${orderSecondaryTables.join(', ')})` : orderTableNumber);
 
-    const orderNotePayload = JSON.stringify({
-      customer: orderCustomerName || 'Tamu',
-      guests: orderGuestCount,
-      table_number: formattedTableLabel,
-      secondary_tables: orderSecondaryTables,
-      general_note: kitchenGeneralNote,
-      items: cartItems.map((c) => ({
-        id: c.menuItem.dbId || c.menuItem.id,
-        name: c.menuItem.name,
-        qty: c.quantity,
-        price: c.menuItem.price,
-        note: c.notes || '',
-      })),
-    });
+    const finalKitchenNote = kitchenGeneralNote.trim();
 
     let success = false;
 
-    // 1. Coba RPC jika tersedia
-    try {
-      const { data, error } = await supabase.rpc('staff_place_order', {
-        p_table_id: tbl.dbId,
-        p_guests: orderGuestCount,
-        p_customer: orderCustomerName,
-        p_note: kitchenGeneralNote,
-        p_draft: draft,
-        p_items: cartItems.map((c) => ({ id: c.menuItem.dbId, qty: c.quantity, note: c.notes })),
-      });
-      if (!error && !data?.error) {
-        success = true;
-      }
-    } catch {
-      // lanjut ke direct insert fallback
-    }
-
-    // 2. Fallback direct insert jika RPC belum ada di remote Supabase
-    if (!success && tbl.dbId) {
+    // 1. Coba RPC jika pesanan santap di tempat dengan meja fisik terdaftar di Supabase
+    if (!isTakeaway && tbl?.dbId) {
       try {
-        let activeSessionId = tbl.sessionId;
-        if (!activeSessionId) {
-          const { data: openSess } = await supabase
-            .from('table_sessions')
-            .select('session_id')
-            .eq('table_id', tbl.dbId)
-            .is('closed_at', null)
-            .maybeSingle();
+        const { data, error } = await supabase.rpc('staff_place_order', {
+          p_table_id: tbl.dbId,
+          p_guests: orderGuestCount || 1,
+          p_customer: targetCustomerName,
+          p_note: finalKitchenNote,
+          p_draft: draft,
+          p_items: cartItems.map((c) => ({ id: c.menuItem.dbId, qty: c.quantity, note: c.notes })),
+        });
+        if (!error && !data?.error) {
+          success = true;
+        }
+      } catch {
+        // lanjut ke direct insert fallback
+      }
 
-          if (openSess) {
-            activeSessionId = openSess.session_id;
-          } else {
-            const { data: newSess } = await supabase
+      // 2. Fallback direct insert jika RPC belum ada di remote Supabase
+      if (!success) {
+        try {
+          let activeSessionId = tbl.sessionId;
+          if (!activeSessionId) {
+            const { data: openSess } = await supabase
               .from('table_sessions')
-              .insert({
-                table_id: tbl.dbId,
-                guest_count: orderGuestCount || 1,
-                customer_name: orderCustomerName || null,
-              })
               .select('session_id')
+              .eq('table_id', tbl.dbId)
+              .is('closed_at', null)
+              .maybeSingle();
+
+            if (openSess) {
+              activeSessionId = openSess.session_id;
+            } else {
+              const { data: newSess } = await supabase
+                .from('table_sessions')
+                .insert({
+                  table_id: tbl.dbId,
+                  guest_count: orderGuestCount || 1,
+                  customer_name: targetCustomerName,
+                })
+                .select('session_id')
+                .single();
+              if (newSess) {
+                activeSessionId = newSess.session_id;
+              }
+            }
+          }
+
+          if (activeSessionId) {
+            const orderNumber = `P${Date.now().toString().slice(-4)}`;
+            const { data: createdOrder, error: ordErr } = await supabase
+              .from('orders')
+              .insert({
+                order_number: orderNumber,
+                session_id: activeSessionId,
+                order_source: 'staff',
+                order_status: draft ? 'draft' : 'submitted',
+                total,
+                customer_name: targetCustomerName,
+                note: finalKitchenNote || '',
+              })
+              .select('order_id, order_number')
               .single();
-            if (newSess) {
-              activeSessionId = newSess.session_id;
+
+            if (!ordErr && createdOrder) {
+              success = true;
+              const itemsPayload = cartItems
+                .filter((c) => c.menuItem.dbId)
+                .map((c) => ({
+                  order_id: createdOrder.order_id,
+                  product_id: c.menuItem.dbId,
+                  product_name: c.menuItem.name,
+                  unit_price: c.menuItem.price,
+                  quantity: c.quantity,
+                  subtotal: c.menuItem.price * c.quantity,
+                  note: c.notes || null,
+                }));
+              if (itemsPayload.length > 0) {
+                await supabase.from('order_items').insert(itemsPayload);
+              }
             }
           }
+        } catch (e) {
+          console.warn('Direct order insert fallback encountered issue, fallback to reactive local order state', e);
         }
-
-        if (activeSessionId) {
-          const orderNumber = `P${Date.now().toString().slice(-4)}`;
-          const { data: createdOrder, error: ordErr } = await supabase
-            .from('orders')
-            .insert({
-              order_number: orderNumber,
-              session_id: activeSessionId,
-              order_source: 'staff',
-              order_status: draft ? 'draft' : 'submitted',
-              total,
-              customer_name: orderCustomerName || null,
-              note: kitchenGeneralNote || '',
-            })
-            .select('order_id, order_number')
-            .single();
-
-          if (!ordErr && createdOrder) {
-            success = true;
-            const itemsPayload = cartItems
-              .filter((c) => c.menuItem.dbId)
-              .map((c) => ({
-                order_id: createdOrder.order_id,
-                product_id: c.menuItem.dbId,
-                product_name: c.menuItem.name,
-                unit_price: c.menuItem.price,
-                quantity: c.quantity,
-                subtotal: c.menuItem.price * c.quantity,
-                note: c.notes || null,
-              }));
-            if (itemsPayload.length > 0) {
-              await supabase.from('order_items').insert(itemsPayload);
-            }
-          }
-        }
-      } catch (e) {
-        console.warn('Direct order insert fallback encountered issue, fallback to reactive local order state', e);
       }
     }
 
@@ -1238,21 +1276,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newOrderObj = {
       order_id: newOrderId,
       order_number: newOrderNumber,
-      order_status: draft ? 'pending' : 'cooking',
-      order_source: 'POS',
+      order_status: draft ? 'draft' : 'submitted',
+      order_source: 'staff',
       total,
-      note: kitchenGeneralNote,
+      note: finalKitchenNote,
       created_at: new Date().toISOString(),
       profiles: { full_name: currentUser.name || 'Kasir' },
       order_items: newOrderItems,
     };
 
     setSessions((prev) => {
+      if (isTakeaway) {
+        return [...prev, {
+          session_id: newOrderId,
+          table_id: 0,
+          is_takeaway: true,
+          takeaway_queue: queueLabel,
+          customer_name: targetCustomerName,
+          guest_count: 1,
+          opened_at: new Date().toISOString(),
+          orders: [newOrderObj],
+        }];
+      }
+
+      if (!tbl) return prev;
       const existing = prev.find((s) => s.table_id === tbl.dbId);
       if (existing) {
         return prev.map((s) => (s.table_id === tbl.dbId ? {
           ...s,
-          customer_name: orderCustomerName || s.customer_name || 'Tamu',
+          customer_name: targetCustomerName,
           guest_count: orderGuestCount,
           orders: [...(s.orders || []), newOrderObj],
         } : s));
@@ -1260,7 +1312,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return [...prev, {
           session_id: newOrderId,
           table_id: tbl.dbId,
-          customer_name: orderCustomerName || 'Tamu',
+          customer_name: targetCustomerName,
           guest_count: orderGuestCount,
           opened_at: new Date().toISOString(),
           orders: [newOrderObj],
@@ -1271,23 +1323,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!draft) {
       setCartItems([]);
       setKitchenGeneralNote('');
+      setOrderCustomerName('');
       setOrderSecondaryTables([]);
+      setOrderType('dine_in');
     }
 
     playDingSound();
     showToast(
       draft
-        ? `Draf pesanan Meja ${formattedTableLabel} disimpan`
-        : `Pesanan Meja ${formattedTableLabel} sukses dikirim ke Kitchen!`,
+        ? `Draf pesanan ${isTakeaway ? queueLabel : `Meja ${formattedTableLabel}`} disimpan`
+        : `Pesanan ${isTakeaway ? queueLabel : `Meja ${formattedTableLabel}`} sukses dikirim ke Kitchen!`,
       draft ? 'info' : 'success'
     );
 
     refresh().catch(() => {});
+    return true;
   };
-  const sendOrderToKitchen = () => { submitStaffOrder(false); };
-  const saveDraftOrder = () => { submitStaffOrder(true); };
+  const sendOrderToKitchen = async () => submitStaffOrder(false);
+  const saveDraftOrder = async () => submitStaffOrder(true);
 
   // ---------- aksi: pembayaran ----------
+  // DESIGN.md §6.1: Toast sukses, struk, perubahan state hanya setelah RPC berhasil.
+  // DESIGN.md §6.2: Tidak ada pembaruan optimistik untuk uang atau status order.
   const settlePayment = async (
     billId: string,
     method: PayMethod | 'Split Payment',
@@ -1297,15 +1354,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const target = bills.find((b) => b.id === billId);
     if (!target) return;
 
-    if (target.isAllServed === false) {
-      showToast('Tidak bisa bayar! Masih ada pesanan di dapur yang belum disajikan.', 'warning');
-      return;
-    }
-
     const tendered = amountTendered || target.total;
     const change = Math.max(0, tendered - target.total);
 
-    // Hitung porsi tunai untuk update laci kasir otomatis
+    // 1. Eksekusi pembayaran ke database TERLEBIH DAHULU (jika terdaftar di DB session)
+    if (typeof target.sessionId === 'number' && target.sessionId < 1000000000) {
+      try {
+        if (method !== 'Split Payment') {
+          const { data, error } = await supabase.rpc('pay_session', {
+            p_session: target.sessionId,
+            p_method: METHOD_TO_DB[method as PayMethod] || 'cash',
+            p_received: tendered,
+          });
+          if (error || data?.error) {
+            showToast(error?.message || data?.error || 'Gagal memproses pembayaran', 'warning');
+            return;
+          }
+        }
+      } catch (e) {
+        showToast('Koneksi bermasalah, pembayaran gagal. Coba lagi.', 'warning');
+        return;
+      }
+    }
+
+    // 2. SETELAH DB confirm berhasil, baru update state lokal
+
+    // Hitung porsi tunai untuk update laci kasir
     let cashAdded = 0;
     if (method === 'Tunai') {
       cashAdded = target.total;
@@ -1329,17 +1403,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     }
 
-    // Eksekusi pembayaran ke database
-    try {
-      if (method !== 'Split Payment') {
-        await supabase.rpc('pay_session', {
-          p_session: target.sessionId,
-          p_method: METHOD_TO_DB[method as PayMethod] || 'cash',
-          p_received: tendered,
-        });
-      }
-    } catch {}
-
     const paidBill: BillItem = {
       ...target,
       status: 'lunas',
@@ -1360,59 +1423,141 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSessions((prev) => prev.filter((s) => s.session_id !== target.sessionId));
 
     playDingSound();
-    showToast(`Pembayaran Meja ${target.tableNumber} LUNAS via ${method}!`, 'success');
+    showToast(`Pembayaran ${target.isTakeaway ? target.tableNumber : `Meja ${target.tableNumber}`} LUNAS via ${method}!`, 'success');
   };
 
   // ---------- aksi: dapur ----------
+
   const advanceTicketStatus = async (ticketId: string) => {
     const rawOrderId = ticketId.replace('-food', '').replace('-drink', '');
+
+    // Optimistic update pakai status DB yang valid: submitted → preparing → ready → served
     setSessions((prev) => prev.map((s) => ({
       ...s,
       orders: (s.orders || []).map((o: any) => {
-        if (String(o.order_id) === String(rawOrderId)) {
-          const cur = o.order_status;
-          const nextStatus = cur === 'pending' || cur === 'submitted' ? 'cooking' : cur === 'cooking' || cur === 'preparing' ? 'ready' : 'served';
-          return { ...o, order_status: nextStatus, ready_at: nextStatus === 'ready' ? new Date().toISOString() : o.ready_at };
-        }
-        return o;
-      })
+        if (String(o.order_id) !== String(rawOrderId)) return o;
+        const cur = o.order_status;
+        const nextStatus =
+          cur === 'submitted' ? 'preparing' :
+          cur === 'preparing' ? 'ready' :
+          'served';
+        return { ...o, order_status: nextStatus, ready_at: nextStatus === 'ready' ? new Date().toISOString() : o.ready_at };
+      }),
     })));
 
     try {
-      await supabase.rpc('advance_order', { p_order: Number(rawOrderId) });
-    } catch {}
+      const { data, error } = await supabase.rpc('advance_order', { p_order: Number(rawOrderId) });
+      if (error || data?.error) {
+        // Balik optimistic update jika RPC gagal — trigger refresh untuk sinkronisasi DB
+        showToast(error?.message || data?.error || 'Gagal memperbarui status pesanan', 'warning');
+        await refresh();
+        return;
+      }
+    } catch (e) {
+      showToast('Koneksi bermasalah, coba lagi', 'warning');
+      await refresh();
+      return;
+    }
     playDingSound();
     showToast('Status pesanan diperbarui');
   };
 
   const confirmCustomerOrder = async (ticketId: string) => {
     const rawOrderId = ticketId.replace('-food', '').replace('-drink', '');
+
+    // Optimistic update ke 'submitted' (status DB yang valid setelah konfirmasi)
     setSessions((prev) => prev.map((s) => ({
       ...s,
       orders: (s.orders || []).map((o: any) => {
         if (String(o.order_id) === String(rawOrderId)) {
-          return { ...o, order_status: 'cooking' };
+          return { ...o, order_status: 'submitted' };
         }
         return o;
-      })
+      }),
     })));
+
     try {
-      await supabase.from('orders').update({ order_status: 'cooking' }).eq('order_id', Number(rawOrderId));
-    } catch {}
+      const stored = localStorage.getItem('rg_mock_sessions_v2');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        const updated = parsed.map((s: any) => ({
+          ...s,
+          orders: (s.orders || []).map((o: any) => (
+            String(o.order_id) === String(rawOrderId) ? { ...o, order_status: 'submitted' } : o
+          )),
+        }));
+        localStorage.setItem('rg_mock_sessions_v2', JSON.stringify(updated));
+      }
+    } catch {
+      /* ignore storage sync */
+    }
+
+    try {
+      // Gunakan advance_order: pending → submitted adalah transisi yang didukung DB
+      const { data, error } = await supabase.rpc('advance_order', { p_order: Number(rawOrderId) });
+      if (error || data?.error) {
+        // Jangan reset error jika fallback session lokal aktif
+        if (Number(rawOrderId) < 1000000000) {
+          showToast(error?.message || data?.error || 'Gagal mengkonfirmasi pesanan', 'warning');
+          await refresh();
+          return;
+        }
+      }
+    } catch (e) {
+      if (Number(rawOrderId) < 1000000000) {
+        showToast('Koneksi bermasalah, coba lagi', 'warning');
+        await refresh();
+        return;
+      }
+    }
     playDingSound();
     showToast('Pesanan pelanggan berhasil dikonfirmasi dan dikirim ke dapur!', 'success');
   };
 
   const rejectCustomerOrder = async (orderId: string) => {
     const rawOrderId = orderId.replace('-food', '').replace('-drink', '');
+
+    // Optimistic: sembunyikan dari UI dulu
     setSessions((prev) => prev.map((s) => ({
       ...s,
-      orders: (s.orders || []).filter((o: any) => String(o.order_id) !== String(rawOrderId))
+      orders: (s.orders || []).filter((o: any) => String(o.order_id) !== String(rawOrderId)),
     })));
+
     try {
-      await supabase.from('orders').update({ order_status: 'cancelled' }).eq('order_id', Number(rawOrderId));
-    } catch {}
-    showToast('Pesanan fiktif/batal berhasil ditolak', 'info');
+      const stored = localStorage.getItem('rg_mock_sessions_v2');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        const updated = parsed.map((s: any) => ({
+          ...s,
+          orders: (s.orders || []).filter((o: any) => String(o.order_id) !== String(rawOrderId)),
+        }));
+        localStorage.setItem('rg_mock_sessions_v2', JSON.stringify(updated));
+      }
+    } catch {
+      /* ignore storage sync */
+    }
+
+    try {
+      // Status 'cancelled' belum ada di DB schema; gunakan direct update sebagai fallback
+      // sampai RPC reject_order tersedia (DESIGN.md PU-02 / ARCHITECTURE.md D12)
+      const { error } = await supabase
+        .from('orders')
+        .update({ order_status: 'draft' })
+        .eq('order_id', Number(rawOrderId))
+        .eq('order_status', 'pending'); // Guard: hanya tolak jika masih pending
+      if (error && Number(rawOrderId) < 1000000000) {
+        showToast(error.message || 'Gagal menolak pesanan', 'warning');
+        await refresh();
+        return;
+      }
+    } catch (e) {
+      if (Number(rawOrderId) < 1000000000) {
+        showToast('Koneksi bermasalah, coba lagi', 'warning');
+        await refresh();
+        return;
+      }
+    }
+    showToast('Pesanan self-order ditolak', 'info');
   };
 
   // ---------- aksi: menu ----------
@@ -1480,8 +1625,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AppContext.Provider value={{
       currentUser, currentRole, setCurrentRole, isLoggedIn, authLoading, dataReady, login, logout,
       activeView, setActiveView, viewportMode, setViewportMode, outletName, setOutletName,
-      tables, selectedTableId, setSelectedTableId, updateTable, addTable, deleteTable, clearTableSession,
-      cartItems, orderTableNumber, setOrderTableNumber, orderSecondaryTables, setOrderSecondaryTables,
+      tables, selectedTableId, setSelectedTableId, updateTable, addTable, deleteTable, rotateTableQr, clearTableSession,
+      cartItems, orderType, setOrderType, takeawayNextQueue, orderTableNumber, setOrderTableNumber, orderSecondaryTables, setOrderSecondaryTables,
       orderCustomerName, setOrderCustomerName, orderGuestCount, setOrderGuestCount,
       kitchenGeneralNote, setKitchenGeneralNote, addToCart, removeFromCart, updateCartQuantity, updateCartItemNotes, clearCart,
       sendOrderToKitchen, saveDraftOrder,

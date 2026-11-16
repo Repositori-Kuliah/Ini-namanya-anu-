@@ -37,7 +37,9 @@ interface AppContextType {
   addToCart: (item: MenuItem, customization: CustomizationSelection, qty: number) => void;
   updateCartItemDetails: (cartItemId: string, item: MenuItem, customization: CustomizationSelection, qty: number) => void;
   updateCartItemQty: (cartItemId: string, delta: number) => void;
+  updateCartQuantity?: (cartItemId: string, delta: number) => void;
   removeCartItem: (cartItemId: string) => void;
+  removeFromCart?: (cartItemId: string) => void;
   quickAddToCart: (item: MenuItem) => void;
   activeOrder: ActiveOrder | null;
   submitOrder: (paymentMethod: 'qris' | 'cashier', notes: string) => Promise<boolean>;
@@ -52,6 +54,15 @@ interface AppContextType {
   formatRupiah: (amount: number) => string;
   tableNotes: string;
   setTableNotes: (notes: string) => void;
+  customerName: string;
+  setCustomerName: (name: string) => void;
+  secondaryTables: string[];
+  setSecondaryTables: React.Dispatch<React.SetStateAction<string[]>>;
+  availableTables: string[];
+  kitchenGeneralNote: string;
+  setKitchenGeneralNote: (note: string) => void;
+  orderType: 'dine_in' | 'takeaway';
+  setOrderType: (type: 'dine_in' | 'takeaway') => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -99,11 +110,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
   const cartKey = `rawon_gusti_cart_${token}`;
 
-  const [currentScreen, setCurrentScreen] = useState<ScreenType>('welcome');
+  const [currentScreen, setCurrentScreen] = useState<ScreenType>('menu');
   const [tableState, setTableState] = useState<AppContextType['tableState']>('loading');
   const [selectedTable, setSelectedTable] = useState('');
   const [tableArea, setTableArea] = useState('');
-  const [guestsCount, setGuestsCount] = useState(2);
+  const [guestsCount, setGuestsCount] = useState(1);
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [menuCategories, setMenuCategories] = useState<MenuCategory[]>([]);
@@ -120,6 +131,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [checkoutRequested, setCheckoutRequested] = useState(false);
   const [checkoutCooldown, setCheckoutCooldown] = useState(0);
   const [tableNotes, setTableNotes] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [secondaryTables, setSecondaryTables] = useState<string[]>([]);
+  const [availableTables, setAvailableTables] = useState<string[]>([]);
+  const [kitchenGeneralNote, setKitchenGeneralNote] = useState('');
+  const [orderType, setOrderType] = useState<'dine_in' | 'takeaway'>('dine_in');
   const [toast, setToast] = useState<ToastState>({ show: false, message: '', icon: 'check_circle' });
 
   // Cooldown countdown timers
@@ -150,11 +166,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     (async () => {
       try {
-        const [t, cats, prods, ex] = await Promise.all([
+        const [t, cats, prods, ex, allTbls] = await Promise.all([
           supabase.rpc('get_table', { p_token: token }),
           supabase.from('categories').select('*').order('category_id'),
           supabase.from('products').select('*, categories(name)').order('product_id'),
           supabase.from('extras').select('*').eq('is_available', true).order('extra_id'),
+          supabase.from('tables').select('table_number').eq('is_active', true).order('table_number'),
         ]);
         if (prods.error) { setTableState('error'); return; }
 
@@ -167,8 +184,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
 
         if (!row) { setTableState('invalid'); return; }
-        setSelectedTable(String(row.table_number).padStart(2, '0'));
+        const tblNum = String(row.table_number).padStart(2, '0');
+        setSelectedTable(tblNum);
         setTableArea(row.area || 'Area Pendopo');
+
+        // Deteksi bawa pulang vs santap di tempat
+        if (row.area?.toLowerCase().includes('takeaway') || token.toLowerCase().includes('takeaway')) {
+          setOrderType('takeaway');
+        } else {
+          setOrderType('dine_in');
+        }
+
+        if (allTbls.data) {
+          setAvailableTables(allTbls.data.map((at: any) => String(at.table_number).padStart(2, '0')));
+        }
         setMenuCategories((cats.data ?? []).map((c: any) => ({ id: c.name, label: c.name })));
         const items: MenuItem[] = (prods.data ?? []).filter((p: any) => p.is_available).map((p: any) => {
           const cat = p.categories?.name ?? '';
@@ -360,9 +389,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const idempotencyKey = `ord-${token}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       let orderPlaced = false;
 
+      // Gabungkan catatan pelanggan: nama tamu, meja gabung, catatan koki
+      const noteParts: string[] = [];
+      if (customerName.trim()) noteParts.push(`Tamu: ${customerName.trim()}`);
+      if (secondaryTables.length > 0) noteParts.push(`Gabung Meja: ${secondaryTables.join(', ')}`);
+      if (kitchenGeneralNote.trim()) noteParts.push(kitchenGeneralNote.trim());
+      if (notes && notes.trim() && !noteParts.includes(notes.trim())) noteParts.push(notes.trim());
+      const compiledNotes = noteParts.join(' • ');
+
       try {
         const { data, error } = await supabase.rpc('place_order', {
-          p_token: token, p_guests: guestsCount, p_note: notes, p_pay_pref: paymentMethod,
+          p_token: token, p_guests: guestsCount, p_note: compiledNotes, p_pay_pref: paymentMethod,
           p_idempotency_key: idempotencyKey,
           p_items: cartItems.map((c) => ({
             id: Number(c.menuItemId), qty: c.quantity, note: noteOf(c.customization),
@@ -392,7 +429,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           orderTime: timeStr,
           orderTimestamp: now.getTime(),
           items: [...cartItems],
-          tableNotes: notes,
+          tableNotes: compiledNotes,
           paymentMethod: 'cashier',
           paymentStatus: 'MENUNGGU DI KASIR',
           statusStage: 1,
@@ -497,8 +534,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       menuItems, menuCategories, extraOptions, cartItems, cartCount, cartSubtotal, cartServiceFee, cartTax, cartTotal,
       selectedMenuItem, setSelectedMenuItem, editingCartItem, openDetail, editCartItem, clearEditingCartItem,
       addToCart, updateCartItemDetails, updateCartItemQty, removeCartItem, quickAddToCart,
+      updateCartQuantity: updateCartItemQty, removeFromCart: removeCartItem,
       activeOrder, submitOrder, waiterCalled, waiterCooldown, callWaiter, checkoutRequested, checkoutCooldown, requestCheckout,
       toast, showToast, formatRupiah, tableNotes, setTableNotes,
+      customerName, setCustomerName, secondaryTables, setSecondaryTables,
+      availableTables, kitchenGeneralNote, setKitchenGeneralNote, orderType, setOrderType,
     }}>
       {children}
     </AppContext.Provider>

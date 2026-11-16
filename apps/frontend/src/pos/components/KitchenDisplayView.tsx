@@ -31,33 +31,31 @@ export const KitchenDisplayView: React.FC = () => {
     }
   };
 
-  const handleAdvance = (ticket: KitchenTicket) => {
+  const handleAdvance = (ticket: KitchenTicket, itemType?: 'food' | 'drink') => {
     playKitchenChime();
     advanceTicketStatus(ticket.id);
+    const typeLabel = itemType === 'drink' ? 'Minuman' : itemType === 'food' ? 'Makanan' : 'Pesanan';
+    const actionLabel = itemType === 'drink' ? 'mulai dibuat' : 'mulai dimasak';
+
     if (ticket.status === 'new') {
-      showToast(`${ticket.tableNumber}: Mulai dimasak`, 'info');
+      showToast(`${ticket.tableNumber}: ${typeLabel} ${actionLabel}`, 'info');
     } else if (ticket.status === 'preparing') {
-      showToast(`${ticket.tableNumber}: Siap diantar waiter`, 'success');
+      showToast(`${ticket.tableNumber}: ${typeLabel} siap diantar waiter`, 'success');
     } else if (ticket.status === 'ready') {
       showToast(`${ticket.tableNumber}: Selesai disajikan ke meja`, 'success');
     }
   };
 
-  const formatTimer = (seconds: number) => {
-    if (seconds >= 3600) {
-      const hours = Math.floor(seconds / 3600);
-      const mins = Math.floor((seconds % 3600) / 60);
-      return `${hours}j ${String(mins).padStart(2, '0')}m`;
-    }
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-  };
-
   // Filter stasiun dapur (Dapur Utama vs Bar Minuman)
-  const stationTickets = kitchenTickets.filter((t) =>
-    stationFilter === 'Semua Stasiun' || stationFilter === 'Semua Bagian' ? true : t.station === stationFilter
-  );
+  const stationTickets = kitchenTickets.filter((t) => {
+    if (stationFilter === 'Dapur Utama (Makanan)') {
+      return t.items.some((i) => !i.isDrink);
+    }
+    if (stationFilter === 'Bar Minuman') {
+      return t.items.some((i) => i.isDrink);
+    }
+    return true;
+  });
 
   const newTickets = stationTickets.filter((t) => t.status === 'new');
   const preparingTickets = stationTickets.filter((t) => t.status === 'preparing');
@@ -65,18 +63,28 @@ export const KitchenDisplayView: React.FC = () => {
 
   /* ── Kartu Tiket Dapur (Sederhana, Bersih, Terbaca Jelas dari Jauh) ── */
   const renderTicketCard = (ticket: KitchenTicket) => {
-    const isOverdue = ticket.elapsedSeconds >= 900; // >15 menit
     const isNew = ticket.status === 'new';
     const isPrep = ticket.status === 'preparing';
     const isReady = ticket.status === 'ready';
+
+    const isFoodOnlyStation = stationFilter === 'Dapur Utama (Makanan)';
+    const isDrinkOnlyStation = stationFilter === 'Bar Minuman';
+
+    // 1 Card per meja/antrean, tetapi item DIPISAH antara Makanan dan Minuman
+    const foodItems = ticket.items.filter((item) => !item.isDrink);
+    const drinkItems = ticket.items.filter((item) => item.isDrink);
+
+    const displayFoodItems = isDrinkOnlyStation ? [] : foodItems;
+    const displayDrinkItems = isFoodOnlyStation ? [] : drinkItems;
+
+    // Jika filter stasiun khusus aktif dan tidak ada item, lewati
+    if (displayFoodItems.length === 0 && displayDrinkItems.length === 0) return null;
 
     return (
       <article
         key={ticket.id}
         className={`bg-white rounded-xl border p-4 flex flex-col justify-between shadow-xs transition-shadow ${
-          isOverdue
-            ? 'border-red-600 ring-2 ring-red-500/30'
-            : isPrep
+          isPrep
             ? 'border-[#994703]'
             : isReady
             ? 'border-[#3d1018] ring-1 ring-[#3d1018]/20'
@@ -84,100 +92,153 @@ export const KitchenDisplayView: React.FC = () => {
         }`}
       >
         <div>
-          {/* Baris Atas: Nomor Meja & Timer */}
-          <div className="flex items-start justify-between pb-2 border-b border-[#ebe8e3]">
-            <div>
-              <span className="text-[10px] font-bold text-[#847374] uppercase tracking-wider block">
-                {ticket.type} #{ticket.ticketNumber}
+          {/* Baris Atas: Nomor Meja / Antrean */}
+          <div className="pb-2 border-b border-[#ebe8e3]">
+            <h3 className="text-2xl sm:text-3xl font-extrabold text-[#1c1c19] tracking-tight leading-none">
+              {ticket.tableNumber}
+            </h3>
+            {ticket.customerName && ticket.customerName !== 'Tamu' && ticket.customerName !== 'Pelanggan Bungkus' && (
+              <span className="text-xs text-[#524344] font-semibold block mt-1.5">
+                {ticket.customerName}
               </span>
-              <h3 className="text-2xl sm:text-3xl font-extrabold text-[#1c1c19] tracking-tight leading-none mt-0.5">
-                {ticket.tableNumber}
-              </h3>
-            </div>
-
-            <div className="text-right">
-              <span
-                className={`inline-block font-mono font-bold text-sm px-2.5 py-1 rounded tabular-nums ${
-                  isOverdue
-                    ? 'bg-red-700 text-white'
-                    : isPrep
-                    ? 'bg-[#ffdbc9] text-[#753400]'
-                    : isReady
-                    ? 'bg-[#f0ede9] text-[#3d1018]'
-                    : 'bg-[#f0ede9] text-[#1c1c19]'
-                }`}
-              >
-                {formatTimer(ticket.elapsedSeconds)}
-              </span>
-              {isOverdue && (
-                <span className="text-[10px] text-red-700 font-bold block mt-0.5 uppercase tracking-wide">
-                  &gt;15 Menit
-                </span>
-              )}
-            </div>
+            )}
           </div>
 
-          {/* Banner Catatan Meja / Pesanan Jika Ada */}
-          {ticket.notesBanner && (
-            <div className="mt-2.5 p-2 rounded bg-amber-50 border border-amber-200 text-xs text-amber-950 font-medium">
-              <strong>Catatan:</strong> {ticket.notesBanner}
+          {/* Banner Catatan Meja / Pesanan Jika Ada (Hanya jika kasir memberi catatan khusus) */}
+          {ticket.notesBanner && ticket.notesBanner.trim() && (
+            <div className="mt-2.5 p-2 rounded-lg bg-[#fcf9f4] border border-[#ebe8e3] text-xs text-[#524344]">
+              <span className="font-bold text-[#1c1c19]">Catatan: </span>
+              {ticket.notesBanner.replace(/^Catatan:\s*/i, '')}
             </div>
           )}
 
-          {/* Daftar Menu Dipesan (Besar & Kontras Tinggi) */}
-          <ul className="py-3 space-y-2 text-sm text-[#1c1c19]">
-            {ticket.items.map((item, idx) => (
-              <li key={idx} className="flex items-start justify-between gap-2">
-                <div className="flex items-start gap-2 min-w-0">
-                  <span className="font-extrabold text-base text-[#3d1018] tabular-nums shrink-0">
-                    {item.quantity}×
-                  </span>
-                  <div className="min-w-0">
-                    <span className="font-bold text-sm sm:text-base text-[#1c1c19] block leading-snug">
-                      {item.name}
-                    </span>
-                    {item.notes && (
-                      <span className="text-xs text-[#994703] font-medium block">
-                        Catatan: {item.notes}
+          {/* Daftar Menu Dipesan (DIPISAH garis biasa antara Makanan & Minuman) */}
+          <div className="py-2.5 space-y-2.5 text-sm text-[#1c1c19]">
+            {/* Bagian MAKANAN */}
+            {displayFoodItems.length > 0 && (
+              <ul className="space-y-2 pl-0.5">
+                {displayFoodItems.map((item, idx) => (
+                  <li key={`food-${idx}`} className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2 min-w-0">
+                      <span className="font-extrabold text-base text-[#3d1018] tabular-nums shrink-0">
+                        {item.quantity}×
                       </span>
-                    )}
-                  </div>
-                </div>
+                      <div className="min-w-0">
+                        <span className="font-bold text-sm sm:text-base text-[#1c1c19] block leading-snug">
+                          {item.name}
+                        </span>
+                        {item.notes && (
+                          <span className="text-xs text-[#994703] font-medium block">
+                            Catatan: {item.notes}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
 
-                {isReady && (
-                  <span className="text-[11px] font-bold text-[#3d1018] bg-[#f0ede9] px-2 py-0.5 rounded shrink-0">
-                    Siap
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
+            {/* Garis Pemisah Biasa Antara Makanan & Minuman */}
+            {displayFoodItems.length > 0 && displayDrinkItems.length > 0 && (
+              <div className="border-t border-[#ebe8e3] my-2" />
+            )}
+
+            {/* Bagian MINUMAN */}
+            {displayDrinkItems.length > 0 && (
+              <ul className="space-y-2 pl-0.5">
+                {displayDrinkItems.map((item, idx) => (
+                  <li key={`drink-${idx}`} className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2 min-w-0">
+                      <span className="font-extrabold text-base text-[#1e613b] tabular-nums shrink-0">
+                        {item.quantity}×
+                      </span>
+                      <div className="min-w-0">
+                        <span className="font-bold text-sm sm:text-base text-[#1c1c19] block leading-snug">
+                          {item.name}
+                        </span>
+                        {item.notes && (
+                          <span className="text-xs text-[#994703] font-medium block">
+                            Catatan: {item.notes}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
 
-        {/* Tombol Tindakan Alur Operasional */}
+        {/* Tombol Tindakan: Dipisah untuk Makanan (Mulai Masak) & Minuman (Mulai Membuat) */}
         <div className="pt-3 border-t border-[#ebe8e3] mt-1">
-          <button
-            type="button"
-            onClick={() => handleAdvance(ticket)}
-            className={`w-full py-3 px-4 rounded-xl text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-[0.99] ${
-              isNew
-                ? 'bg-[#3d1018] hover:bg-[#58252c]'
-                : isPrep
-                ? 'bg-[#994703] hover:bg-[#7a3200]'
-                : 'bg-[#58252c] hover:bg-[#3d1018]'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[18px]">
-              {isNew ? 'skillet' : isPrep ? 'notifications_active' : 'check_circle'}
-            </span>
-            <span>
-              {isNew
-                ? 'Mulai Masak'
-                : isPrep
-                ? 'Siap Diantar'
-                : 'Sudah Diantar'}
-            </span>
-          </button>
+          {displayFoodItems.length > 0 && displayDrinkItems.length > 0 ? (
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => handleAdvance(ticket, 'food')}
+                className={`py-2.5 px-3 rounded-xl text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.99] ${
+                  isNew
+                    ? 'bg-[#3d1018] hover:bg-[#58252c]'
+                    : isPrep
+                    ? 'bg-[#994703] hover:bg-[#7a3200]'
+                    : 'bg-[#58252c] hover:bg-[#3d1018]'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">
+                  {isNew ? 'skillet' : isPrep ? 'notifications_active' : 'check_circle'}
+                </span>
+                <span>
+                  {isNew ? 'Mulai Masak' : isPrep ? 'Makanan Siap' : 'Selesai'}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleAdvance(ticket, 'drink')}
+                className={`py-2.5 px-3 rounded-xl text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.99] ${
+                  isNew
+                    ? 'bg-[#1e613b] hover:bg-[#164a2c]'
+                    : isPrep
+                    ? 'bg-[#994703] hover:bg-[#7a3200]'
+                    : 'bg-[#58252c] hover:bg-[#3d1018]'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">
+                  {isNew ? 'local_bar' : isPrep ? 'notifications_active' : 'check_circle'}
+                </span>
+                <span>
+                  {isNew ? 'Mulai Membuat' : isPrep ? 'Minuman Siap' : 'Selesai'}
+                </span>
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => handleAdvance(ticket, displayDrinkItems.length > 0 ? 'drink' : 'food')}
+              className={`w-full py-3 px-4 rounded-xl text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-[0.99] ${
+                isNew
+                  ? displayDrinkItems.length > 0 ? 'bg-[#1e613b] hover:bg-[#164a2c]' : 'bg-[#3d1018] hover:bg-[#58252c]'
+                  : isPrep
+                  ? 'bg-[#994703] hover:bg-[#7a3200]'
+                  : 'bg-[#58252c] hover:bg-[#3d1018]'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                {isNew
+                  ? displayDrinkItems.length > 0 ? 'local_bar' : 'skillet'
+                  : isPrep ? 'notifications_active' : 'check_circle'}
+              </span>
+              <span>
+                {isNew
+                  ? displayDrinkItems.length > 0 ? 'Mulai Membuat' : 'Mulai Masak'
+                  : isPrep
+                  ? 'Siap Diantar'
+                  : 'Sudah Diantar'}
+              </span>
+            </button>
+          )}
         </div>
       </article>
     );

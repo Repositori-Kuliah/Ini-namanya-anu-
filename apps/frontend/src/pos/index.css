@@ -92,13 +92,17 @@ input::-ms-clear {
   display: none !important;
 }
 
-/* Print styling for thermal receipts */
+/* Print styling for thermal receipts & table QR stands */
 @media print {
-  body * {
+  /* Blank the app chrome only when a dedicated printable surface is on screen,
+     so printing other pages (e.g. the table list) never yields an empty sheet. */
+  :where(body:has(.printable-receipt-area), body:has(.printable-qr-area)) * {
     visibility: hidden !important;
   }
   .printable-receipt-area,
-  .printable-receipt-area * {
+  .printable-receipt-area *,
+  .printable-qr-area,
+  .printable-qr-area * {
     visibility: visible !important;
   }
   .printable-receipt-area {
@@ -113,6 +117,25 @@ input::-ms-clear {
     box-shadow: none !important;
     background: white !important;
     color: black !important;
+  }
+  /* Stand QR: A4, pojok kiri atas, margin aman 12 mm agar tidak terpotong */
+  .printable-qr-area {
+    position: absolute !important;
+    top: 12mm !important;
+    left: 12mm !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 100mm !important;
+    max-width: calc(100% - 24mm) !important;
+    margin: 0 !important;
+    padding: 8mm !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #fffdfa !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
   .no-print {
     display: none !important;

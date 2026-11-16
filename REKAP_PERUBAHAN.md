@@ -256,5 +256,161 @@ Dokumen ini merangkum seluruh pembaruan, perbaikan bug, penyesuaian tata letak (
 
 ---
 
+## 13. Audit Menyeluruh POS: Keamanan, Logika Transaksi, Koneksi DB & Refactoring Bersih
+
+Berdasarkan audit komprehensif kode frontend POS (`apps/frontend/src/pos/`) dengan acuan panduan teknis `DESIGN.md`, `ARCHITECTURE.md`, `TASK.md`, dan `DATABASE_AUDIT.md`:
+
+### A. Penguatan Keamanan (*Security Hardening*)
+- **Penghapusan Total Mock Fallback Akun Staf (`StaffManagementView.tsx`)**:
+  - Menghilangkan array hardcoded akun demo (`usr-admin`, `usr-kasir`, `usr-kitchen`, email `@rawongusti.test`) yang sebelumnya muncul ketika koneksi Supabase gagal.
+  - Menggantinya dengan status *error* jujur dan *empty state* yang informatif, sesuai mandat **DESIGN.md §6.4** (*"Tidak ada transaksi palsu dari fallback lokal"*).
+- **Pembersihan Cek Otorisasi Admin yang Rapuh (`StaffManagementView.tsx`)**:
+  - Menghapus pengecekan rapuh berbasis string email `editingStaff.email.includes('admin')` dan mock ID `usr-admin`.
+  - Otorisasi akun admin kini ditegakkan secara ketat dan bersih murni berdasarkan role otentik database: `editingStaff.role === 'admin'`.
+- **Integritas Transaksi Pembayaran Kasir (`AppContext.tsx` - `settlePayment`)**:
+  - Menghilangkan *optimistic update* pada laci kasir dan penanganan error kosong (`catch {}`).
+  - Alur pembayaran kini mengeksekusi RPC database `pay_session` terlebih dahulu; pencatatan uang masuk kasir (`cashierShift`), pencatatan struk (`saveRecentReceipt`), dan penutupan sesi meja lokal **HANYA** dieksekusi setelah database mengonfirmasi transaksi sukses, mematuhi **DESIGN.md §6.1 & §6.2**.
+- **Rotasi Token QR Kriptografis Persisten (`KelolaMejaView.tsx` & `AppContext.tsx` - `rotateTableQr`)**:
+  - Mengganti penggunaan `Math.random()` dengan `crypto.getRandomValues()` yang menghasilkan token acak 16-karakter heksadesimal dengan entropi tinggi (64-bit).
+  - Aksi "Generate Ulang QR Code Meja" kini secara nyata mengirim pembaruan `qr_token` ke tabel `tables` di Supabase, meregenerasi URL pemesanan pelanggan yang valid, dan menampilkan QR code terbaru secara instan per **ARCHITECTURE.md §8**.
+
+### B. Perbaikan Logika Backend & Sinkronisasi Database
+- **Sinkronisasi Filter Pesanan QR Pelanggan (`AppContext.tsx` - `pendingQrOrders`)**:
+  - Memperbaiki filter yang sebelumnya mencari status fiktif `'pending_confirmation'` atau `'menunggu_kasir'` (yang tidak ada di schema DB) menjadi status resmi PostgreSQL: `'pending'` dengan sumber `'qr'`.
+- **Isolasi Tiket Pesanan Dapur (`KitchenDisplayView.tsx` & `AppContext.tsx`)**:
+  - Menambahkan filter pengecualian status `'pending'` pada tiket dapur (`kitchenTickets`). Dapur kini tidak akan melihat pesanan mandiri pelanggan via QR sebelum diverifikasi dan dikonfirmasi kasir, sesuai **DESIGN.md §9**.
+- **Koreksi Transisi Status State Machine (`advanceTicketStatus` & `confirmCustomerOrder`)**:
+  - Menghapus penggunaan status fiktif frontend seperti `'cooking'`, menyelaraskannya dengan enum resmi database: `submitted` &rarr; `preparing` &rarr; `ready` &rarr; `served`.
+  - Fungsi `confirmCustomerOrder` kini memajukan pesanan QR yang berstatus `pending` ke antrean dapur `submitted` melalui RPC `advance_order` dengan mekanisme pemulihan data (*rollback refresh*) jika jaringan terputus.
+- **Pencegahan Sukses Semu pada Pemesanan Kasir (`PesananBaruView.tsx` & `AppContext.tsx`)**:
+  - Mengganti timer semu (`setTimeout`) dengan `await sendOrderToKitchen()` sejati, memastikan indikator sukses hanya menyala ketika pesanan benar-benar telah diterima oleh backend.
+
+### C. Efisiensi & Kualitas Kode (*Clean Code*)
+- **Penghapusan Alokasi Ulang Memori (`ROLE_MAP`)**: Memindahkan objek pemetaan role ke lingkup modul di luar komponen agar tidak dibuat ulang pada setiap siklus re-render.
+- **Stabilisasi Akses Cache Offline Master Data (`masterCacheRef`)**: Menggunakan `useRef` untuk inisialisasi pembacaan *local cache* agar tidak memicu pembacaan I/O `localStorage` berulang.
+- **Identifier Notifikasi Kriptografis**: Mengganti pembangkit ID Toast dari `Date.now() + Math.random()` menjadi `crypto.randomUUID()`.
+- **Konsolidasi Audio Feedback**: Menghilangkan duplikasi inisialisasi Web Audio API pada mutasi realtime dan menyatukannya ke dalam referensi `playDingSoundRef`.
+- **Verifikasi Kompilasi**: 100% lolos kompilasi Vite & TypeScript tanpa *warning* maupun *error* (`✓ built in 6.70s`).
+
+---
+
+## 14. Pembersihan Redundansi Informasi, Tata Letak Mobile Laporan & Manajemen QR Per Meja
+
+Pembaruan berdasarkan arahan penyempurnaan UX operasional:
+
+- **Pembersihan Header Rincian Tagihan Meja & Kartu Riwayat (`CheckoutView.tsx`)**:
+  - Menghapus badge redundan `[ ID: B-9 ]` yang sebelumnya menempel di sebelah judul `Meja 01` (baik pada panel samping PC desktop maupun pop-up modal mobile). Judul kini bersih dan fokus: cukup bertuliskan **`Meja 01`**, karena identitas ID bill sudah ditampilkan jelas pada daftar antrean sebelah kiri.
+  - Menghapus teks redundan `Detail >` pada kartu riwayat transaksi di versi mobile, sehingga sisi kanan kartu hanya menyisakan nominal Total Tebal dan tanggal/waktu transaksi yang rapi dan lapang.
+- **Penyelarasan Input Target Meja & Tamu (`PesananBaruView.tsx`)**:
+  - Mengubah label panjang *"Nama Tamu / Rombongan"* menjadi **`Nama Tamu`** saja (berlaku untuk PC & Mobile).
+  - Menerapkan pengunci tinggi label `h-4 leading-4 truncate whitespace-nowrap` pada ketiga kolom (`No. Meja Utama`, `Gabung Meja`, `Nama Tamu`). Ketiga kontrol input kini berada di garis horizontal yang rata dan sejajar presisi (*pixel-perfect alignment*) tanpa ada kotak yang turun ke bawah di layar HP.
+- **Pembersihan Header & Footer Tabel Laporan Transaksi (`LaporanView.tsx`)**:
+  - Menghapus subtitle redundan `• {metode} • {jumlah} transaksi` di bawah judul *"Rincian Transaksi Selesai"*. Subtitle kini bersih hanya menampilkan tanggal aktif yang dipilih.
+  - Menghapus total baris footer bawah tabel (`Total 0 transaksi lunas, Subtotal, PB1, Total`) yang redundan, karena ringkasan angka tersebut sudah disajikan secara jauh lebih jelas dan besar pada 4 kartu metrik utama di bagian atas halaman.
+- **Tampilan Daftar Kartu Vertikal Laporan di Mobile (`LaporanView.tsx`)**:
+  - Pada layar smartphone/mobile (`< md`), tabel 9 kolom yang sebelumnya memaksa kasir menggeser layar ke samping (*horizontal scroll*) kini digantikan oleh **Daftar Kartu Transaksi Vertikal (*Card List View*)**.
+  - Setiap kartu menampilkan: kode struk, waktu, badge metode bayar (`Tunai`/`QRIS`), nama meja, subtotal, total tebal, dan tombol pintasan cetak struk tanpa perlu digeser ke samping sama sekali.
+  - Pada layar PC desktop (`>= md`), tampilan tetap berupa tabel kolom lengkap seperti sedia kala.
+- **Manajemen QR Code Meja Mandiri 1 per 1 (`KelolaMejaView.tsx` & `QrCodeModal.tsx`)**:
+  - Menghilangkan tombol massal *"Unduh QR"* dari header utama kelola meja agar tampilan header lebih bersih dan fokus pada tombol `+ Tambah Meja`.
+  - Memindahkan akses QR ke dalam **Pop-up Edit Meja**:
+    - Tombol utama: **`Lihat & Cetak QR Meja`** (langsung membuka kartu stand QR meja tersebut).
+    - Tombol sekunder: **`Generate Ulang QR Code Meja`** (untuk regenerasi token kriptografis baru jika diperlukan).
+  - Melengkapi dialog `QrCodeModal` dengan tombol **`Unduh PNG`** dan **`Cetak Stand`**, memungkinkan pengunduhan file stiker QR meja secara satuan (1 per 1) sesuai kebutuhan riil restoran.
+
+---
+
+## 15. Penyelarasan Alur Pemesanan & Eliminasi Kebuntuan Antrean Meja Penuh
+
+Berdasarkan tinjauan arsitektur dan operasional lapangan, pemaksaan pesanan takeaway ke dalam dropdown nomor meja berpotensi memicu kebuntuan operasional (*deadlock*): jika seluruh meja fisik terisi penuh oleh tamu *dine-in*, constraint unik `table_sessions` (`one_open_session_per_table where closed_at is null`) akan mencegah pembuatan sesi takeaway baru atau menggabungkan tagihan bungkus ke tamu yang sedang makan.
+
+Oleh karena itu, form pemesanan disederhanakan kembali secara elegan:
+- **Penghapusan Segmented Switcher & Banner Redundan (`PesananBaruView.tsx`)**:
+  - Menghapus tombol *Santap di Tempat / Bawa Pulang*, banner teks kuning pengemasan, dan dropdown *Pos Antrean / Meja*.
+  - Mengembalikan layout **Target Meja & Tamu** ke bentuk ringkas 3 kolom presisi sejajar: **`[ No. Meja Utama ] [ Gabung Meja ] [ Nama Tamu ]`**.
+  - Mengembalikan tombol aksi utama ke standar: **`Kirim ke Kitchen (Rp ...)`**.
+- **Penanganan Bawa Pulang Alami Lewat Catatan (Zero-Conflict)**:
+  - Pelanggan yang ingin pesan bungkus/takeaway cukup dicatat melalui kolom **Catatan Khusus Kitchen** (misal ketik: *"Bungkus"* atau *"Takeaway"*) atau per-item menu.
+  - Tiket dapur dan laporan secara cerdas tetap mendeteksi kata kunci tersebut dan mengibarkan peringatan kemasan bungkus ke juru masak tanpa menyandera atau memblokir ketersediaan nomor meja fisik restoran.
+
+---
+
+## 16. Perbaikan Stabilitas Grafik Tren Penjualan & Penanganan Klik Backdrop (*Void*) Modal
+
+Berdasarkan laporan pengujian perangkat mobile:
+
+- **Stabilisasi Grafik Batang & Baseline Tanggal (`LaporanView.tsx` & `DashboardView.tsx`)**:
+  - **Penyebab tanggal naik-turun**: Sebelumnya batang dan label tanggal digabung dalam satu kontainer flex `items-end`. Ketika teks label minggu seperti `Mg 2 (8–14)` terpotong menjadi 2 baris pada layar sempit ponsel, tinggi kontainer bertambah sehingga dasar batang dan angka nominal di atasnya terdorong melompat ke atas (*jagged / staggered alignment*).
+  - **Solusi**: Memisahkan area batang dan area label ke dalam dua baris kontainer independen. Seluruh batang kini berdiri di atas garis dasar horizontal datar yang sama (`border-b border-[#ebe8e3]`). Baris label tanggal memiliki batas tinggi dan pemotongan teks rapi (`truncate block`), menjamin seluruh tanggal dan batang berada pada garis datar rata presisi.
+- **Kebijakan Klik Backdrop (*Void*) Modal (PC vs Mobile)**:
+  - **Di PC Desktop (`>= 1024px`)**: Pengguna dapat menutup modal secara cepat dan praktis dengan mengklik area luar (*void area*) dengan kursor mouse.
+  - **Di Mobile Smartphone (`< 1024px`)**: Fitur klik luar / void **sengaja dinonaktifkan** sesuai instruksi. Hal ini untuk mencegah pop-up tertutup secara tidak sengaja (*accidental dismissal*) saat kasir menyentuh layar sentuh atau sedang menggulir formulir. Di mobile, modal hanya bisa ditutup jika kasir secara sengaja menekan tombol `✕` (Close) atau tombol `Batal`.
+
+---
+
+## 17. Implementasi Sistem Antrean Bungkus Mandiri (Takeaway Queue) & Finalisasi Responsif
+
+Berdasarkan kesepakatan desain alur takeaway mandiri tanpa menyandera meja makan restoran:
+
+- **Sistem Antrean Bungkus Mandiri (`Antrean #01, #02, ...`)**:
+  - **Solusi Kebuntuan Meja Penuh**: Ketika seluruh meja makan (*dine-in*) penuh 100%, kasir tetap dapat melayani pesanan bawa pulang dengan lancar tanpa terhalang status meja makan.
+  - **Switcher Layanan di Pesanan Baru (`PesananBaruView.tsx`)**:
+    - **Santap di Tempat**: Menampilkan 3 kolom standar (`No. Meja Utama`, `Gabung Meja`, `Nama Tamu`).
+    - **Bawa Pulang**: Dropdown nomor meja & gabung meja disembunyikan sepenuhnya. Digantikan oleh lencana **Nomor Antrean Bungkus** otomatis (`Antrean #01`, `Antrean #02`, dst.) dan kolom input **Nama Pemesan / Panggilan** (misal: "Bpk. Budi", "Grab/Gojek", dll.).
+    - Tombol aksi otomatis berganti menjadi **`Kirim Pesanan Bungkus (Rp ...)`** dengan ikon `takeout_dining`.
+- **Penyederhanaan UI Antrean Bungkus (Bebas AI Slop & Elegan)**:
+  - **Pesanan Baru (`PesananBaruView.tsx`)**:
+    - Menghapus kotak kuning mencolok, ikon tiket berlebihan, dan paragraf penjelasan emoji yang mengotori form kasir.
+    - Menyatukan tata letak input Bawa Pulang ke dalam kisi 3 kolom yang identik dengan Santap di Tempat: `[ No. Antrean (#01) ]` (kolom 1) dan `[ Nama Pemesan ]` (kolom 2–3) menggunakan warna tema netral heritage (`#fcf9f4`, `#ebe8e3`), tanpa teks tutorial redundan.
+  - **Kitchen Display System (`KitchenDisplayView.tsx`)**:
+    - **Penghapusan Estimasi & Stopwatch Tiruan**: Menghapus timer stopwatch `00:00` dan label alert `>15 Menit` yang bersifat simulasi artifisial (*AI slop*). Digantikan oleh catatan jam pesanan masuk riil (*real timestamp*, misal `14:35 WIB`).
+    - **Pembersihan Catatan Dobel & Tag Internal**: Memperbaiki bug dobel tag `Catatan: Catatan: [BAWA PULANG - Antrean #01]`. Catatan di dapur kini hanya muncul jika kasir benar-benar mengetik permintaan khusus (misal: *"sambal dipisah"*). Jika tidak ada catatan, kartu dapur tampil bersih tanpa kotak catatan palsu.
+    - **Pencegahan Tanda Pagar Dobel**: Memperbaiki nomor tiket dapur agar tidak memunculkan `##P78882`.
+  - **Integrasi Kasir & Struk Pembayaran (`CheckoutView.tsx` & `ThermalReceiptModal.tsx`)**:
+    - Antrean tagihan kasir menampilkan lencana kuning `BUNGKUS` dengan nomor antrean (misal `#01`).
+    - Struk cetak thermal mencetak rincian `Layanan: BAWA PULANG (BUNGKUS)` dan `No. Antrean: Antrean #XX`.
+    - Di versi mobile, label redundan `Detail >` telah dihapus agar antrean transaksi tampil lebih bersih dan padat.
+- **Penyempurnaan Responsif Grafik Tren Penjualan (`LaporanView.tsx` & `DashboardView.tsx`)**:
+  - Diberikan `shortLabel` (`Mg 1`, `Mg 2` s/d `Mg 5`) khusus layar ponsel `< sm` untuk mode bulanan agar teks label tidak bertumpuk atau terdorong naik-turun.
+  - Area grafik batang dan label tanggal dipisahkan pada kontainer terpisah dengan baseline horizontal tetap, menjaga grafik tetap rata sempurna di segala ukuran layar.
+- **Standarisasi Interaksi Pop-up Modal (PC vs Mobile)**:
+  - Seluruh pop-up di desktop PC (>= 1024px) dapat ditutup praktis dengan mengklik area luar (*void area*).
+  - Di layar mobile (< 1024px), klik luar tetap diproteksi (tidak menutup) agar formulir tidak hilang akibat ketidaksengajaan sentuhan jari; penutupan hanya dapat dilakukan melalui tombol `✕` atau `Batal`.
+
+## 18. Pembersihan Elemen "AI Slop", KDS Bersih & Penyederhanaan POS
+
+Berdasarkan instruksi perapian menyeluruh:
+
+- **Format Penomoran & ID Transaksi Bersih**:
+  - Penomoran antrean bungkus diseragamkan tanpa simbol pagar `#`: `Antrean 01`, `Antrean 02`, dst.
+  - Standarisasi format ID Transaksi:
+    - **Bawa Pulang**: `BUNGKUS_${tanggalpemesanan}_${nomor}` (contoh: `BUNGKUS_161126_01`).
+    - **Santap di Tempat**: `MEJA_${nomor}_${tanggalpemesanan}` (contoh: `MEJA_01_161126`).
+  - Jika nama pemesan tidak diisi atau berupa teks generik (*Tamu* / *Pelanggan Bungkus*), sistem otomatis hanya menampilkan ID unik tanpa label generik yang tidak perlu.
+- **Pembersihan Kartu Tagihan Kasir (`CheckoutView.tsx`)**:
+  - Lencana nomor antrean bungkus menggunakan warna tema netral heritage (`#f0ede9` / `#3d1018`), tidak lagi menggunakan warna kuning mencolok.
+  - Menghapus badge pil redundan `"Bawa Pulang"` dan badge `"Dapur"` dari kartu antrean.
+  - Pada panel detail pembayaran desktop dan modal mobile: teks judul atas kini langsung menampilkan ID Transaksi bersih tanpa teks pembuka berulang atau ikon bawa pulang.
+- **Penghapusan Banner Peringatan Dapur & Pembayaran Bebas Hambatan**:
+  - Menghapus seluruh banner peringatan dapur (*"warning Pesanan Belum Selesai Dimasak di Dapur..."*).
+  - Kasir kini dapat langsung menyelesaikan pembayaran (*settle payment*) kapan pun tanpa harus menunggu status seluruh hidangan selesai di KDS.
+- **Penghapusan Fitur Pecah Bayar & Gabung Meja**:
+  - Menghapus fitur **Pecah Bayar** (*Split Payment*) dari kasir checkout (opsi pembayaran disederhanakan murni menjadi: **Tunai**, **QRIS**, dan **Kartu Debit**).
+  - Menghapus tombol dan modal **Gabung Meja** dari halaman Pesanan Baru.
+- **Penyederhanaan Total Kitchen Display System (KDS)**:
+  - **1 Pesanan = 1 Kartu Utuh**: Pesanan makanan dan minuman digabung ke dalam 1 kartu tiket tunggal, menghapus duplikasi kartu pesanan terpisah.
+  - Menghapus teks header koki yang tidak relevan: `"Santap di Tempat #P33556"` dan `"takeout_dining Bawa Pulang #P80503 [Minuman]"`.
+  - Menghapus stempel jam (`20:38 WIB`) dan timer stopwatch (`00:00`); tiket diurutkan alami berdasarkan urutan kedatangan pesanan dari atas ke bawah.
+  - Menghapus tombol/badge status per-item `"Siap"`.
+  - Tiket fokus murni pada nomor meja/antrean besar yang kontras (`Antrean 01` / `Meja 01`), rincian menu yang harus dimasak, serta catatan khusus dari pelanggan.
+- **Penyelarasan Grafik Tren Penjualan di Layar Mobile**:
+  - Memisahkan wadah batang grafik dan label tanggal menjadi 2 wadah baris independen dengan dasar horizontal rata (*fixed baseline*).
+  - Label tanggal diberi tinggi presisi tetap (`h-5`), `whitespace-nowrap`, dan `truncate`, sehingga nama hari/tanggal tidak melipat menjadi 2 baris atau membuat grafik melompat naik-turun di ponsel.
+- **Interaksi Klik Luar Modal Pop-Up (Void Backdrop Click)**:
+  - Penutupan pop-up via klik di luar kartu (area gelap/void) diaktifkan khusus pada perangkat PC Desktop (mouse pointer / layar lebar).
+  - Di perangkat HP layar sentuh (mobile), penutupan via klik luar dinonaktifkan untuk mencegah modal tertutup secara tidak sengaja saat pengguna menggulir atau mengetuk tepi layar.
+
+---
+
 *Terakhir diperbarui: 16 November 2026*
 

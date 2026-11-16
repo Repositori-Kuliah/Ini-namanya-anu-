@@ -37,24 +37,15 @@ export const WelcomeScreen: React.FC = () => {
           <div className="absolute inset-0 bg-gradient-to-t from-[#3d1018] via-[#3d1018]/65 to-black/25" />
         </div>
 
-        {/* Brand & Editorial Title Lockup */}
+        {/* Brand & Editorial Title Lockup (Tanpa Logo) */}
         <div className="relative px-5 md:px-8 pt-2 pb-9 space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl overflow-hidden bg-white p-1 border border-white/25 shrink-0 shadow-xs flex items-center justify-center">
-              <img
-                alt="Logo Rawon Gusti Surabaya"
-                className="w-full h-full object-contain"
-                src={RESTAURANT_INFO.logoUrl}
-              />
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="font-serif text-xl sm:text-2xl font-bold text-white tracking-tight leading-none">
-                {RESTAURANT_INFO.name}
-              </span>
-              <span className="text-[11px] text-[#ffdbc9] font-sans font-medium tracking-wide mt-1">
-                {RESTAURANT_INFO.branch} · Sejak 1982
-              </span>
-            </div>
+          <div className="flex flex-col min-w-0">
+            <span className="font-serif text-2xl sm:text-3xl font-bold text-white tracking-tight leading-none">
+              {RESTAURANT_INFO.name}
+            </span>
+            <span className="text-xs text-[#ffdbc9] font-sans font-medium tracking-wide mt-1.5">
+              {RESTAURANT_INFO.branch} · Sejak 1982
+            </span>
           </div>
 
           <div className="pt-1 space-y-1.5 max-w-xl">

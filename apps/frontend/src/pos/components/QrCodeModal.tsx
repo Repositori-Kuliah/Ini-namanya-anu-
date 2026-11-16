@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { useApp } from '../context/AppContext';
+import { publicAsset } from '../../lib/publicAsset';
 
 export const QrCodeModal: React.FC = () => {
   const { qrModalTable, closeQrModal } = useApp();
@@ -29,14 +30,28 @@ export const QrCodeModal: React.FC = () => {
     window.print();
   };
 
+  const handleDownloadQr = () => {
+    if (!qrSrc) return;
+    const a = document.createElement('a');
+    a.href = qrSrc;
+    a.download = `QR-Meja-${table.number}.png`;
+    a.click();
+  };
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="qr-modal-title"
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in lg:cursor-pointer"
+      onClick={(e) => {
+        // Hanya tutup via klik void di PC desktop (>= 1024px)
+        if (e.target === e.currentTarget && typeof window !== 'undefined' && window.innerWidth >= 1024) {
+          closeQrModal();
+        }
+      }}
     >
-      <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl relative flex flex-col items-center">
+      <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl relative flex flex-col items-center cursor-default">
         <button
           type="button"
           onClick={closeQrModal}
@@ -47,16 +62,8 @@ export const QrCodeModal: React.FC = () => {
         </button>
 
         {/* Printable Stand Card Preview */}
-        <div className="w-full bg-[#fffdfa] border-2 border-[#3d1018] rounded-2xl p-6 flex flex-col items-center text-center shadow-md my-2">
-          <div className="w-12 h-12 rounded-xl bg-[#3d1018] flex items-center justify-center p-1 mb-2 shadow-xs">
-            <img
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuC4jDTg2zGsW66D3mPi0LCCgkEKAz6A3C_LyMjRjF33cCX-hxn-FMKJ-VmnANEDzHK36CnYdj065-0rxRIyAzaBK6gX8QPIzL_SZbagw1SD7hPd2ZxzJIZ6yhPlB0wT0wYg5V1QYZIndg6LMBj-RspFW4GjCZKuvGWpMCQZZXFIpvETPHdcZZBqLKJziB4JXaXmcwodTl3uHGVnuzTEmOl9Fam2CBCupu5HozhgUINKbYrxNyF4ccQ9FOYEpUIXWooGFlE"
-              alt="Logo"
-              className="w-full h-full object-cover rounded-lg"
-            />
-          </div>
-
-          <h3 id="qr-modal-title" className="font-serif text-xl font-bold text-[#3d1018] tracking-tight">
+        <div className="printable-qr-area w-full bg-[#fffdfa] border-2 border-[#3d1018] rounded-2xl p-6 flex flex-col items-center text-center shadow-md my-2">
+          <h3 id="qr-modal-title" className="font-serif text-2xl font-bold text-[#3d1018] tracking-tight">
             Rawon Gusti
           </h3>
           <p className="text-xs text-[#847374] font-serif italic mb-4">
@@ -85,9 +92,17 @@ export const QrCodeModal: React.FC = () => {
           <button
             type="button"
             onClick={closeQrModal}
-            className="flex-1 py-2.5 rounded-xl bg-[#f0ede9] hover:bg-[#ebe8e3] text-[#1c1c19] text-xs font-semibold focus-visible:ring-2 focus-visible:ring-[#3d1018] focus-visible:outline-none cursor-pointer"
+            className="px-3 py-2.5 rounded-xl bg-[#f0ede9] hover:bg-[#ebe8e3] text-[#1c1c19] text-xs font-semibold focus-visible:ring-2 focus-visible:ring-[#3d1018] focus-visible:outline-none cursor-pointer"
           >
             Tutup
+          </button>
+          <button
+            type="button"
+            onClick={handleDownloadQr}
+            className="flex-1 py-2.5 rounded-xl border border-[#ebe8e3] bg-white hover:bg-[#f6f3ee] text-[#3d1018] text-xs font-bold shadow-xs flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-[#3d1018] focus-visible:outline-none cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[16px]" aria-hidden="true">download</span>
+            <span>Unduh PNG</span>
           </button>
           <button
             type="button"
@@ -95,7 +110,7 @@ export const QrCodeModal: React.FC = () => {
             className="flex-1 py-2.5 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold shadow-md flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-[#3d1018] focus-visible:outline-none cursor-pointer"
           >
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">print</span>
-            <span>Cetak Stand Meja</span>
+            <span>Cetak Stand</span>
           </button>
         </div>
       </div>

@@ -224,11 +224,11 @@ export const DashboardView: React.FC = () => {
     if (isMonthMode) {
       // 3. Cukup minggu saja (Minggu 1 s/d Minggu 5)
       const buckets = [
-        { label: 'Mg 1 (1–7)', startDay: 1, endDay: 7, amount: 0 },
-        { label: 'Mg 2 (8–14)', startDay: 8, endDay: 14, amount: 0 },
-        { label: 'Mg 3 (15–21)', startDay: 15, endDay: 21, amount: 0 },
-        { label: 'Mg 4 (22–28)', startDay: 22, endDay: 28, amount: 0 },
-        { label: 'Mg 5 (29–31)', startDay: 29, endDay: 31, amount: 0 },
+        { label: 'Mg 1 (1–7)', shortLabel: 'Mg 1', startDay: 1, endDay: 7, amount: 0 },
+        { label: 'Mg 2 (8–14)', shortLabel: 'Mg 2', startDay: 8, endDay: 14, amount: 0 },
+        { label: 'Mg 3 (15–21)', shortLabel: 'Mg 3', startDay: 15, endDay: 21, amount: 0 },
+        { label: 'Mg 4 (22–28)', shortLabel: 'Mg 4', startDay: 22, endDay: 28, amount: 0 },
+        { label: 'Mg 5 (29–31)', shortLabel: 'Mg 5', startDay: 29, endDay: 31, amount: 0 },
       ];
 
       filteredTrx.forEach((t) => {
@@ -452,18 +452,18 @@ export const DashboardView: React.FC = () => {
 
             {/* Bar Chart Visualization */}
             <div className="mt-6 pt-4 pb-2">
-              <div className="h-48 w-full flex items-end justify-between gap-2 sm:gap-4 px-2 sm:px-6">
+              <div className="h-36 w-full flex items-end justify-between gap-2 sm:gap-4 px-2 sm:px-6 border-b border-[#ebe8e3] pb-1">
                 {trendBuckets.map((b) => {
                   const heightPx =
                     maxBucketAmount > 0
-                      ? Math.max(6, Math.round((b.amount / maxBucketAmount) * 140))
+                      ? Math.max(6, Math.round((b.amount / maxBucketAmount) * 110))
                       : 4;
                   const hasSales = b.amount > 0;
 
                   return (
-                    <div key={b.label} className="flex-1 flex flex-col items-center gap-2 group">
+                    <div key={b.label} className="flex-1 flex flex-col items-center gap-1.5 group">
                       <span
-                        className={`text-[10px] tabular-nums transition-colors ${
+                        className={`text-[10px] tabular-nums transition-colors whitespace-nowrap ${
                           hasSales
                             ? 'font-bold text-[#3d1018]'
                             : 'text-[#847374] group-hover:text-[#1c1c19]'
@@ -473,22 +473,30 @@ export const DashboardView: React.FC = () => {
                       </span>
                       <div
                         style={{ height: `${heightPx}px` }}
-                        className={`w-full max-w-[48px] rounded-t transition-all ${
+                        className={`w-full max-w-[44px] rounded-t transition-all ${
                           hasSales
                             ? 'bg-[#58252c] group-hover:bg-[#3d1018]'
                             : 'bg-[#f0ede9]'
                         }`}
                       />
-                      <span
-                        className={`text-[11px] ${
-                          hasSales ? 'font-bold text-[#1c1c19]' : 'text-[#524344]'
-                        }`}
-                      >
-                        {b.label}
-                      </span>
                     </div>
                   );
                 })}
+              </div>
+
+              {/* Area Label Tanggal / Periode Rata Presisi (Satu Garis Lurus Tanpa Wrapping) */}
+              <div className="w-full flex justify-between gap-1.5 sm:gap-4 px-2 sm:px-6 pt-2.5">
+                {trendBuckets.map((b) => (
+                  <div key={b.label} className="flex-1 text-center min-w-0 h-5 flex items-center justify-center">
+                    <span
+                      className="text-[9px] sm:text-[11px] text-[#524344] font-medium whitespace-nowrap truncate block"
+                      title={b.label}
+                    >
+                      <span className="hidden sm:inline">{b.label}</span>
+                      <span className="sm:hidden">{(b as any).shortLabel || b.label}</span>
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
