@@ -111,6 +111,10 @@ const KelolaMenuViewInner: React.FC = () => {
   );
   useLockBodyScroll(isAnyModalOpen);
 
+  const closeOnBackdrop = (e: React.MouseEvent<HTMLDivElement>, close: () => void) => {
+    if (e.target === e.currentTarget) close();
+  };
+
   // --- Filter Logic: Menu ---
   const filteredMenuItems = menuItems.filter((item) => {
     const matchesSearch =
@@ -661,6 +665,7 @@ const KelolaMenuViewInner: React.FC = () => {
           role="dialog"
           aria-modal="true"
           aria-labelledby="add-menu-title"
+          onClick={(e) => closeOnBackdrop(e,() => setShowAddMenuModal(false))}
           className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
         >
           <form
@@ -848,6 +853,7 @@ const KelolaMenuViewInner: React.FC = () => {
           role="dialog"
           aria-modal="true"
           aria-labelledby="edit-menu-title"
+          onClick={(e) => closeOnBackdrop(e,() => setEditingItem(null))}
           className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
         >
           <form
@@ -1092,6 +1098,7 @@ const KelolaMenuViewInner: React.FC = () => {
           role="dialog"
           aria-modal="true"
           aria-labelledby="restock-title"
+          onClick={(e) => closeOnBackdrop(e,() => setRestockItem(null))}
           className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
         >
           <form
@@ -1167,6 +1174,7 @@ const KelolaMenuViewInner: React.FC = () => {
           role="dialog"
           aria-modal="true"
           aria-labelledby="edit-min-title"
+          onClick={(e) => closeOnBackdrop(e,() => setEditMinItem(null))}
           className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
         >
           <form
@@ -1226,6 +1234,7 @@ const KelolaMenuViewInner: React.FC = () => {
           role="dialog"
           aria-modal="true"
           aria-labelledby="add-ing-title"
+          onClick={(e) => closeOnBackdrop(e,() => setShowAddIngredientModal(false))}
           className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
         >
           <form
@@ -1344,7 +1353,10 @@ const KelolaMenuViewInner: React.FC = () => {
 
       {/* Modal Peringatan Konfirmasi Hapus Menu */}
       {deleteMenuConfirm && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
+        <div
+          onClick={(e) => closeOnBackdrop(e,() => setDeleteMenuConfirm(null))}
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs"
+        >
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-[#ebe8e3] animate-in fade-in zoom-in-95 duration-150">
             <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-3">
               <span className="material-symbols-outlined text-2xl">warning</span>
@@ -1380,7 +1392,10 @@ const KelolaMenuViewInner: React.FC = () => {
 
       {/* Modal Peringatan Konfirmasi Hapus Bahan Baku */}
       {deleteIngConfirm && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
+        <div
+          onClick={(e) => closeOnBackdrop(e,() => setDeleteIngConfirm(null))}
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs"
+        >
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-[#ebe8e3] animate-in fade-in zoom-in-95 duration-150">
             <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-3">
               <span className="material-symbols-outlined text-2xl">warning</span>
