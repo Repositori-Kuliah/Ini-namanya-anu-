@@ -111,8 +111,39 @@ const KelolaMenuViewInner: React.FC = () => {
   );
   useLockBodyScroll(isAnyModalOpen);
 
-  const closeOnBackdrop = (e: React.MouseEvent<HTMLDivElement>, close: () => void) => {
-    if (e.target === e.currentTarget) close();
+  const [discardTarget, setDiscardTarget] = useState<(() => void) | null>(null);
+
+  const addMenuDirty =
+    newName !== '' ||
+    newDescription !== '' ||
+    newImage !== '' ||
+    newIsRecommended ||
+    newPrice !== '25000' ||
+    newCategory !== (menuCategories[0] || 'Menu Nusantara');
+  const editMenuDirty = editingItem
+    ? editName !== editingItem.name ||
+      editCategory !== editingItem.category ||
+      editPrice !== editingItem.price.toString() ||
+      editDescription !== (editingItem.description || '') ||
+      editImage !== (editingItem.image || '') ||
+      editIsRecommended !== Boolean(editingItem.isRecommended || editingItem.isFavorite) ||
+      editIsAvailable !== (editingItem.isAvailable !== false)
+    : false;
+  const restockDirty = restockQty !== '5';
+  const editMinDirty = editMinItem ? editMinVal !== editMinItem.minimumStock.toString() : false;
+  const addIngDirty =
+    newIngCode !== '' ||
+    newIngName !== '' ||
+    newIngSupplier !== '' ||
+    newIngStock !== '10' ||
+    newIngMin !== '5' ||
+    newIngUnit !== 'kg' ||
+    newIngCategory !== 'Bumbu & Rempah';
+
+  const closeOnBackdrop = (e: React.MouseEvent<HTMLDivElement>, dirty: boolean, close: () => void) => {
+    if (e.target !== e.currentTarget) return;
+    if (dirty) setDiscardTarget(() => close);
+    else close();
   };
 
   // --- Filter Logic: Menu ---
@@ -295,6 +326,10 @@ const KelolaMenuViewInner: React.FC = () => {
     setNewIngName('');
     setNewIngCode('');
     setNewIngSupplier('');
+    setNewIngStock('10');
+    setNewIngMin('5');
+    setNewIngUnit('kg');
+    setNewIngCategory('Bumbu & Rempah');
     showToast(`Bahan baku "${newIng.name}" berhasil didaftarkan!`, 'success');
   };
 
@@ -665,7 +700,7 @@ const KelolaMenuViewInner: React.FC = () => {
           role="dialog"
           aria-modal="true"
           aria-labelledby="add-menu-title"
-          onClick={(e) => closeOnBackdrop(e,() => setShowAddMenuModal(false))}
+          onClick={(e) => closeOnBackdrop(e, addMenuDirty, () => setShowAddMenuModal(false))}
           className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
         >
           <form
@@ -853,7 +888,7 @@ const KelolaMenuViewInner: React.FC = () => {
           role="dialog"
           aria-modal="true"
           aria-labelledby="edit-menu-title"
-          onClick={(e) => closeOnBackdrop(e,() => setEditingItem(null))}
+          onClick={(e) => closeOnBackdrop(e, editMenuDirty, () => setEditingItem(null))}
           className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
         >
           <form
@@ -1098,7 +1133,7 @@ const KelolaMenuViewInner: React.FC = () => {
           role="dialog"
           aria-modal="true"
           aria-labelledby="restock-title"
-          onClick={(e) => closeOnBackdrop(e,() => setRestockItem(null))}
+          onClick={(e) => closeOnBackdrop(e, restockDirty, () => setRestockItem(null))}
           className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
         >
           <form
@@ -1174,7 +1209,7 @@ const KelolaMenuViewInner: React.FC = () => {
           role="dialog"
           aria-modal="true"
           aria-labelledby="edit-min-title"
-          onClick={(e) => closeOnBackdrop(e,() => setEditMinItem(null))}
+          onClick={(e) => closeOnBackdrop(e, editMinDirty, () => setEditMinItem(null))}
           className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
         >
           <form
@@ -1234,7 +1269,7 @@ const KelolaMenuViewInner: React.FC = () => {
           role="dialog"
           aria-modal="true"
           aria-labelledby="add-ing-title"
-          onClick={(e) => closeOnBackdrop(e,() => setShowAddIngredientModal(false))}
+          onClick={(e) => closeOnBackdrop(e, addIngDirty, () => setShowAddIngredientModal(false))}
           className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
         >
           <form
@@ -1354,7 +1389,7 @@ const KelolaMenuViewInner: React.FC = () => {
       {/* Modal Peringatan Konfirmasi Hapus Menu */}
       {deleteMenuConfirm && (
         <div
-          onClick={(e) => closeOnBackdrop(e,() => setDeleteMenuConfirm(null))}
+          onClick={(e) => closeOnBackdrop(e, false, () => setDeleteMenuConfirm(null))}
           className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs"
         >
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-[#ebe8e3] animate-in fade-in zoom-in-95 duration-150">
@@ -1393,7 +1428,7 @@ const KelolaMenuViewInner: React.FC = () => {
       {/* Modal Peringatan Konfirmasi Hapus Bahan Baku */}
       {deleteIngConfirm && (
         <div
-          onClick={(e) => closeOnBackdrop(e,() => setDeleteIngConfirm(null))}
+          onClick={(e) => closeOnBackdrop(e, false, () => setDeleteIngConfirm(null))}
           className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs"
         >
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-[#ebe8e3] animate-in fade-in zoom-in-95 duration-150">
@@ -1423,6 +1458,37 @@ const KelolaMenuViewInner: React.FC = () => {
                 className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer shadow-xs transition-colors"
               >
                 Hapus Bahan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Konfirmasi Buang Perubahan */}
+      {discardTarget && (
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-[#ebe8e3]">
+            <h3 className="text-base font-bold text-[#1c1c19] text-center mb-1">Perubahan belum disimpan</h3>
+            <p className="text-xs text-[#524344] text-center mb-5 leading-relaxed">
+              Tutup formulir sekarang dan buang perubahan yang belum disimpan?
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setDiscardTarget(null)}
+                className="flex-1 py-2 rounded-xl bg-[#f0ede9] hover:bg-[#ebe8e3] text-[#1c1c19] text-xs font-semibold cursor-pointer transition-colors"
+              >
+                Lanjut Edit
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  discardTarget();
+                  setDiscardTarget(null);
+                }}
+                className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer shadow-xs transition-colors"
+              >
+                Buang Perubahan
               </button>
             </div>
           </div>
