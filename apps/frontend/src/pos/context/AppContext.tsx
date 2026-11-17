@@ -94,6 +94,7 @@ interface AppContextType {
 
   kitchenTickets: KitchenTicket[];
   advanceTicketStatus: (ticketId: string) => void;
+  completeKitchenTicket: (ticketId: string) => void;
   confirmCustomerOrder: (ticketId: string) => void;
   rejectCustomerOrder: (orderId: string) => void;
   pendingQrOrders: Array<{
@@ -1473,6 +1474,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Status pesanan diperbarui');
   };
 
+  const completeKitchenTicket = async (ticketId: string) => {
+    const rawOrderId = ticketId.replace('-food', '').replace('-drink', '');
+
+    // Optimistic update langsung ke 'served' agar tiket tuntas seketika
+    setSessions((prev) => prev.map((s) => ({
+      ...s,
+      orders: (s.orders || []).map((o: any) => {
+        if (String(o.order_id) !== String(rawOrderId)) return o;
+        return {
+          ...o,
+          order_status: 'served',
+          ready_at: o.ready_at || new Date().toISOString(),
+          served_at: new Date().toISOString(),
+        };
+      }),
+    })));
+
+    try {
+      // Loop advance_order hingga status mencapai 'served' (submitted -> preparing -> ready -> served)
+      for (let i = 0; i < 3; i++) {
+        const { data, error } = await supabase.rpc('advance_order', { p_order: Number(rawOrderId) });
+        if (error || data?.error) break;
+        if (data?.ok === 'served') break;
+      }
+    } catch (e) {
+      console.warn('completeKitchenTicket error:', e);
+      await refresh();
+      return;
+    }
+    playDingSound();
+    showToast('Pesanan selesai disiapkan', 'success');
+  };
+
   const confirmCustomerOrder = async (ticketId: string) => {
     const rawOrderId = ticketId.replace('-food', '').replace('-drink', '');
 
@@ -1645,7 +1679,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       menuItems, menuCategories, updateMenuItem, addMenuItem, deleteMenuItem, toggleMenuItemAvailability,
       rawIngredients, lowStockIngredients, updateIngredientStock, restockIngredient, updateIngredientMinimum, addRawIngredient, deleteRawIngredient,
       dismissStockWarning, setDismissStockWarning,
-      kitchenTickets, advanceTicketStatus, confirmCustomerOrder, rejectCustomerOrder, pendingQrOrders, transactions, recentReceipts,
+      kitchenTickets, advanceTicketStatus, completeKitchenTicket, confirmCustomerOrder, rejectCustomerOrder, pendingQrOrders, transactions, recentReceipts,
       toast, showToast, receiptModalData, openReceiptModal: setReceiptModalData, closeReceiptModal: () => setReceiptModalData(null),
       qrModalTable, openQrModal: setQrModalTable, closeQrModal: () => setQrModalTable(null),
       desktopSidebarOpen, setDesktopSidebarOpen, toggleDesktopSidebar,

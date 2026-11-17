@@ -141,16 +141,7 @@ export const CheckoutView: React.FC = () => {
   return (
     <div className="flex flex-col w-full pb-4 md:pb-8 max-w-[1600px] mx-auto px-4 sm:px-6 pt-3">
       {/* Header Halaman */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 mb-4 border-b border-[#ebe8e3]">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-[#1c1c19] tracking-tight">
-            Checkout &amp; Pembayaran
-          </h1>
-          <p className="text-xs text-[#524344] mt-0.5">
-            Penyelesaian transaksi santap di tempat, pelunasan tagihan, dan cetak struk kasir.
-          </p>
-        </div>
-
+      <div className="flex items-center justify-end pb-3 mb-4 border-b border-[#ebe8e3]">
         <button
           type="button"
           onClick={handleManualRefresh}
@@ -377,9 +368,6 @@ export const CheckoutView: React.FC = () => {
                           Rp {bill.total.toLocaleString('id-ID')}
                         </span>
                         <div className="flex items-center gap-1 justify-end mt-0.5">
-                          <span className="lg:hidden text-[10px] text-[#3d1018] font-bold flex items-center">
-                            Bayar <span className="material-symbols-outlined text-[13px]">chevron_right</span>
-                          </span>
                           {bill.status === 'minta_checkout' && (
                             <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#ffdbc9] text-[#753400]">
                               Minta Bayar

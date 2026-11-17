@@ -101,16 +101,8 @@ export const PesananBaruView: React.FC = () => {
 
   return (
     <div className="flex flex-col w-full pb-4 md:pb-8 max-w-[1600px] mx-auto px-4 sm:px-6 pt-3">
-      {/* Header Halaman */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 mb-4 border-b border-[#ebe8e3]">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-[#1c1c19] tracking-tight">
-            Pesanan Baru
-          </h1>
-        </div>
-
-        {/* Mobile Switcher Tab (Menu vs Ringkasan Pesanan) */}
-        <div className="flex items-center lg:hidden bg-[#f0ede9] p-1 rounded-xl">
+      {/* Mobile Switcher Tab (Menu vs Ringkasan Pesanan) */}
+      <div className="flex items-center lg:hidden bg-[#f0ede9] p-1 rounded-xl mb-4">
           <button
             type="button"
             onClick={() => setMobileTab('catalog')}
@@ -135,7 +127,6 @@ export const PesananBaruView: React.FC = () => {
             )}
           </button>
         </div>
-      </div>
 
       {/* Grid Dua Kolom: KIRI (Katalog Menu) & KANAN (Ringkasan Pesanan) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
@@ -354,7 +345,6 @@ export const PesananBaruView: React.FC = () => {
                   : 'text-[#847374] hover:text-[#1c1c19]'
               }`}
             >
-              <span className="material-symbols-outlined text-[16px]">restaurant</span>
               <span>Santap di Tempat</span>
             </button>
             <button
@@ -366,7 +356,6 @@ export const PesananBaruView: React.FC = () => {
                   : 'text-[#847374] hover:text-[#1c1c19]'
               }`}
             >
-              <span className="material-symbols-outlined text-[16px]">takeout_dining</span>
               <span>Bawa Pulang</span>
             </button>
           </div>
@@ -410,31 +399,19 @@ export const PesananBaruView: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-2.5 items-start">
-                {/* No. Antrean */}
-                <div>
-                  <label className="text-[10px] text-[#847374] block mb-0.5 h-4 leading-4 truncate whitespace-nowrap">
-                    No. Antrean
-                  </label>
-                  <div className="w-full bg-[#f0ede9] border border-[#ebe8e3] rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#3d1018] truncate">
-                    {takeawayNextQueue}
-                  </div>
-                </div>
-
+              <div>
                 {/* Nama Pemesan */}
-                <div>
-                  <label htmlFor="takeaway-customer" className="text-[10px] text-[#847374] block mb-0.5 h-4 leading-4 truncate whitespace-nowrap">
-                    Nama Pemesan (Opsional)
-                  </label>
-                  <input
-                    id="takeaway-customer"
-                    type="text"
-                    value={orderCustomerName}
-                    onChange={(e) => setOrderCustomerName(e.target.value)}
-                    placeholder="Opsional..."
-                    className="w-full bg-[#fcf9f4] border border-[#ebe8e3] rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#1c1c19] outline-none focus:border-[#3d1018]"
-                  />
-                </div>
+                <label htmlFor="takeaway-customer" className="text-[10px] text-[#847374] block mb-0.5 h-4 leading-4 truncate whitespace-nowrap">
+                  Nama Pemesan (Opsional)
+                </label>
+                <input
+                  id="takeaway-customer"
+                  type="text"
+                  value={orderCustomerName}
+                  onChange={(e) => setOrderCustomerName(e.target.value)}
+                  placeholder="Opsional..."
+                  className="w-full bg-[#fcf9f4] border border-[#ebe8e3] rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#1c1c19] outline-none focus:border-[#3d1018]"
+                />
               </div>
             )}
           </div>
@@ -599,14 +576,9 @@ export const PesananBaruView: React.FC = () => {
                   <span>Terkirim ke Kitchen!</span>
                 </>
               ) : (
-                <>
-                  <span className="material-symbols-outlined text-[18px]">
-                    {orderType === 'takeaway' ? 'takeout_dining' : 'soup_kitchen'}
-                  </span>
-                  <span>
-                    {orderType === 'takeaway' ? 'Kirim Pesanan Bungkus' : 'Kirim ke Kitchen'} (Rp {grandTotal.toLocaleString('id-ID')})
-                  </span>
-                </>
+                <span>
+                  {orderType === 'takeaway' ? 'Kirim Pesanan Bungkus' : 'Kirim ke Kitchen'} (Rp {grandTotal.toLocaleString('id-ID')})
+                </span>
               )}
             </button>
           </div>

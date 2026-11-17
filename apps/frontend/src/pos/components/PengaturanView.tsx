@@ -229,14 +229,6 @@ export const PengaturanView: React.FC = () => {
 
   return (
     <div className="flex flex-col w-full pb-4 md:pb-8 max-w-[1540px] mx-auto px-4 sm:px-6 lg:px-8 pt-3 space-y-6">
-      {/* Header Halaman */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#ebe8e3]">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-[#1c1c19] tracking-tight">
-            Pengaturan Sistem Outlet
-          </h1>
-        </div>
-      </div>
 
       {/* ================= BARIS 1: OPERASIONAL UTAMA OUTLET ================= */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">

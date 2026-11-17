@@ -307,13 +307,7 @@ const KelolaMenuViewInner: React.FC = () => {
   return (
     <div className="flex flex-col w-full pb-4 md:pb-8 max-w-[1600px] mx-auto px-4 sm:px-6 pt-3 space-y-4">
       {/* Header Halaman & Tombol Aksi */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#ebe8e3]">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-[#1c1c19] tracking-tight">
-            Kelola Menu
-          </h1>
-        </div>
-
+      <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-3 pb-3 border-b border-[#ebe8e3]">
         <div className="flex items-center gap-2">
           {storeSettings.enableInventoryTracking && (
             <div className="flex bg-[#f6f3ee] p-1 rounded-xl border border-[#ebe8e3]">
@@ -390,7 +384,7 @@ const KelolaMenuViewInner: React.FC = () => {
                 className="bg-[#fcf9f4] border border-[#ebe8e3] rounded-lg px-2.5 py-1 text-xs font-semibold text-[#1c1c19] outline-none cursor-pointer focus:border-[#3d1018]"
               >
                 <option value="Semua">Semua Kategori</option>
-                <option value="Favorit">⭐ Favorit ({favoriteMenuCount})</option>
+                <option value="Favorit">Favorit</option>
                 {menuCategories.map((c) => (
                   <option key={c} value={c}>
                     {c}
@@ -438,7 +432,7 @@ const KelolaMenuViewInner: React.FC = () => {
             }`}
           >
             <span className="material-symbols-outlined text-[14px] text-amber-500">star</span>
-            <span>Favorit ({favoriteMenuCount})</span>
+            <span>Favorit</span>
           </button>
           {menuCategories.map((c) => (
             <button

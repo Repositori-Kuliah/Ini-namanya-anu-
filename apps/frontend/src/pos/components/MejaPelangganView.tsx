@@ -89,14 +89,6 @@ const MejaPelangganViewInner: React.FC = () => {
 
   return (
     <div className="flex flex-col w-full p-4 sm:p-6 lg:p-8 space-y-5 max-w-[1540px] mx-auto pb-4 md:pb-8">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <h1 className="font-serif text-3xl sm:text-4xl font-bold text-[#3d1018] tracking-tight">
-            Meja &amp; Pelanggan
-          </h1>
-        </div>
-      </div>
 
       {/* Search & Segmented Filter Bar (3 Tab Filter: Semua Meja, Terisi, Tersedia) */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
@@ -245,9 +237,6 @@ const MejaPelangganViewInner: React.FC = () => {
 
           {selectedTable.status === 'kosong' ? (
             <div className="py-8 flex flex-col items-center text-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-[#f6f3ee] flex items-center justify-center text-[#847374]">
-                <span className="material-symbols-outlined text-[28px]">table_restaurant</span>
-              </div>
               <div>
                 <h3 className="font-serif font-bold text-base text-[#1c1c19]">Meja Ini Tersedia</h3>
                 <p className="text-xs text-[#524344] max-w-xs mt-1">
@@ -384,9 +373,6 @@ const MejaPelangganViewInner: React.FC = () => {
 
             {selectedTable.status === 'kosong' ? (
               <div className="py-6 flex flex-col items-center text-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-[#f6f3ee] flex items-center justify-center text-[#847374]">
-                  <span className="material-symbols-outlined text-[28px]">table_restaurant</span>
-                </div>
                 <div>
                   <h3 className="font-serif font-bold text-base text-[#1c1c19]">Meja Ini Tersedia</h3>
                   <p className="text-xs text-[#524344] mt-0.5">

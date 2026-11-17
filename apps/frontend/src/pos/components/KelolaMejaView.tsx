@@ -188,23 +188,8 @@ const KelolaMejaViewInner: React.FC = () => {
   return (
     <div className="flex flex-col w-full pb-4 md:pb-8 max-w-[1600px] mx-auto px-4 sm:px-6 pt-3 space-y-4">
       {/* Header Halaman & Aksi Utama */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#ebe8e3]">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-[#1c1c19] tracking-tight">
-            Kelola Meja &amp; QR Code
-          </h1>
-        </div>
-
+      <div className="flex items-center justify-end gap-3 pb-3 border-b border-[#ebe8e3]">
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setShowQrExportModal(true)}
-            disabled={!tables.length}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-[#ebe8e3] hover:bg-[#f6f3ee] text-[#3d1018] text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <span className="material-symbols-outlined text-[16px]">download</span>
-            <span>Unduh QR</span>
-          </button>
           <button
             type="button"
             onClick={() => setShowAddModal(true)}
@@ -265,7 +250,7 @@ const KelolaMejaViewInner: React.FC = () => {
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={2} className="py-8 text-center text-xs text-[#847374]">
-                    Tidak ada meja yang cocok dengan pencarian &ldquo;{searchQuery}&rdquo;.
+                    {searchQuery ? `Tidak ada meja yang cocok dengan pencarian ${searchQuery}.` : 'Tidak ada meja yang cocok.'}
                   </td>
                 </tr>
               ) : (
@@ -363,9 +348,6 @@ const KelolaMejaViewInner: React.FC = () => {
                     placeholder="Contoh: 13"
                     className="w-full px-3 py-2 bg-[#fcf9f4] rounded-lg border border-[#ebe8e3] outline-none font-bold text-sm focus:border-[#3d1018]"
                   />
-                  <p className="text-[11px] text-[#847374] mt-1.5">
-                    Setiap meja otomatis dikonfigurasi dengan kapasitas standar 4 orang (tata letak lantai 1).
-                  </p>
                 </div>
               </div>
             ) : (
@@ -396,9 +378,6 @@ const KelolaMejaViewInner: React.FC = () => {
                     />
                   </div>
                 </div>
-                <p className="text-[11px] text-[#847374]">
-                  Nomor yang sudah terdaftar akan dilewati. Maksimal {MAX_BATCH_TABLES} meja sekali tambah, dengan kapasitas 4 orang dan lantai 1.
-                </p>
               </div>
             )}
 
@@ -475,7 +454,20 @@ const KelolaMejaViewInner: React.FC = () => {
                 </select>
               </div>
 
-              <div className="pt-1">
+              <div className="pt-1 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const tbl = editingTable;
+                    setEditingTable(null);
+                    openQrModal(tbl);
+                  }}
+                  className="w-full py-2.5 px-3 rounded-xl bg-white hover:bg-[#f0ede9] border border-[#ebe8e3] text-xs font-bold text-[#3d1018] flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                >
+                  <span className="material-symbols-outlined text-[16px]">download</span>
+                  <span>Unduh &amp; Cetak QR Meja {editingTable.number}</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => {
@@ -485,10 +477,10 @@ const KelolaMejaViewInner: React.FC = () => {
                     setEditingTable(null);
                     openQrModal(updated);
                   }}
-                  className="w-full py-2.5 px-3 rounded-xl bg-[#fcf9f4] hover:bg-[#f0ede9] border border-[#ebe8e3] text-xs font-semibold text-[#3d1018] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  className="w-full py-2 px-3 rounded-xl hover:bg-[#f0ede9] text-[11px] font-medium text-[#847374] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[16px] text-[#994703]">sync</span>
-                  <span>Generate Ulang QR Code Meja</span>
+                  <span className="material-symbols-outlined text-[15px] text-[#994703]">sync</span>
+                  <span>Generate Ulang Kode QR</span>
                 </button>
               </div>
             </div>

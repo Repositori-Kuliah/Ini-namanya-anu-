@@ -312,13 +312,8 @@ export const DashboardView: React.FC = () => {
 
   return (
     <div className="flex flex-col w-full p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1540px] mx-auto pb-4 md:pb-8">
-      {/* Top Action Bar & Title Block */}
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
-        <div>
-          <h1 className="font-serif text-3xl sm:text-4xl font-bold text-[#3d1018] tracking-tight">
-            Dashboard
-          </h1>
-        </div>
+      {/* Top Action Bar & Period Selector */}
+      <div className="flex flex-wrap items-center justify-end gap-2">
 
         {/* Unified Date & Period Selector (1 Hari, 1 Minggu, 1 Bulan, 1 Tahun + 1 Unified Date Picker) */}
         <div className="flex flex-wrap items-center gap-2">
@@ -371,9 +366,6 @@ export const DashboardView: React.FC = () => {
             <span className="text-[11px] font-bold uppercase tracking-wider text-[#524344]">
               Penjualan Lunas
             </span>
-            <span className="w-8 h-8 rounded-full bg-[#f0ede9] flex items-center justify-center text-[#3d1018]">
-              <span className="material-symbols-outlined text-[18px]">receipt_long</span>
-            </span>
           </div>
           <div>
             <div className="font-serif text-2xl sm:text-3xl font-bold text-[#3d1018] tabular-nums">
@@ -387,9 +379,6 @@ export const DashboardView: React.FC = () => {
           <div className="flex items-center justify-between text-[#524344] mb-2">
             <span className="text-[11px] font-bold uppercase tracking-wider text-[#524344]">
               Transaksi Lunas
-            </span>
-            <span className="w-8 h-8 rounded-full bg-[#f0ede9] flex items-center justify-center text-[#3d1018]">
-              <span className="material-symbols-outlined text-[18px]">checklist</span>
             </span>
           </div>
           <div>
@@ -405,9 +394,6 @@ export const DashboardView: React.FC = () => {
             <span className="text-[11px] font-bold uppercase tracking-wider text-[#524344]">
               Rata-rata Transaksi
             </span>
-            <span className="w-8 h-8 rounded-full bg-[#f0ede9] flex items-center justify-center text-[#3d1018]">
-              <span className="material-symbols-outlined text-[18px]">account_balance_wallet</span>
-            </span>
           </div>
           <div>
             <div className="font-serif text-2xl sm:text-3xl font-bold text-[#3d1018] tabular-nums">
@@ -421,9 +407,6 @@ export const DashboardView: React.FC = () => {
           <div className="flex items-center justify-between text-[#524344] mb-2">
             <span className="text-[11px] font-bold uppercase tracking-wider text-[#524344]">
               Pajak Terkumpul
-            </span>
-            <span className="w-8 h-8 rounded-full bg-[#f0ede9] flex items-center justify-center text-[#3d1018]">
-              <span className="material-symbols-outlined text-[18px]">percent</span>
             </span>
           </div>
           <div>
@@ -586,13 +569,11 @@ export const DashboardView: React.FC = () => {
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h2 className="font-serif text-lg font-bold text-[#1c1c19]">Menu terlaris</h2>
-                <p className="text-xs text-[#524344]">Berdasarkan kuantitas transaksi lunas</p>
               </div>
             </div>
 
             {bestSellers.length === 0 ? (
               <div className="py-10 text-center flex flex-col items-center justify-center gap-2">
-                <span className="material-symbols-outlined text-3xl text-[#c5bcb5]">restaurant_menu</span>
                 <p className="text-xs font-semibold text-[#524344]">Belum ada menu terjual pada periode ini</p>
                 <p className="text-[11px] text-[#847374] max-w-xs">Data menu terlaris otomatis terisi saat transaksi lunas diselesaikan.</p>
               </div>
@@ -630,10 +611,6 @@ export const DashboardView: React.FC = () => {
           </div>
 
           <div className="pt-4 mt-4 space-y-2 border-t border-[#ebe8e3]">
-            <div className="flex items-center justify-between text-xs text-[#524344]">
-              <span>Total item terjual</span>
-              <span className="font-bold text-[#1c1c19]">{totalItemsSold} item</span>
-            </div>
             <button
               type="button"
               onClick={() => setActiveView('kelola-menu')}
@@ -689,13 +666,7 @@ export const DashboardView: React.FC = () => {
                         <td className="py-3 px-3 font-bold text-[#3d1018]">{trx.code}</td>
                         <td className="py-3 px-3 text-[#1c1c19]">{trx.typeMeja}</td>
                         <td className="py-3 px-3">
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                              trx.method === 'Tunai'
-                                ? 'bg-amber-50 text-amber-900 border border-amber-300'
-                                : 'bg-[#58252c] text-white'
-                            }`}
-                          >
+                          <span className="text-xs font-medium text-[#524344]">
                             {trx.method}
                           </span>
                         </td>
@@ -703,7 +674,7 @@ export const DashboardView: React.FC = () => {
                           Rp {trx.total.toLocaleString('id-ID')}
                         </td>
                         <td className="py-3 px-3 text-right">
-                          <span className="px-2 py-0.5 rounded-full bg-[#f0ede9] text-[#524344] text-[10px] font-semibold">
+                          <span className="text-xs font-semibold text-[#524344]">
                             {trx.status}
                           </span>
                         </td>

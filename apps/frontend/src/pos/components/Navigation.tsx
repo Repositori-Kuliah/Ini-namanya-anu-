@@ -312,7 +312,7 @@ export const DesktopSidebar: React.FC = () => {
   const getOperationalNav = () => {
     if (currentRole === 'kitchen') {
       return storeSettings.enableKitchenDisplay
-        ? [{ label: 'Pantau Pesanan (KDS)', icon: 'skillet', view: 'pantau-pesanan' as AppView }]
+        ? [{ label: 'Pantau Pesanan', icon: 'skillet', view: 'pantau-pesanan' as AppView }]
         : [];
     }
     if (currentRole === 'kasir') {
@@ -476,7 +476,7 @@ export const DesktopHeader: React.FC = () => {
       case 'pembayaran':
         return 'Checkout & Pembayaran';
       case 'pantau-pesanan':
-        return 'Pantau Pesanan (KDS)';
+        return 'Pantau Pesanan';
       case 'kelola-menu':
         return 'Kelola Menu';
       case 'kelola-meja':
@@ -508,7 +508,6 @@ export const DesktopHeader: React.FC = () => {
             </button>
 
             <div className="flex items-center gap-2 text-xs text-[#524344]">
-              <span className="material-symbols-outlined text-[16px] text-[#994703]">store</span>
               <span className="font-semibold text-[#1c1c19]">Rawon Gusti Surabaya</span>
               <span className="text-[#847374]">/</span>
               <span className="font-medium">{getViewTitle()}</span>

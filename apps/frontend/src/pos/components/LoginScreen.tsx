@@ -173,15 +173,11 @@ export const LoginScreen: React.FC = () => {
             >
               {busy ? 'Memproses…' : 'Masuk'}
             </button>
-
-            <p className="text-[11px] text-[#847374] text-center sm:text-left">
-              Gunakan &ldquo;Ingat saya&rdquo; hanya di perangkat pribadi.
-            </p>
           </form>
         </div>
 
         {/* Footer */}
-        <footer className="py-4 text-center text-xs text-[#847374]">
+        <footer className="py-4 text-center text-xs text-[#847374] lg:hidden">
           &copy; {new Date().getFullYear()} Rawon Gusti &bull; Sistem Point of Sale Restoran
         </footer>
       </main>
