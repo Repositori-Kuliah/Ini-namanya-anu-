@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { BillItem, SplitPaymentDetail } from '../types';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
@@ -32,6 +32,13 @@ export const CheckoutView: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [showQrisCode, setShowQrisCode] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Buka detail tagihan di mobile jika ada bill yang dipilih secara eksplisit
+  useEffect(() => {
+    if (selectedBillId && bills.some((b) => b.id === selectedBillId)) {
+      setMobileDetailOpen(true);
+    }
+  }, [selectedBillId, bills]);
 
   const filteredBills = bills.filter(
     (b) =>
@@ -113,11 +120,6 @@ export const CheckoutView: React.FC = () => {
   }, [currentBill.id, currentBill.total]);
 
   const handleExecutePayment = () => {
-    if (currentBill.isAllServed === false) {
-      showToast('Tidak bisa bayar! Masih ada pesanan di dapur yang belum disajikan.', 'warning');
-      return;
-    }
-
     if (paymentMethod === 'Tunai' && isChangeNegative) {
       showToast('Nominal uang tunai kurang dari total tagihan!', 'warning');
       return;
@@ -483,14 +485,14 @@ export const CheckoutView: React.FC = () => {
             {/* Rincian Menu Yang Dipesan (Tabel Ringkas) */}
             <div>
               <span className="text-[11px] font-bold uppercase tracking-wider text-[#524344] block mb-2">
-                Daftar Pesanan ({currentBill.items.length} menu)
+                Daftar Pesanan ({(currentBill.items || []).length} menu)
               </span>
 
-              {currentBill.items.length === 0 ? (
+              {(!currentBill.items || currentBill.items.length === 0) ? (
                 <p className="text-xs text-[#847374] italic py-2">Tidak ada item pesanan.</p>
               ) : (
                 <div className="divide-y divide-[#ebe8e3] text-xs">
-                  {currentBill.items.map((item, idx) => (
+                  {(currentBill.items || []).map((item, idx) => (
                     <div key={idx} className="py-2 flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="w-5 text-center font-bold text-[#3d1018] tabular-nums shrink-0">
@@ -687,11 +689,10 @@ export const CheckoutView: React.FC = () => {
                     disabled={
                       isProcessing ||
                       bills.length === 0 ||
-                      currentBill.isAllServed === false ||
                       (paymentMethod === 'Tunai' && isChangeNegative)
                     }
                     className={`w-full py-3 px-4 rounded-xl text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer ${
-                      currentBill.isAllServed === false || (paymentMethod === 'Tunai' && isChangeNegative)
+                      paymentMethod === 'Tunai' && isChangeNegative
                         ? 'bg-[#847374] opacity-60 cursor-not-allowed'
                         : 'bg-[#3d1018] hover:bg-[#58252c] active:scale-[0.99]'
                     }`}
@@ -702,11 +703,6 @@ export const CheckoutView: React.FC = () => {
                           sync
                         </span>
                         <span>Memproses Pembayaran...</span>
-                      </>
-                    ) : currentBill.isAllServed === false ? (
-                      <>
-                        <span className="material-symbols-outlined text-[18px]">skillet</span>
-                        <span>Tunggu Masakan Disajikan Dapur</span>
                       </>
                     ) : (
                       <>
@@ -753,14 +749,14 @@ export const CheckoutView: React.FC = () => {
               {/* Rincian Menu Yang Dipesan (Tabel Ringkas) */}
               <div>
                 <span className="text-[11px] font-bold uppercase tracking-wider text-[#524344] block mb-2">
-                  Daftar Pesanan ({currentBill.items.length} menu)
+                  Daftar Pesanan ({(currentBill.items || []).length} menu)
                 </span>
 
-                {currentBill.items.length === 0 ? (
+                {(!currentBill.items || currentBill.items.length === 0) ? (
                   <p className="text-xs text-[#847374] italic py-2">Tidak ada item pesanan.</p>
                 ) : (
                   <div className="divide-y divide-[#ebe8e3] text-xs">
-                    {currentBill.items.map((item, idx) => (
+                    {(currentBill.items || []).map((item, idx) => (
                       <div key={idx} className="py-2 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="w-5 text-center font-bold text-[#3d1018] tabular-nums shrink-0">
@@ -964,11 +960,10 @@ export const CheckoutView: React.FC = () => {
                       disabled={
                         isProcessing ||
                         bills.length === 0 ||
-                        currentBill.isAllServed === false ||
                         (paymentMethod === 'Tunai' && isChangeNegative)
                       }
                       className={`w-full py-3 px-4 rounded-xl text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer ${
-                        currentBill.isAllServed === false || (paymentMethod === 'Tunai' && isChangeNegative)
+                        paymentMethod === 'Tunai' && isChangeNegative
                           ? 'bg-[#847374] opacity-60 cursor-not-allowed'
                           : 'bg-[#3d1018] hover:bg-[#58252c] active:scale-[0.99]'
                       }`}
@@ -979,11 +974,6 @@ export const CheckoutView: React.FC = () => {
                             sync
                           </span>
                           <span>Memproses Pembayaran...</span>
-                        </>
-                      ) : currentBill.isAllServed === false ? (
-                        <>
-                          <span className="material-symbols-outlined text-[18px]">skillet</span>
-                          <span>Tunggu Masakan Disajikan Dapur</span>
                         </>
                       ) : (
                         <>

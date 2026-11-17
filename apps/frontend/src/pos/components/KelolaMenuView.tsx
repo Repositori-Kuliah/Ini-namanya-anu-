@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { MenuItem, RawIngredient } from '../types';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
@@ -120,8 +120,8 @@ const KelolaMenuViewInner: React.FC = () => {
   // --- Filter Logic: Menu ---
   const filteredMenuItems = menuItems.filter((item) => {
     const matchesSearch =
-      item.name.toLowerCase().includes(searchMenuQuery.toLowerCase()) ||
-      item.code.toLowerCase().includes(searchMenuQuery.toLowerCase());
+      (item.name || '').toLowerCase().includes(searchMenuQuery.toLowerCase()) ||
+      (item.code || '').toLowerCase().includes(searchMenuQuery.toLowerCase());
     if (!matchesSearch) return false;
 
     if (filterMenuCategory === 'Favorit') {
@@ -139,8 +139,8 @@ const KelolaMenuViewInner: React.FC = () => {
   // --- Filter Logic: Bahan Baku ---
   const filteredIngredients = rawIngredients.filter((ing) => {
     const matchesSearch =
-      ing.name.toLowerCase().includes(searchStockQuery.toLowerCase()) ||
-      ing.code.toLowerCase().includes(searchStockQuery.toLowerCase());
+      (ing.name || '').toLowerCase().includes(searchStockQuery.toLowerCase()) ||
+      (ing.code || '').toLowerCase().includes(searchStockQuery.toLowerCase());
     if (!matchesSearch) return false;
 
     if (stockCategoryFilter !== 'Semua' && ing.category !== stockCategoryFilter) return false;

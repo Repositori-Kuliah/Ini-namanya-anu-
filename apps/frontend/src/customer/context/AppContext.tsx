@@ -203,7 +203,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const cat = p.categories?.name ?? '';
           return {
             id: String(p.product_id), dbId: p.product_id, name: p.name, price: Number(p.price),
-            description: p.description || `${cat} khas Rawon Gusti.`, category: cat, categories: [cat], tags: [cat],
+            description: p.description || '', category: cat, categories: [cat], tags: [cat],
             badge: p.is_signature
               ? { text: 'Best Seller', type: 'best_seller' }
               : (p.is_favorite || p.is_recommended)

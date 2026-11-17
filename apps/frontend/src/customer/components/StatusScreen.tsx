@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 
 export const StatusScreen: React.FC = () => {
@@ -10,6 +10,45 @@ export const StatusScreen: React.FC = () => {
     navigate,
     formatRupiah,
   } = useApp();
+
+  // Konsolidasi/gabungkan item dengan nama menu yang sama agar ringkas
+  const consolidatedItems = useMemo(() => {
+    if (!activeOrder?.items) return [];
+    const map = new Map<
+      string,
+      {
+        name: string;
+        quantity: number;
+        totalPrice: number;
+        notes: string[];
+      }
+    >();
+
+    for (const it of activeOrder.items) {
+      const note = it.customization?.kitchenNotes?.trim();
+      const existing = map.get(it.name);
+      if (existing) {
+        existing.quantity += it.quantity;
+        existing.totalPrice += it.totalPrice;
+        if (note && !existing.notes.includes(note)) {
+          existing.notes.push(note);
+        }
+      } else {
+        map.set(it.name, {
+          name: it.name,
+          quantity: it.quantity,
+          totalPrice: it.totalPrice,
+          notes: note ? [note] : [],
+        });
+      }
+    }
+
+    return Array.from(map.values());
+  }, [activeOrder?.items]);
+
+  const totalPortions = useMemo(() => {
+    return consolidatedItems.reduce((acc, it) => acc + it.quantity, 0);
+  }, [consolidatedItems]);
 
   if (!activeOrder) {
     return (
@@ -43,20 +82,20 @@ export const StatusScreen: React.FC = () => {
               Daftar Pesanan
             </h2>
             <span className="text-[11px] text-[#847374] font-sans">
-              {activeOrder.items.length} Menu
+              {totalPortions} Porsi ({consolidatedItems.length} Menu)
             </span>
           </div>
 
           <div className="divide-y divide-[#f0ede9]">
-            {activeOrder.items.map((it, idx) => (
+            {consolidatedItems.map((it, idx) => (
               <div key={idx} className="py-2.5 first:pt-0 last:pb-0 flex items-center justify-between text-xs">
                 <div className="min-w-0 pr-3">
                   <div className="font-serif font-bold text-[#1c1c19] truncate">
                     {it.quantity}x {it.name}
                   </div>
-                  {it.customization?.kitchenNotes && (
+                  {it.notes.length > 0 && (
                     <div className="text-[11px] text-[#6b5a5b] italic font-sans mt-0.5">
-                      "{it.customization.kitchenNotes}"
+                      "{it.notes.join(', ')}"
                     </div>
                   )}
                 </div>

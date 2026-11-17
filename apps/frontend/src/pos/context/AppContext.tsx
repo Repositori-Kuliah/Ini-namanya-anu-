@@ -812,8 +812,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     else if (storeSettings.roundingRule === '1000') total = Math.ceil(total / 1000) * 1000;
 
     const req = requests.find((r) => r.table_id === s.table_id && r.kind === 'checkout');
-    const items: OrderItemSummary[] = live.flatMap((o: any) => o.order_items.map((i: any) => ({
+    const rawItems: OrderItemSummary[] = live.flatMap((o: any) => (o.order_items || []).map((i: any) => ({
       name: i.product_name, quantity: i.quantity, price: Number(i.unit_price), notes: i.note || undefined })));
+    const itemMap = new Map<string, OrderItemSummary>();
+    for (const it of rawItems) {
+      const key = `${it.name}__${it.notes || ''}`;
+      const existing = itemMap.get(key);
+      if (existing) {
+        existing.quantity += it.quantity;
+      } else {
+        itemMap.set(key, { ...it });
+      }
+    }
+    const items: OrderItemSummary[] = Array.from(itemMap.values());
     const staffOrder = live.find((o: any) => o.profiles?.full_name);
     const unservedOrders = live.filter((o: any) => o.order_status !== 'served');
     const isAllServed = unservedOrders.length === 0;
