@@ -94,8 +94,8 @@ export const LoginScreen: React.FC = () => {
 
           {/* Error Banner */}
           {errorMsg && (
-            <div className="flex items-start gap-2.5 rounded-xl bg-red-50 border border-red-200 p-3.5 text-xs text-red-700 animate-in fade-in">
-              <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+            <div className="flex items-start gap-2.5 rounded-xl bg-[#ffdadc]/40 border border-[#ba1a1a]/25 p-3.5 text-xs text-[#ba1a1a] animate-in fade-in">
+              <AlertCircle className="w-4 h-4 text-[#ba1a1a] shrink-0 mt-0.5" />
               <div className="flex-1">
                 <span className="font-semibold block">{errorMsg}</span>
                 <span className="text-[11px] opacity-90">Periksa kembali kredensial Anda atau hubungi admin outlet.</span>

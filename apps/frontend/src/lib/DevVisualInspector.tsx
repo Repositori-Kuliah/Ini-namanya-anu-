@@ -206,9 +206,9 @@ export const DevVisualInspector: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleHideElement}
-                  className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-900 border border-rose-200 text-xs font-medium transition cursor-pointer"
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#ffdadc]/40 hover:bg-[#ffdadc]/70 text-[#ba1a1a] border border-[#ba1a1a]/25 text-xs font-medium transition cursor-pointer"
                 >
-                  <EyeOff className="w-3.5 h-3.5 text-rose-700" />
+                  <EyeOff className="w-3.5 h-3.5 text-[#ba1a1a]" />
                   <span>Sembunyikan Elemen</span>
                 </button>
               </div>

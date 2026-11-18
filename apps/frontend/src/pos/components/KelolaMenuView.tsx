@@ -675,9 +675,9 @@ const KelolaMenuViewInner: React.FC = () => {
                                         setOpenIngActionId(null);
                                         setDeleteIngConfirm(ing);
                                       }}
-                                      className="w-full px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 flex items-center gap-2 cursor-pointer"
+                                      className="w-full px-3 py-1.5 text-xs font-semibold text-[#ba1a1a] hover:bg-[#ffdadc]/40 flex items-center gap-2 cursor-pointer"
                                     >
-                                      <span className="material-symbols-outlined text-[15px] text-red-700">delete</span>
+                                      <span className="material-symbols-outlined text-[15px] text-[#ba1a1a]">delete</span>
                                       <span>Hapus Bahan</span>
                                     </button>
                                   </div>
@@ -829,7 +829,7 @@ const KelolaMenuViewInner: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setNewImage('')}
-                        className="px-2.5 py-1 rounded-md bg-red-600 text-xs font-bold text-white hover:bg-red-700 cursor-pointer shadow"
+                        className="px-2.5 py-1 rounded-md bg-[#ba1a1a] text-xs font-bold text-white hover:bg-[#93000a] cursor-pointer shadow"
                       >
                         Hapus
                       </button>
@@ -1018,7 +1018,7 @@ const KelolaMenuViewInner: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setEditImage('')}
-                        className="px-2.5 py-1 rounded-md bg-red-600 text-xs font-bold text-white hover:bg-red-700 cursor-pointer shadow"
+                        className="px-2.5 py-1 rounded-md bg-[#ba1a1a] text-xs font-bold text-white hover:bg-[#93000a] cursor-pointer shadow"
                       >
                         Hapus
                       </button>
@@ -1117,7 +1117,7 @@ const KelolaMenuViewInner: React.FC = () => {
                   setEditingItem(null);
                   setDeleteMenuConfirm(itm);
                 }}
-                className="px-3 py-2 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 hover:text-red-700 cursor-pointer flex items-center gap-1 transition-colors"
+                className="px-3 py-2 rounded-lg text-xs font-semibold text-[#ba1a1a] hover:bg-[#ffdadc]/40 hover:text-[#93000a] cursor-pointer flex items-center gap-1 transition-colors"
               >
                 <span className="material-symbols-outlined text-[16px]">delete</span>
                 <span>Hapus Menu</span>
@@ -1424,7 +1424,7 @@ const KelolaMenuViewInner: React.FC = () => {
           }}
         >
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-[#ebe8e3] animate-in fade-in zoom-in-95 duration-150 cursor-default">
-            <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-3">
+            <div className="w-12 h-12 rounded-full bg-[#ffdadc]/40 text-[#ba1a1a] flex items-center justify-center mx-auto mb-3">
               <span className="material-symbols-outlined text-2xl">warning</span>
             </div>
             <h3 className="text-base font-bold text-[#1c1c19] text-center mb-1">
@@ -1447,7 +1447,7 @@ const KelolaMenuViewInner: React.FC = () => {
                   handleDeleteMenu(deleteMenuConfirm);
                   setDeleteMenuConfirm(null);
                 }}
-                className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer shadow-xs transition-colors"
+                className="flex-1 py-2 rounded-xl bg-[#ba1a1a] hover:bg-[#93000a] text-white text-xs font-bold cursor-pointer shadow-xs transition-colors"
               >
                 Hapus Menu
               </button>
@@ -1467,7 +1467,7 @@ const KelolaMenuViewInner: React.FC = () => {
           }}
         >
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-[#ebe8e3] animate-in fade-in zoom-in-95 duration-150 cursor-default">
-            <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-3">
+            <div className="w-12 h-12 rounded-full bg-[#ffdadc]/40 text-[#ba1a1a] flex items-center justify-center mx-auto mb-3">
               <span className="material-symbols-outlined text-2xl">warning</span>
             </div>
             <h3 className="text-base font-bold text-[#1c1c19] text-center mb-1">
@@ -1490,7 +1490,7 @@ const KelolaMenuViewInner: React.FC = () => {
                   handleDeleteIngredient(deleteIngConfirm);
                   setDeleteIngConfirm(null);
                 }}
-                className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer shadow-xs transition-colors"
+                className="flex-1 py-2 rounded-xl bg-[#ba1a1a] hover:bg-[#93000a] text-white text-xs font-bold cursor-pointer shadow-xs transition-colors"
               >
                 Hapus Bahan
               </button>

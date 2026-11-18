@@ -24,6 +24,8 @@ export interface OrderItemSummary {
   quantity: number;
   price: number;
   notes?: string;
+  orderItemId?: number | string;
+  orderId?: number | string;
 }
 
 export interface CurrentOrder {

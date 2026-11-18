@@ -43,6 +43,8 @@ interface AppContextType {
   deleteTable: (tableId: number) => Promise<boolean>;
   rotateTableQr: (tableId: number) => Promise<TableItem | null>;
   clearTableSession: (tableNumberOrSessionId: string | number) => Promise<void>;
+  voidOrderItem: (tableNumberOrSessionId: string | number, item: OrderItemSummary, reason?: string, removeAll?: boolean) => Promise<void>;
+  voidTableOrder: (tableNumberOrSessionId: string | number, reason?: string) => Promise<void>;
 
   cartItems: CartItem[];
   orderType: 'dine_in' | 'takeaway';
@@ -814,7 +816,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const req = requests.find((r) => r.table_id === s.table_id && r.kind === 'checkout');
     const rawItems: OrderItemSummary[] = live.flatMap((o: any) => (o.order_items || []).map((i: any) => ({
-      name: i.product_name, quantity: i.quantity, price: Number(i.unit_price), notes: i.note || undefined })));
+      name: i.product_name, quantity: i.quantity, price: Number(i.unit_price), notes: i.note || undefined,
+      orderItemId: i.order_item_id, orderId: o.order_id })));
     const itemMap = new Map<string, OrderItemSummary>();
     for (const it of rawItems) {
       const key = `${it.name}__${it.notes || ''}`;
@@ -1129,8 +1132,128 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await supabase.from('table_sessions').update({ closed_at: new Date().toISOString() }).eq('session_id', targetSessionId);
       } catch {}
       setSessions((prev) => prev.filter((s) => s.session_id !== targetSessionId));
+      try {
+        const stored = localStorage.getItem('rg_mock_sessions_v2');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          const updated = parsed.filter((s: any) => s.session_id !== targetSessionId);
+          localStorage.setItem('rg_mock_sessions_v2', JSON.stringify(updated));
+        }
+      } catch {}
     }
     showToast(`Meja ${target?.number || tableNumberOrSessionId} berhasil dikosongkan`, 'success');
+  };
+
+  const voidTableOrder = async (tableNumberOrSessionId: string | number, reason = 'Dibatalkan oleh kasir') => {
+    const target = tables.find((t) => t.number === String(tableNumberOrSessionId) || t.sessionId === Number(tableNumberOrSessionId));
+    const targetSessionId = target?.sessionId || (typeof tableNumberOrSessionId === 'number' ? tableNumberOrSessionId : undefined);
+
+    if (targetSessionId) {
+      try {
+        await supabase.from('table_sessions').update({ closed_at: new Date().toISOString() }).eq('session_id', targetSessionId);
+      } catch {}
+      setSessions((prev) => prev.filter((s) => s.session_id !== targetSessionId));
+
+      try {
+        const stored = localStorage.getItem('rg_mock_sessions_v2');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          const updated = parsed.filter((s: any) => s.session_id !== targetSessionId);
+          localStorage.setItem('rg_mock_sessions_v2', JSON.stringify(updated));
+        }
+      } catch {}
+    }
+
+    playDingSound();
+    showToast(`Pesanan Meja ${target?.number || tableNumberOrSessionId} berhasil dibatalkan (${reason})`, 'success');
+  };
+
+  const voidOrderItem = async (
+    tableNumberOrSessionId: string | number,
+    item: OrderItemSummary,
+    reason = 'Salah input kasir',
+    removeAll = false
+  ) => {
+    const target = tables.find((t) => t.number === String(tableNumberOrSessionId) || t.sessionId === Number(tableNumberOrSessionId));
+    const targetSessionId = target?.sessionId || (typeof tableNumberOrSessionId === 'number' ? tableNumberOrSessionId : undefined);
+
+    if (!targetSessionId) {
+      showToast('Sesi meja tidak ditemukan', 'warning');
+      return;
+    }
+
+    // 1. Optimistic update di local sessions
+    setSessions((prev) => {
+      return prev.map((s) => {
+        if (s.session_id !== targetSessionId) return s;
+
+        let itemHandled = false;
+        const updatedOrders = (s.orders || []).map((o: any) => {
+          if (itemHandled) return o;
+          const items = o.order_items || [];
+          const matchIndex = items.findIndex((it: any) => it.product_name === item.name);
+          if (matchIndex === -1) return o;
+
+          itemHandled = true;
+          const targetIt = items[matchIndex];
+          if (!removeAll && targetIt.quantity > 1) {
+            const newItems = [...items];
+            newItems[matchIndex] = { ...targetIt, quantity: targetIt.quantity - 1 };
+            return { ...o, order_items: newItems, total: Math.max(0, (o.total || 0) - Number(targetIt.unit_price)) };
+          } else {
+            const newItems = items.filter((_: any, idx: number) => idx !== matchIndex);
+            const deduct = Number(targetIt.unit_price) * (targetIt.quantity || 1);
+            return { ...o, order_items: newItems, total: Math.max(0, (o.total || 0) - deduct) };
+          }
+        }).filter((o: any) => (o.order_items || []).length > 0);
+
+        return { ...s, orders: updatedOrders };
+      }).filter((s) => (s.orders || []).length > 0);
+    });
+
+    // 2. Sinkronisasi localStorage rg_mock_sessions_v2
+    try {
+      const stored = localStorage.getItem('rg_mock_sessions_v2');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        const updated = parsed.map((s: any) => {
+          if (s.session_id !== targetSessionId) return s;
+          let itemHandled = false;
+          const updatedOrders = (s.orders || []).map((o: any) => {
+            if (itemHandled) return o;
+            const items = o.order_items || [];
+            const matchIndex = items.findIndex((it: any) => it.product_name === item.name);
+            if (matchIndex === -1) return o;
+            itemHandled = true;
+            const targetIt = items[matchIndex];
+            if (!removeAll && targetIt.quantity > 1) {
+              const newItems = [...items];
+              newItems[matchIndex] = { ...targetIt, quantity: targetIt.quantity - 1 };
+              return { ...o, order_items: newItems };
+            } else {
+              return { ...o, order_items: items.filter((_: any, idx: number) => idx !== matchIndex) };
+            }
+          }).filter((o: any) => (o.order_items || []).length > 0);
+          return { ...s, orders: updatedOrders };
+        }).filter((s: any) => (s.orders || []).length > 0);
+        localStorage.setItem('rg_mock_sessions_v2', JSON.stringify(updated));
+      }
+    } catch {}
+
+    // 3. Supabase async sync jika ada item_id
+    try {
+      if (item.orderItemId) {
+        if (!removeAll && item.quantity > 1) {
+          await supabase.from('order_items').update({ quantity: item.quantity - 1 }).eq('order_item_id', item.orderItemId);
+        } else {
+          await supabase.from('order_items').delete().eq('order_item_id', item.orderItemId);
+        }
+      }
+    } catch {}
+
+    playDingSound();
+    const actionDesc = removeAll || item.quantity <= 1 ? `Semua ${item.name} berhasil dibatalkan` : `1× ${item.name} berhasil dikurangi`;
+    showToast(`${actionDesc} (${reason})`, 'info');
   };
 
   // ---------- aksi: keranjang & pesanan staf ----------
@@ -1670,7 +1793,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AppContext.Provider value={{
       currentUser, currentRole, setCurrentRole, isLoggedIn, authLoading, dataReady, login, logout,
       activeView, setActiveView, viewportMode, setViewportMode, outletName, setOutletName,
-      tables, selectedTableId, setSelectedTableId, updateTable, addTable, deleteTable, rotateTableQr, clearTableSession,
+      tables, selectedTableId, setSelectedTableId, updateTable, addTable, deleteTable, rotateTableQr, clearTableSession, voidOrderItem, voidTableOrder,
       cartItems, orderType, setOrderType, takeawayNextQueue, orderTableNumber, setOrderTableNumber, orderSecondaryTables, setOrderSecondaryTables,
       orderCustomerName, setOrderCustomerName, orderGuestCount, setOrderGuestCount,
       kitchenGeneralNote, setKitchenGeneralNote, addToCart, removeFromCart, updateCartQuantity, updateCartItemNotes, clearCart,

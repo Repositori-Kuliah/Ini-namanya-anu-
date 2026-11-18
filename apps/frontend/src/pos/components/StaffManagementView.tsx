@@ -316,7 +316,7 @@ export const StaffManagementView: React.FC = () => {
                               ? 'bg-neutral-100 text-neutral-800 border-neutral-300'
                               : staf.role === 'kitchen'
                               ? 'bg-amber-50 text-amber-900 border-amber-200'
-                              : 'bg-rose-50 text-[#3d1018] border-rose-200'
+                              : 'bg-[#ffdadc]/40 text-[#3d1018] border-[#ba1a1a]/25'
                           }`}
                         >
                           {staf.role === 'admin' ? 'Admin' : staf.role === 'kitchen' ? 'Dapur' : 'Kasir'}
@@ -369,7 +369,7 @@ export const StaffManagementView: React.FC = () => {
             <div className="space-y-3.5 text-xs">
               <div>
                 <label className="block font-semibold text-[#1c1c19] mb-1">
-                  Nama Lengkap <span className="text-red-500">*</span>
+                  Nama Lengkap <span className="text-[#ba1a1a]">*</span>
                 </label>
                 <input
                   type="text"
@@ -383,7 +383,7 @@ export const StaffManagementView: React.FC = () => {
 
               <div>
                 <label className="block font-semibold text-[#1c1c19] mb-1">
-                  Email / User ID Login <span className="text-red-500">*</span>
+                  Email / User ID Login <span className="text-[#ba1a1a]">*</span>
                 </label>
                 <input
                   type="email"
@@ -397,7 +397,7 @@ export const StaffManagementView: React.FC = () => {
 
               <div>
                 <label className="block font-semibold text-[#1c1c19] mb-1">
-                  Kata Sandi Awal <span className="text-red-500">*</span>
+                  Kata Sandi Awal <span className="text-[#ba1a1a]">*</span>
                 </label>
                 <div className="relative">
                   <input
@@ -424,7 +424,7 @@ export const StaffManagementView: React.FC = () => {
 
               <div>
                 <label className="block font-semibold text-[#1c1c19] mb-1">
-                  Hak Akses (Role) <span className="text-red-500">*</span>
+                  Hak Akses (Role) <span className="text-[#ba1a1a]">*</span>
                 </label>
                 <select
                   value={newRole}
@@ -488,7 +488,7 @@ export const StaffManagementView: React.FC = () => {
             <div className="space-y-3.5 text-xs">
               <div>
                 <label className="block font-semibold text-[#1c1c19] mb-1">
-                  Nama Lengkap <span className="text-red-500">*</span>
+                  Nama Lengkap <span className="text-[#ba1a1a]">*</span>
                 </label>
                 <input
                   type="text"
@@ -501,7 +501,7 @@ export const StaffManagementView: React.FC = () => {
 
               <div>
                 <label className="block font-semibold text-[#1c1c19] mb-1">
-                  Email / User ID Login <span className="text-red-500">*</span>
+                  Email / User ID Login <span className="text-[#ba1a1a]">*</span>
                 </label>
                 <input
                   type="email"
@@ -564,7 +564,7 @@ export const StaffManagementView: React.FC = () => {
                       onClick={() => setEditActive(false)}
                       className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
                         !editActive
-                          ? 'bg-red-600 text-white border-red-600'
+                          ? 'bg-[#ba1a1a] text-white border-[#ba1a1a]'
                           : 'bg-[#f6f3ee] text-[#524344] border-[#ebe8e3]'
                       }`}
                     >
@@ -625,7 +625,7 @@ export const StaffManagementView: React.FC = () => {
                   }}
                   className={`text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-colors cursor-pointer flex items-center gap-1 ${
                     editActive
-                      ? 'text-red-700 bg-red-50 border-red-200 hover:bg-red-100'
+                      ? 'text-[#ba1a1a] bg-[#ffdadc]/35 border-[#ba1a1a]/25 hover:bg-[#ffdadc]/60'
                       : 'text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100'
                   }`}
                 >

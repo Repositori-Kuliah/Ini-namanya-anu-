@@ -497,7 +497,7 @@ const KelolaMejaViewInner: React.FC = () => {
                   setEditingTable(null);
                   setDeleteTableConfirm(tbl);
                 }}
-                className="px-3 py-2 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 hover:text-red-700 cursor-pointer flex items-center gap-1 transition-colors"
+                className="px-3 py-2 rounded-lg text-xs font-semibold text-[#ba1a1a] hover:bg-[#ffdadc]/40 hover:text-[#93000a] cursor-pointer flex items-center gap-1 transition-colors"
               >
                 <span className="material-symbols-outlined text-[16px]">delete</span>
                 <span>Hapus Meja</span>
@@ -526,7 +526,7 @@ const KelolaMejaViewInner: React.FC = () => {
       {deleteTableConfirm && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-[#ebe8e3] animate-in fade-in zoom-in-95 duration-150">
-            <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-3">
+            <div className="w-12 h-12 rounded-full bg-[#ffdadc]/40 text-[#ba1a1a] flex items-center justify-center mx-auto mb-3">
               <span className="material-symbols-outlined text-2xl">warning</span>
             </div>
             <h3 className="text-base font-bold text-[#1c1c19] text-center mb-1">
@@ -546,7 +546,7 @@ const KelolaMejaViewInner: React.FC = () => {
               <button
                 type="button"
                 onClick={() => confirmDeleteTableAction(deleteTableConfirm)}
-                className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer shadow-xs transition-colors"
+                className="flex-1 py-2 rounded-xl bg-[#ba1a1a] hover:bg-[#93000a] text-white text-xs font-bold cursor-pointer shadow-xs transition-colors"
               >
                 Hapus Meja
               </button>

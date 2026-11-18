@@ -386,14 +386,14 @@ export const PesananBaruView: React.FC = () => {
                 {/* Input Nama Pemesan */}
                 <div>
                   <label htmlFor="order-customer" className="text-[10px] text-[#847374] block mb-0.5 h-4 leading-4 truncate whitespace-nowrap">
-                    Nama Pemesan (Opsional)
+                    Nama Pemesan
                   </label>
                   <input
                     id="order-customer"
                     type="text"
                     value={orderCustomerName}
                     onChange={(e) => setOrderCustomerName(e.target.value)}
-                    placeholder="Opsional..."
+                    placeholder="Nama pemesan..."
                     className="w-full bg-[#fcf9f4] border border-[#ebe8e3] rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#1c1c19] outline-none focus:border-[#3d1018]"
                   />
                 </div>
@@ -402,14 +402,14 @@ export const PesananBaruView: React.FC = () => {
               <div>
                 {/* Nama Pemesan */}
                 <label htmlFor="takeaway-customer" className="text-[10px] text-[#847374] block mb-0.5 h-4 leading-4 truncate whitespace-nowrap">
-                  Nama Pemesan (Opsional)
+                  Nama Pemesan
                 </label>
                 <input
                   id="takeaway-customer"
                   type="text"
                   value={orderCustomerName}
                   onChange={(e) => setOrderCustomerName(e.target.value)}
-                  placeholder="Opsional..."
+                  placeholder="Nama pemesan..."
                   className="w-full bg-[#fcf9f4] border border-[#ebe8e3] rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#1c1c19] outline-none focus:border-[#3d1018]"
                 />
               </div>
@@ -428,7 +428,7 @@ export const PesananBaruView: React.FC = () => {
               <div className="p-6 text-center border border-dashed border-[#ebe8e3] rounded-xl text-xs text-[#847374] leading-relaxed">
                 Keranjang masih kosong.
                 <br />
-                Pilih menu dari daftar di sebelah kiri untuk mulai memesan.
+                Pilih menu dari katalog untuk mulai memesan.
               </div>
             ) : (
               <div className="divide-y divide-[#ebe8e3] text-xs max-h-56 overflow-y-auto pr-1">

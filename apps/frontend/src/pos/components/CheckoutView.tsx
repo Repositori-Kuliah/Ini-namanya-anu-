@@ -657,7 +657,7 @@ export const CheckoutView: React.FC = () => {
                       <span className="text-[#524344]">Uang Kembalian:</span>
                       <span
                         className={`text-base tabular-nums ${
-                          isChangeNegative ? 'text-red-700' : 'text-[#994703]'
+                          isChangeNegative ? 'text-[#ba1a1a]' : 'text-[#994703]'
                         }`}
                       >
                         {isChangeNegative
@@ -929,7 +929,7 @@ export const CheckoutView: React.FC = () => {
                         <span className="text-[#524344]">Uang Kembalian:</span>
                         <span
                           className={`text-base tabular-nums ${
-                            isChangeNegative ? 'text-red-700' : 'text-[#994703]'
+                            isChangeNegative ? 'text-[#ba1a1a]' : 'text-[#994703]'
                           }`}
                         >
                           {isChangeNegative

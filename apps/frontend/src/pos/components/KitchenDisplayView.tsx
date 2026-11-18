@@ -123,7 +123,7 @@ export const KitchenDisplayView: React.FC = () => {
           {/* Header Tiket: Nomor Meja & Waktu */}
           <div className="flex items-start justify-between pb-3 border-b border-[#ebe8e3] gap-2">
             <div>
-              <h3 className="text-2xl sm:text-3xl font-extrabold text-[#1c1c19] tracking-tight leading-none">
+              <h3 className="font-serif text-2xl sm:text-3xl font-bold text-[#1c1c19] tracking-tight leading-none">
                 {sub.ticket.tableNumber}
               </h3>
               {/* Nama hanya ditampilkan jika pesanan Bawa Pulang / Takeaway */}
