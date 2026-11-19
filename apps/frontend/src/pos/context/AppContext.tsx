@@ -43,7 +43,7 @@ interface AppContextType {
   deleteTable: (tableId: number) => Promise<boolean>;
   rotateTableQr: (tableId: number) => Promise<TableItem | null>;
   clearTableSession: (tableNumberOrSessionId: string | number) => Promise<void>;
-  voidOrderItem: (tableNumberOrSessionId: string | number, item: OrderItemSummary, reason?: string, removeAll?: boolean) => Promise<void>;
+  voidOrderItem: (tableNumberOrSessionId: string | number, item: OrderItemSummary, reason?: string, qtyToVoid?: number) => Promise<void>;
   voidTableOrder: (tableNumberOrSessionId: string | number, reason?: string) => Promise<void>;
 
   cartItems: CartItem[];
@@ -1165,14 +1165,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     playDingSound();
-    showToast(`Pesanan Meja ${target?.number || tableNumberOrSessionId} berhasil dibatalkan (${reason})`, 'success');
+    showToast(`Pesanan Meja ${target?.number || tableNumberOrSessionId} berhasil dibatalkan`, 'success');
   };
 
   const voidOrderItem = async (
     tableNumberOrSessionId: string | number,
     item: OrderItemSummary,
     reason = 'Salah input kasir',
-    removeAll = false
+    qtyToVoid?: number
   ) => {
     const target = tables.find((t) => t.number === String(tableNumberOrSessionId) || t.sessionId === Number(tableNumberOrSessionId));
     const targetSessionId = target?.sessionId || (typeof tableNumberOrSessionId === 'number' ? tableNumberOrSessionId : undefined);
@@ -1181,6 +1181,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       showToast('Sesi meja tidak ditemukan', 'warning');
       return;
     }
+
+    const cancelQty = Math.max(1, Math.min(item.quantity, qtyToVoid ?? item.quantity));
 
     // 1. Optimistic update di local sessions
     setSessions((prev) => {
@@ -1196,10 +1198,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
           itemHandled = true;
           const targetIt = items[matchIndex];
-          if (!removeAll && targetIt.quantity > 1) {
+          const remainingQty = targetIt.quantity - cancelQty;
+
+          if (remainingQty > 0) {
             const newItems = [...items];
-            newItems[matchIndex] = { ...targetIt, quantity: targetIt.quantity - 1 };
-            return { ...o, order_items: newItems, total: Math.max(0, (o.total || 0) - Number(targetIt.unit_price)) };
+            newItems[matchIndex] = { ...targetIt, quantity: remainingQty };
+            return { ...o, order_items: newItems, total: Math.max(0, (o.total || 0) - Number(targetIt.unit_price) * cancelQty) };
           } else {
             const newItems = items.filter((_: any, idx: number) => idx !== matchIndex);
             const deduct = Number(targetIt.unit_price) * (targetIt.quantity || 1);
@@ -1226,9 +1230,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (matchIndex === -1) return o;
             itemHandled = true;
             const targetIt = items[matchIndex];
-            if (!removeAll && targetIt.quantity > 1) {
+            const remainingQty = targetIt.quantity - cancelQty;
+            if (remainingQty > 0) {
               const newItems = [...items];
-              newItems[matchIndex] = { ...targetIt, quantity: targetIt.quantity - 1 };
+              newItems[matchIndex] = { ...targetIt, quantity: remainingQty };
               return { ...o, order_items: newItems };
             } else {
               return { ...o, order_items: items.filter((_: any, idx: number) => idx !== matchIndex) };
@@ -1243,8 +1248,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 3. Supabase async sync jika ada item_id
     try {
       if (item.orderItemId) {
-        if (!removeAll && item.quantity > 1) {
-          await supabase.from('order_items').update({ quantity: item.quantity - 1 }).eq('order_item_id', item.orderItemId);
+        const remainingQty = item.quantity - cancelQty;
+        if (remainingQty > 0) {
+          await supabase.from('order_items').update({ quantity: remainingQty }).eq('order_item_id', item.orderItemId);
         } else {
           await supabase.from('order_items').delete().eq('order_item_id', item.orderItemId);
         }
@@ -1252,8 +1258,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {}
 
     playDingSound();
-    const actionDesc = removeAll || item.quantity <= 1 ? `Semua ${item.name} berhasil dibatalkan` : `1× ${item.name} berhasil dikurangi`;
-    showToast(`${actionDesc} (${reason})`, 'info');
+    const actionDesc = cancelQty >= item.quantity ? `Semua (${item.quantity}×) ${item.name} berhasil dibatalkan` : `${cancelQty}× ${item.name} berhasil dihapus`;
+    showToast(actionDesc, 'info');
   };
 
   // ---------- aksi: keranjang & pesanan staf ----------

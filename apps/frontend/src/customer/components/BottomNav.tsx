@@ -29,7 +29,7 @@ export const BottomNav: React.FC = () => {
       aria-label="Navigasi Utama"
       className="fixed bottom-0 inset-x-0 z-40 pb-safe bg-[#fcf9f4]/95 backdrop-blur-md border-t border-[#ebe8e3] shadow-xs"
     >
-      <div className="w-full max-w-md md:max-w-3xl lg:max-w-5xl mx-auto flex justify-around items-center h-14 px-4">
+      <div className="w-full max-w-md md:max-w-4xl lg:max-w-[1600px] mx-auto flex justify-around items-center h-14 px-4">
         {tabs.map((tab) => {
           const isActive = currentScreen === tab.id;
           return (

@@ -13,7 +13,7 @@ export const Header: React.FC<HeaderProps> = ({ onBack }) => {
 
   return (
     <header className="fixed top-0 inset-x-0 z-50 pt-safe bg-[#fcf9f4]/95 backdrop-blur-md border-b border-[#ebe8e3] transition-all">
-      <div className="w-full max-w-md md:max-w-3xl lg:max-w-5xl mx-auto h-14 px-4 md:px-6 flex items-center justify-between gap-3">
+      <div className="w-full max-w-md md:max-w-4xl lg:max-w-[1600px] mx-auto h-14 px-4 md:px-6 flex items-center justify-between gap-3">
         {!isMenu ? (
           <div className="flex items-center gap-3 min-w-0">
             <button

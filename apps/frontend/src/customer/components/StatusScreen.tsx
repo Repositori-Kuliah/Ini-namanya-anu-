@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 export const StatusScreen: React.FC = () => {
   const {
     activeOrder,
+    selectedTable,
     callWaiter,
     waiterCooldown,
     waiterCalled,
@@ -11,7 +12,7 @@ export const StatusScreen: React.FC = () => {
     formatRupiah,
   } = useApp();
 
-  // Konsolidasi/gabungkan item dengan nama menu yang sama agar ringkas
+  // Konsolidasi/gabungkan item dengan nama menu yang sama agar ringkas seperti pada POS
   const consolidatedItems = useMemo(() => {
     if (!activeOrder?.items) return [];
     const map = new Map<
@@ -19,6 +20,7 @@ export const StatusScreen: React.FC = () => {
       {
         name: string;
         quantity: number;
+        unitPrice: number;
         totalPrice: number;
         notes: string[];
       }
@@ -37,6 +39,7 @@ export const StatusScreen: React.FC = () => {
         map.set(it.name, {
           name: it.name,
           quantity: it.quantity,
+          unitPrice: it.basePrice,
           totalPrice: it.totalPrice,
           notes: note ? [note] : [],
         });
@@ -46,9 +49,12 @@ export const StatusScreen: React.FC = () => {
     return Array.from(map.values());
   }, [activeOrder?.items]);
 
-  const totalPortions = useMemo(() => {
-    return consolidatedItems.reduce((acc, it) => acc + it.quantity, 0);
-  }, [consolidatedItems]);
+  // Format kode tagihan identik dengan POS: MEJA_02_181126
+  const billCode = useMemo(() => {
+    const tbl = String(activeOrder?.tableNumber || selectedTable || '01').padStart(2, '0');
+    const orderNum = activeOrder?.ticketNumber?.replace('#', '') || '0001';
+    return `MEJA_${tbl}_${orderNum}`;
+  }, [activeOrder?.tableNumber, activeOrder?.ticketNumber, selectedTable]);
 
   if (!activeOrder) {
     return (
@@ -63,7 +69,7 @@ export const StatusScreen: React.FC = () => {
         <button
           type="button"
           onClick={() => navigate('menu')}
-          className="h-11 px-6 rounded-2xl bg-[#3d1018] hover:bg-[#58252c] text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-xs font-sans"
+          className="h-11 px-6 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-xs font-sans"
         >
           <span className="material-symbols-outlined text-[18px]">restaurant_menu</span>
           <span>Buka Katalog Menu</span>
@@ -74,101 +80,120 @@ export const StatusScreen: React.FC = () => {
 
   return (
     <div className="flex flex-col w-full pt-16 pb-28 min-h-screen bg-[#fcf9f4]">
-      <div className="px-4 md:px-6 py-4 max-w-xl mx-auto w-full space-y-4">
-        {/* Rincian Menu yang Dipesan */}
-        <div className="bg-white rounded-3xl p-5 border border-[#ebe8e3] shadow-xs space-y-3">
-          <div className="flex items-center justify-between pb-2 border-b border-[#f0ede9]">
-            <h2 className="text-xs font-bold text-[#1c1c19] uppercase tracking-wider font-sans">
-              Daftar Pesanan
-            </h2>
-            <span className="text-[11px] text-[#847374] font-sans">
-              {totalPortions} Porsi ({consolidatedItems.length} Menu)
-            </span>
+      <div className="px-4 md:px-6 py-4 max-w-xl mx-auto w-full">
+        {/* Card Section: Desain Plek Ketiplek dengan Detail Pembayaran POS Checkout */}
+        <section
+          aria-label="Detail Pembayaran Tagihan Terpilih"
+          className="bg-white rounded-xl border border-[#ebe8e3] p-4 sm:p-5 flex flex-col gap-4 shadow-xs"
+        >
+          {/* Header Rincian Tagihan Terpilih */}
+          <div className="pb-3 border-b border-[#ebe8e3] flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-lg sm:text-xl font-bold text-[#1c1c19] tracking-tight">
+                {billCode}
+              </h2>
+              <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-[#f6f3ee] text-[#3d1018] border border-[#ebe8e3]">
+                Meja {activeOrder.tableNumber || selectedTable || '01'}
+              </span>
+            </div>
           </div>
 
-          <div className="divide-y divide-[#f0ede9]">
-            {consolidatedItems.map((it, idx) => (
-              <div key={idx} className="py-2.5 first:pt-0 last:pb-0 flex items-center justify-between text-xs">
-                <div className="min-w-0 pr-3">
-                  <div className="font-serif font-bold text-[#1c1c19] truncate">
-                    {it.quantity}x {it.name}
-                  </div>
-                  {it.notes.length > 0 && (
-                    <div className="text-[11px] text-[#6b5a5b] italic font-sans mt-0.5">
-                      "{it.notes.join(', ')}"
+          {/* Rincian Menu Yang Dipesan (Tabel Ringkas POS) */}
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#524344] block mb-2">
+              Daftar Pesanan ({consolidatedItems.length} menu)
+            </span>
+
+            {consolidatedItems.length === 0 ? (
+              <p className="text-xs text-[#847374] italic py-2">Tidak ada item pesanan.</p>
+            ) : (
+              <div className="divide-y divide-[#ebe8e3] text-xs">
+                {consolidatedItems.map((item, idx) => (
+                  <div key={idx} className="py-2 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-5 text-center font-bold text-[#3d1018] tabular-nums shrink-0">
+                        {item.quantity}×
+                      </span>
+                      <div className="min-w-0">
+                        <span className="font-semibold text-[#1c1c19] truncate block">
+                          {item.name}
+                        </span>
+                        {item.notes.length > 0 && (
+                          <span className="text-[11px] text-[#994703] block truncate">
+                            Catatan: {item.notes.join(', ')}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </div>
-                <span className="font-sans font-semibold text-[#3d1018] tabular-nums shrink-0">
-                  {formatRupiah(it.totalPrice)}
+                    <span className="font-medium text-[#1c1c19] tabular-nums shrink-0">
+                      {formatRupiah(item.totalPrice)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Kalkulasi Finansial (Subtotal Menu, Biaya Layanan, PB1, Total Pembayaran) */}
+          <div className="pt-3 border-t border-[#ebe8e3] space-y-1.5 text-xs">
+            <div className="flex justify-between text-[#524344]">
+              <span>Subtotal Menu</span>
+              <span className="font-medium text-[#1c1c19] tabular-nums">
+                {formatRupiah(activeOrder.subtotal)}
+              </span>
+            </div>
+            {activeOrder.serviceFee > 0 && (
+              <div className="flex justify-between text-[#524344]">
+                <span>Biaya Layanan (5%)</span>
+                <span className="font-medium text-[#1c1c19] tabular-nums">
+                  {formatRupiah(activeOrder.serviceFee)}
                 </span>
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Rincian Biaya, Pajak, dan Total */}
-        <div className="bg-white rounded-3xl p-5 border border-[#ebe8e3] shadow-xs space-y-2.5 text-xs text-[#6b5a5b] font-sans">
-          <div className="flex justify-between">
-            <span>Subtotal</span>
-            <span className="font-semibold text-[#1c1c19] tabular-nums">
-              {formatRupiah(activeOrder.subtotal)}
-            </span>
-          </div>
-
-          {activeOrder.serviceFee > 0 && (
-            <div className="flex justify-between">
-              <span>Biaya Layanan</span>
-              <span className="font-semibold text-[#1c1c19] tabular-nums">
-                {formatRupiah(activeOrder.serviceFee)}
+            )}
+            {activeOrder.tax > 0 && (
+              <div className="flex justify-between text-[#524344]">
+                <span>Pajak Restoran PB1 (10%)</span>
+                <span className="font-medium text-[#1c1c19] tabular-nums">
+                  {formatRupiah(activeOrder.tax)}
+                </span>
+              </div>
+            )}
+            <div className="flex justify-between pt-2 border-t border-[#ebe8e3] items-baseline">
+              <span className="text-sm font-bold text-[#1c1c19]">TOTAL PEMBAYARAN</span>
+              <span className="text-2xl font-bold text-[#3d1018] tabular-nums">
+                {formatRupiah(activeOrder.total)}
               </span>
             </div>
-          )}
-
-          {activeOrder.tax > 0 && (
-            <div className="flex justify-between">
-              <span>PB1 (Pajak Restoran)</span>
-              <span className="font-semibold text-[#1c1c19] tabular-nums">
-                {formatRupiah(activeOrder.tax)}
-              </span>
-            </div>
-          )}
-
-          <div className="pt-2.5 border-t border-[#f0ede9] flex justify-between items-baseline">
-            <span className="font-extrabold text-[#1c1c19] text-sm">TOTAL</span>
-            <span className="font-serif text-lg font-bold text-[#3d1018] tabular-nums">
-              {formatRupiah(activeOrder.total)}
-            </span>
           </div>
-        </div>
 
-        {/* Tombol Tindakan: Pesan Tambahan & Panggil Pelayan */}
-        <div className="grid grid-cols-2 gap-3 pt-2 font-sans">
-          <button
-            type="button"
-            onClick={() => navigate('menu')}
-            className="h-12 rounded-2xl bg-[#3d1018] hover:bg-[#58252c] text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer shadow-xs"
-          >
-            <span className="material-symbols-outlined text-[18px]">add</span>
-            <span>Pesan Tambahan</span>
-          </button>
+          {/* Tombol Aksi: Pesan Tambahan & Panggil Pelayan */}
+          <div className="grid grid-cols-2 gap-3 pt-2 font-sans border-t border-[#ebe8e3]">
+            <button
+              type="button"
+              onClick={() => navigate('menu')}
+              className="h-11 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer shadow-xs"
+            >
+              <span className="material-symbols-outlined text-[17px]">add</span>
+              <span>Pesan Tambahan</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={callWaiter}
-            disabled={waiterCooldown > 0}
-            className="h-12 rounded-2xl bg-white border border-[#ebe8e3] text-[#3d1018] font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-[#f0ede9] active:scale-95 transition-all cursor-pointer shadow-xs"
-          >
-            <span className="material-symbols-outlined text-[18px]">notifications</span>
-            <span>
-              {waiterCooldown > 0
-                ? `Tunggu ${waiterCooldown}s`
-                : waiterCalled
-                ? 'Dipanggil'
-                : 'Panggil Pelayan'}
-            </span>
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={callWaiter}
+              disabled={waiterCooldown > 0}
+              className="h-11 rounded-xl bg-white border border-[#ebe8e3] text-[#3d1018] font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-[#f0ede9] active:scale-95 transition-all cursor-pointer shadow-xs"
+            >
+              <span className="material-symbols-outlined text-[17px]">notifications</span>
+              <span>
+                {waiterCooldown > 0
+                  ? `Tunggu ${waiterCooldown}s`
+                  : waiterCalled
+                  ? 'Dipanggil'
+                  : 'Panggil Pelayan'}
+              </span>
+            </button>
+          </div>
+        </section>
       </div>
     </div>
   );

@@ -226,7 +226,7 @@ const KelolaMejaViewInner: React.FC = () => {
               onClick={() => setFilterMode(mode)}
               className={`px-3 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
                 filterMode === mode
-                  ? 'bg-white text-[#3d1018] shadow-xs'
+                  ? 'bg-[#3d1018] text-white shadow-xs'
                   : 'text-[#524344] hover:text-[#1c1c19]'
               }`}
             >
@@ -316,70 +316,19 @@ const KelolaMejaViewInner: React.FC = () => {
               </button>
             </div>
 
-            <div className="flex p-1 rounded-lg bg-[#f0ede9] text-xs">
-              {(
-                [
-                  { value: 'single', label: 'Satu Meja' },
-                  { value: 'range', label: 'Banyak Meja' },
-                ] as const
-              ).map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setAddMode(option.value)}
-                  className={`flex-1 py-1.5 rounded font-bold transition-all cursor-pointer ${
-                    addMode === option.value ? 'bg-white text-[#3d1018] shadow-xs' : 'text-[#524344]'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="font-bold text-[#1c1c19] block mb-1">Nomor Meja *</label>
+                <input
+                  type="number"
+                  required
+                  min={1}
+                  value={newTableNum}
+                  onChange={(e) => setNewTableNum(e.target.value)}
+                  className="w-full px-3 py-2 bg-[#fcf9f4] rounded-lg border border-[#ebe8e3] outline-none font-bold text-sm focus:border-[#3d1018]"
+                />
+              </div>
             </div>
-
-            {addMode === 'single' ? (
-              <div className="space-y-3 text-xs">
-                <div>
-                  <label className="font-bold text-[#1c1c19] block mb-1">Nomor Meja *</label>
-                  <input
-                    type="number"
-                    required
-                    value={newTableNum}
-                    onChange={(e) => setNewTableNum(e.target.value)}
-                    placeholder="Contoh: 13"
-                    className="w-full px-3 py-2 bg-[#fcf9f4] rounded-lg border border-[#ebe8e3] outline-none font-bold text-sm focus:border-[#3d1018]"
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3 text-xs">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="font-bold text-[#1c1c19] block mb-1">Dari Meja *</label>
-                    <input
-                      type="number"
-                      required
-                      min={1}
-                      value={rangeStart}
-                      onChange={(e) => setRangeStart(e.target.value)}
-                      placeholder="Contoh: 1"
-                      className="w-full px-3 py-2 bg-[#fcf9f4] rounded-lg border border-[#ebe8e3] outline-none font-bold text-sm focus:border-[#3d1018]"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-bold text-[#1c1c19] block mb-1">Sampai Meja *</label>
-                    <input
-                      type="number"
-                      required
-                      min={1}
-                      value={rangeEnd}
-                      onChange={(e) => setRangeEnd(e.target.value)}
-                      placeholder="Contoh: 10"
-                      className="w-full px-3 py-2 bg-[#fcf9f4] rounded-lg border border-[#ebe8e3] outline-none font-bold text-sm focus:border-[#3d1018]"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
 
             <div className="flex gap-2 pt-2 border-t border-[#ebe8e3]">
               <button
@@ -477,9 +426,9 @@ const KelolaMejaViewInner: React.FC = () => {
                     setEditingTable(null);
                     openQrModal(updated);
                   }}
-                  className="w-full py-2 px-3 rounded-xl hover:bg-[#f0ede9] text-[11px] font-medium text-[#847374] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  className="w-full py-2.5 px-3 rounded-xl bg-[#f0ede9] hover:bg-[#ebe8e3] text-xs font-semibold text-[#3d1018] flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-[#ebe8e3]"
                 >
-                  <span className="material-symbols-outlined text-[15px] text-[#994703]">sync</span>
+                  <span className="material-symbols-outlined text-[16px] text-[#994703]">sync</span>
                   <span>Generate Ulang Kode QR</span>
                 </button>
               </div>
@@ -497,7 +446,7 @@ const KelolaMejaViewInner: React.FC = () => {
                   setEditingTable(null);
                   setDeleteTableConfirm(tbl);
                 }}
-                className="px-3 py-2 rounded-lg text-xs font-semibold text-[#ba1a1a] hover:bg-[#ffdadc]/40 hover:text-[#93000a] cursor-pointer flex items-center gap-1 transition-colors"
+                className="px-3 py-2 rounded-lg text-xs font-bold text-white bg-[#ba1a1a] hover:bg-[#93000a] cursor-pointer flex items-center gap-1 transition-colors shadow-xs"
               >
                 <span className="material-symbols-outlined text-[16px]">delete</span>
                 <span>Hapus Meja</span>
@@ -526,10 +475,7 @@ const KelolaMejaViewInner: React.FC = () => {
       {deleteTableConfirm && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-[#ebe8e3] animate-in fade-in zoom-in-95 duration-150">
-            <div className="w-12 h-12 rounded-full bg-[#ffdadc]/40 text-[#ba1a1a] flex items-center justify-center mx-auto mb-3">
-              <span className="material-symbols-outlined text-2xl">warning</span>
-            </div>
-            <h3 className="text-base font-bold text-[#1c1c19] text-center mb-1">
+            <h3 className="text-base font-bold text-[#ba1a1a] text-center mb-1">
               Peringatan Konfirmasi Hapus
             </h3>
             <p className="text-xs text-[#524344] text-center mb-5 leading-relaxed">

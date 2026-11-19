@@ -43,6 +43,17 @@
     background: transparent !important;
   }
 
+  /* Hilangkan spinner / arrow atas-bawah bawaan browser pada input angka */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none !important;
+    margin: 0 !important;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield !important;
+    appearance: textfield !important;
+  }
+
   h1, h2, .font-serif {
     font-family: 'Playfair Display', Georgia, serif;
   }

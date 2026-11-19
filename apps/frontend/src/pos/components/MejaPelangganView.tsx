@@ -28,6 +28,7 @@ const MejaPelangganViewInner: React.FC = () => {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<OrderItemSummary | null>(null);
+  const [deleteQty, setDeleteQty] = useState<number>(1);
   const [isCancelTableModalOpen, setIsCancelTableModalOpen] = useState(false);
 
   // Kunci scroll halaman belakang saat modal detail meja / konfirmasi terbuka
@@ -278,8 +279,11 @@ const MejaPelangganViewInner: React.FC = () => {
                         </div>
                         <button
                           type="button"
-                          onClick={() => setItemToDelete(item)}
-                          className="w-7 h-7 rounded-lg hover:bg-[#ffdadc]/40 text-[#847374] hover:text-[#ba1a1a] flex items-center justify-center transition-colors cursor-pointer border border-transparent hover:border-[#ba1a1a]/30 shrink-0 ml-2"
+                          onClick={() => {
+                            setItemToDelete(item);
+                            setDeleteQty(item.quantity);
+                          }}
+                          className="w-7 h-7 rounded-lg bg-[#ba1a1a] hover:bg-[#93000a] text-white flex items-center justify-center transition-colors cursor-pointer shrink-0 ml-2 shadow-2xs"
                           title={`Hapus / Batalkan ${item.name}`}
                         >
                           <span className="material-symbols-outlined text-[16px]">delete</span>
@@ -343,7 +347,7 @@ const MejaPelangganViewInner: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsCancelTableModalOpen(true)}
-                  className="w-full py-2 px-3 rounded-xl text-[#ba1a1a] bg-[#ffdadc]/30 hover:bg-[#ffdadc]/60 hover:text-[#93000a] border border-[#ba1a1a]/25 font-semibold text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5 mt-0.5"
+                  className="w-full py-2.5 px-3 rounded-xl bg-[#ba1a1a] hover:bg-[#93000a] text-white font-bold text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5 mt-0.5 shadow-xs"
                 >
                   <span className="material-symbols-outlined text-[16px]">cancel</span>
                   <span>Batalkan Seluruh Pesanan Meja {selectedTable.number}</span>
@@ -434,8 +438,11 @@ const MejaPelangganViewInner: React.FC = () => {
                           </div>
                           <button
                             type="button"
-                            onClick={() => setItemToDelete(item)}
-                            className="w-7 h-7 rounded-lg hover:bg-[#ffdadc]/40 text-[#847374] hover:text-[#ba1a1a] flex items-center justify-center transition-colors cursor-pointer border border-transparent hover:border-[#ba1a1a]/30 shrink-0 ml-2"
+                            onClick={() => {
+                              setItemToDelete(item);
+                              setDeleteQty(item.quantity);
+                            }}
+                            className="w-7 h-7 rounded-lg bg-[#ba1a1a] hover:bg-[#93000a] text-white flex items-center justify-center transition-colors cursor-pointer shrink-0 ml-2 shadow-2xs"
                             title={`Hapus / Batalkan ${item.name}`}
                           >
                             <span className="material-symbols-outlined text-[16px]">delete</span>
@@ -496,7 +503,7 @@ const MejaPelangganViewInner: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsCancelTableModalOpen(true)}
-                  className="w-full py-2 px-3 rounded-xl text-[#ba1a1a] bg-[#ffdadc]/30 hover:bg-[#ffdadc]/60 hover:text-[#93000a] border border-[#ba1a1a]/25 font-semibold text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5 mt-1"
+                  className="w-full py-2.5 px-3 rounded-xl bg-[#ba1a1a] hover:bg-[#93000a] text-white font-bold text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5 mt-1 shadow-xs"
                 >
                   <span className="material-symbols-outlined text-[16px]">cancel</span>
                   <span>Batalkan Seluruh Pesanan Meja {selectedTable.number}</span>
@@ -608,7 +615,7 @@ const MejaPelangganViewInner: React.FC = () => {
         </div>
       )}
 
-      {/* Modal 1: Konfirmasi Hapus Satuan Menu (Void Item - Opsi B) */}
+      {/* Modal 1: Konfirmasi Hapus Satuan Menu (Void Item - Stepper Porsi) */}
       {itemToDelete && (
         <div
           role="dialog"
@@ -623,7 +630,7 @@ const MejaPelangganViewInner: React.FC = () => {
               <p className="text-xs text-[#524344] mt-1.5 leading-relaxed">
                 {itemToDelete.quantity > 1 ? (
                   <>
-                    Meja <b>{selectedTable.number}</b> memesan <b>{itemToDelete.quantity}× {itemToDelete.name}</b>. Pilih apakah ingin mengurangi 1 porsi atau membatalkan seluruhnya:
+                    Meja <b>{selectedTable.number}</b> memesan <b>{itemToDelete.quantity}× {itemToDelete.name}</b>. Masukkan jumlah porsi yang ingin dihapus:
                   </>
                 ) : (
                   <>
@@ -633,62 +640,75 @@ const MejaPelangganViewInner: React.FC = () => {
               </p>
             </div>
 
-            {itemToDelete.quantity > 1 ? (
-              <div className="flex flex-col gap-2 pt-2 border-t border-[#ebe8e3]">
-                <div className="grid grid-cols-2 gap-2">
+            {itemToDelete.quantity > 1 && (
+              <div className="p-3 rounded-xl bg-[#fcf9f4] border border-[#ebe8e3] space-y-2.5">
+                <label htmlFor="void-qty-input" className="text-xs font-semibold text-[#524344] block">
+                  Jumlah porsi yang dihapus:
+                </label>
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={async () => {
-                      const targetItem = itemToDelete;
-                      setItemToDelete(null);
-                      await voidOrderItem(selectedTable.number, targetItem, 'Salah input kasir', false);
-                    }}
-                    className="py-2.5 px-3 rounded-xl bg-[#ffdadc]/40 hover:bg-[#ffdadc]/70 text-[#ba1a1a] border border-[#ba1a1a]/30 font-bold text-xs cursor-pointer transition-colors text-center"
+                    onClick={() => setDeleteQty((q) => Math.max(1, q - 1))}
+                    disabled={deleteQty <= 1}
+                    className="w-10 h-10 rounded-lg bg-white border border-[#ebe8e3] text-[#1c1c19] font-bold text-base flex items-center justify-center hover:bg-[#f0ede9] disabled:opacity-40 transition-colors cursor-pointer select-none"
+                    title="Kurangi 1"
                   >
-                    Kurangi 1 Porsi
+                    -
                   </button>
+                  <input
+                    id="void-qty-input"
+                    type="number"
+                    min={1}
+                    max={itemToDelete.quantity}
+                    value={deleteQty}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      if (isNaN(val)) {
+                        setDeleteQty(1);
+                      } else {
+                        setDeleteQty(Math.max(1, Math.min(itemToDelete.quantity, val)));
+                      }
+                    }}
+                    className="flex-1 h-10 bg-white border border-[#ebe8e3] rounded-lg text-center font-bold text-base text-[#1c1c19] outline-none focus:border-[#ba1a1a] tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
                   <button
                     type="button"
-                    onClick={async () => {
-                      const targetItem = itemToDelete;
-                      setItemToDelete(null);
-                      await voidOrderItem(selectedTable.number, targetItem, 'Salah input kasir', true);
-                    }}
-                    className="py-2.5 px-3 rounded-xl bg-[#ba1a1a] hover:bg-[#93000a] text-white font-bold text-xs cursor-pointer shadow-xs transition-colors text-center"
+                    onClick={() => setDeleteQty((q) => Math.min(itemToDelete.quantity, q + 1))}
+                    disabled={deleteQty >= itemToDelete.quantity}
+                    className="w-10 h-10 rounded-lg bg-white border border-[#ebe8e3] text-[#1c1c19] font-bold text-base flex items-center justify-center hover:bg-[#f0ede9] disabled:opacity-40 transition-colors cursor-pointer select-none"
+                    title="Tambah 1"
                   >
-                    Hapus Semua ({itemToDelete.quantity})
+                    +
                   </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setItemToDelete(null)}
-                  className="w-full py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold text-xs cursor-pointer transition-colors text-center"
-                >
-                  Batal
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#ebe8e3]">
-                <button
-                  type="button"
-                  onClick={() => setItemToDelete(null)}
-                  className="py-2.5 px-3 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs cursor-pointer transition-colors"
-                >
-                  Batal
-                </button>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const targetItem = itemToDelete;
-                    setItemToDelete(null);
-                    await voidOrderItem(selectedTable.number, targetItem, 'Salah input kasir', true);
-                  }}
-                  className="py-2.5 px-3 rounded-xl bg-[#ba1a1a] hover:bg-[#93000a] text-white font-bold text-xs cursor-pointer shadow-xs transition-colors"
-                >
-                  Ya, Hapus Menu
-                </button>
               </div>
             )}
+
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#ebe8e3]">
+              <button
+                type="button"
+                onClick={() => setItemToDelete(null)}
+                className="py-2.5 px-3 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs cursor-pointer transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const targetItem = itemToDelete;
+                  const qty = itemToDelete.quantity > 1 ? deleteQty : 1;
+                  setItemToDelete(null);
+                  await voidOrderItem(selectedTable.number, targetItem, 'Salah input kasir', qty);
+                }}
+                className="py-2.5 px-3 rounded-xl bg-[#ba1a1a] hover:bg-[#93000a] text-white font-bold text-xs cursor-pointer shadow-xs transition-colors"
+              >
+                {itemToDelete.quantity > 1
+                  ? deleteQty >= itemToDelete.quantity
+                    ? `Hapus Semua (${itemToDelete.quantity})`
+                    : `Hapus ${deleteQty} Porsi`
+                  : 'Ya, Hapus Menu'}
+              </button>
+            </div>
           </div>
         </div>
       )}

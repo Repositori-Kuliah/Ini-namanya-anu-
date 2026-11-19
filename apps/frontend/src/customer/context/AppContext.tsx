@@ -4,7 +4,11 @@ import { supabase } from '../../lib/supabase';
 import { billOfOrders } from '../../lib/domain';
 import { placeholderImage } from '../../lib/placeholder';
 
-interface ToastState { show: boolean; message: string; icon: string; }
+interface ToastState {
+  show: boolean;
+  message: string;
+  type?: 'info' | 'warning' | 'success';
+}
 export interface MenuCategory { id: string; label: string; }
 
 interface AppContextType {
@@ -136,7 +140,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [availableTables, setAvailableTables] = useState<string[]>([]);
   const [kitchenGeneralNote, setKitchenGeneralNote] = useState('');
   const [orderType, setOrderType] = useState<'dine_in' | 'takeaway'>('dine_in');
-  const [toast, setToast] = useState<ToastState>({ show: false, message: '', icon: 'check_circle' });
+  const [toast, setToast] = useState<ToastState>({ show: false, message: '', type: 'info' });
 
   // Cooldown countdown timers
   useEffect(() => {
@@ -153,8 +157,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => { try { localStorage.setItem(cartKey, JSON.stringify(cartItems)); } catch { /* abaikan */ } }, [cartItems, cartKey]);
 
-  const showToast = useCallback((message: string, icon = 'check_circle') => {
-    setToast({ show: true, message, icon });
+  const showToast = useCallback((message: string, typeOrIcon: string = 'info') => {
+    let resolvedType: 'info' | 'warning' | 'success' = 'info';
+    if (typeOrIcon === 'error' || typeOrIcon === 'warning' || typeOrIcon === 'cancel' || typeOrIcon === 'delete') {
+      resolvedType = 'warning';
+    } else if (typeOrIcon === 'success' || typeOrIcon === 'done_all' || typeOrIcon === 'check_circle') {
+      resolvedType = 'success';
+    } else {
+      resolvedType = 'info';
+    }
+    setToast({ show: true, message, type: resolvedType });
     setTimeout(() => setToast((p) => ({ ...p, show: false })), 2800);
   }, []);
 
@@ -415,30 +427,63 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       if (!orderPlaced) {
-        // Fallback: create order locally so customer self-ordering always succeeds seamlessly
+        // Fallback: create or stack order locally so customer self-ordering always succeeds seamlessly
         const generatedTicket = '#' + (1000 + Math.floor(Math.random() * 9000));
         const now = new Date();
         const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} WIB`;
 
-        const fallbackOrder: ActiveOrder = {
-          ticketNumber: generatedTicket,
-          orderNumbers: [generatedTicket.replace('#', '')],
-          tableNumber: selectedTable,
-          tableArea,
-          guestsCount,
-          orderTime: timeStr,
-          orderTimestamp: now.getTime(),
-          items: [...cartItems],
-          tableNotes: compiledNotes,
-          paymentMethod: 'cashier',
-          paymentStatus: 'MENUNGGU DI KASIR',
-          statusStage: 1,
-          estimatedMinutes: '',
-          subtotal: cartSubtotal,
-          serviceFee: cartServiceFee,
-          tax: cartTax,
-          total: cartTotal,
-        };
+        let existingActive: ActiveOrder | null = activeOrder;
+        if (!existingActive) {
+          try {
+            const saved = localStorage.getItem(`rg_customer_order_${token}`);
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              if (parsed && parsed.paymentStatus !== 'LUNAS') {
+                existingActive = parsed;
+              }
+            }
+          } catch {}
+        }
+
+        let fallbackOrder: ActiveOrder;
+        if (existingActive) {
+          const combinedItems = [...existingActive.items, ...cartItems];
+          const newSubtotal = existingActive.subtotal + cartSubtotal;
+          const newServiceFee = Math.round(newSubtotal * 0.05);
+          const newTax = Math.round((newSubtotal + newServiceFee) * 0.1);
+          const newTotal = newSubtotal + newServiceFee + newTax;
+
+          fallbackOrder = {
+            ...existingActive,
+            orderNumbers: [...(existingActive.orderNumbers || [existingActive.ticketNumber.replace('#', '')]), generatedTicket.replace('#', '')],
+            items: combinedItems,
+            subtotal: newSubtotal,
+            serviceFee: newServiceFee,
+            tax: newTax,
+            total: newTotal,
+            statusStage: 1,
+          };
+        } else {
+          fallbackOrder = {
+            ticketNumber: generatedTicket,
+            orderNumbers: [generatedTicket.replace('#', '')],
+            tableNumber: selectedTable,
+            tableArea,
+            guestsCount,
+            orderTime: timeStr,
+            orderTimestamp: now.getTime(),
+            items: [...cartItems],
+            tableNotes: compiledNotes,
+            paymentMethod: 'cashier',
+            paymentStatus: 'MENUNGGU DI KASIR',
+            statusStage: 1,
+            estimatedMinutes: '',
+            subtotal: cartSubtotal,
+            serviceFee: cartServiceFee,
+            tax: cartTax,
+            total: cartTotal,
+          };
+        }
 
         try {
           localStorage.setItem(`rg_customer_order_${token}`, JSON.stringify(fallbackOrder));
@@ -453,20 +498,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               price: i.basePrice,
               notes: i.customization?.kitchenNotes,
             }));
-            sessions[sessionIndex].subtotal = cartSubtotal;
-            sessions[sessionIndex].serviceFee = cartServiceFee;
-            sessions[sessionIndex].tax = cartTax;
-            sessions[sessionIndex].total = cartTotal;
+            sessions[sessionIndex].subtotal = fallbackOrder.subtotal;
+            sessions[sessionIndex].serviceFee = fallbackOrder.serviceFee;
+            sessions[sessionIndex].tax = fallbackOrder.tax;
+            sessions[sessionIndex].total = fallbackOrder.total;
 
             const qrOrderObj = {
               order_id: now.getTime(),
-              order_number: fallbackOrder.orderNumbers[0],
+              order_number: generatedTicket.replace('#', ''),
               order_status: 'pending_confirmation',
               order_source: 'qr',
               total: cartTotal,
               note: notes,
               created_at: now.toISOString(),
-              order_items: fallbackOrder.items.map((i, idx) => ({
+              order_items: cartItems.map((i, idx) => ({
                 order_item_id: now.getTime() + idx,
                 product_id: Number(i.menuItemId) || idx + 1,
                 product_name: i.name,

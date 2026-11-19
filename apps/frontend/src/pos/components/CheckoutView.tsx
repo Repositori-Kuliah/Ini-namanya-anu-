@@ -240,14 +240,14 @@ export const CheckoutView: React.FC = () => {
               onClick={() => setQueueTab('unpaid')}
               className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                 queueTab === 'unpaid'
-                  ? 'bg-white text-[#3d1018] shadow-xs'
+                  ? 'bg-[#3d1018] text-white shadow-xs'
                   : 'text-[#524344] hover:text-[#1c1c19]'
               }`}
             >
               <span>Belum Dibayar</span>
               <span
                 className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                  queueTab === 'unpaid' ? 'bg-[#3d1018] text-white' : 'bg-[#e0dcd8] text-[#524344]'
+                  queueTab === 'unpaid' ? 'bg-white/20 text-white' : 'bg-[#e0dcd8] text-[#524344]'
                 }`}
               >
                 {bills.length}
@@ -258,14 +258,14 @@ export const CheckoutView: React.FC = () => {
               onClick={() => setQueueTab('history')}
               className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                 queueTab === 'history'
-                  ? 'bg-white text-[#3d1018] shadow-xs'
+                  ? 'bg-[#3d1018] text-white shadow-xs'
                   : 'text-[#524344] hover:text-[#1c1c19]'
               }`}
             >
               <span>Riwayat Transaksi</span>
               <span
                 className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                  queueTab === 'history' ? 'bg-[#3d1018] text-white' : 'bg-[#e0dcd8] text-[#524344]'
+                  queueTab === 'history' ? 'bg-white/20 text-white' : 'bg-[#e0dcd8] text-[#524344]'
                 }`}
               >
                 {recentReceipts.length}

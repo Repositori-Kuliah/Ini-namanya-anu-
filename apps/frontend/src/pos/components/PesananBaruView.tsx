@@ -107,7 +107,7 @@ export const PesananBaruView: React.FC = () => {
             type="button"
             onClick={() => setMobileTab('catalog')}
             className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all ${
-              mobileTab === 'catalog' ? 'bg-white text-[#3d1018] shadow-xs' : 'text-[#524344]'
+              mobileTab === 'catalog' ? 'bg-[#3d1018] text-white shadow-xs' : 'text-[#524344]'
             }`}
           >
             Katalog Menu
@@ -116,12 +116,14 @@ export const PesananBaruView: React.FC = () => {
             type="button"
             onClick={() => setMobileTab('summary')}
             className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-              mobileTab === 'summary' ? 'bg-white text-[#3d1018] shadow-xs' : 'text-[#524344]'
+              mobileTab === 'summary' ? 'bg-[#3d1018] text-white shadow-xs' : 'text-[#524344]'
             }`}
           >
             <span>Pesanan</span>
             {totalItemCount > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[#3d1018] text-white">
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                mobileTab === 'summary' ? 'bg-white/20 text-white' : 'bg-[#3d1018] text-white'
+              }`}>
                 {totalItemCount}
               </span>
             )}
@@ -341,7 +343,7 @@ export const PesananBaruView: React.FC = () => {
               onClick={() => setOrderType('dine_in')}
               className={`py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                 orderType === 'dine_in'
-                  ? 'bg-white text-[#3d1018] shadow-xs'
+                  ? 'bg-[#3d1018] text-white shadow-xs'
                   : 'text-[#847374] hover:text-[#1c1c19]'
               }`}
             >
@@ -475,7 +477,7 @@ export const PesananBaruView: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => removeFromCart(ci.menuItem.id)}
-                          className="text-[#847374] hover:text-[#ba1a1a] p-1 cursor-pointer"
+                          className="w-7 h-7 rounded-lg bg-[#ba1a1a] hover:bg-[#93000a] text-white flex items-center justify-center transition-colors cursor-pointer shrink-0 shadow-2xs"
                           aria-label={`Hapus ${ci.menuItem.name} dari pesanan`}
                         >
                           <span className="material-symbols-outlined text-[16px]">delete</span>

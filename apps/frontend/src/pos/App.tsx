@@ -105,15 +105,16 @@ const AppContent: React.FC = () => {
 
       {/* Global Toast Notification (Top Center) */}
       {toast && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-[#3d1018] text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-[#ffdadc]/20 max-w-[90vw] animate-in fade-in slide-in-from-top-4 duration-200">
-          <span className="material-symbols-outlined text-[#fc934f] text-[20px] shrink-0">
-            {toast.type === 'success'
-              ? 'check_circle'
-              : toast.type === 'warning'
-              ? 'warning'
-              : 'notifications_active'}
-          </span>
-          <span className="text-xs font-semibold">{toast.message}</span>
+        <div
+          className={`fixed top-5 left-1/2 -translate-x-1/2 z-50 text-white px-5 py-2.5 rounded-2xl shadow-2xl flex items-center justify-center border max-w-[90vw] animate-in fade-in slide-in-from-top-4 duration-200 text-center ${
+            toast.type === 'warning'
+              ? 'bg-[#ba1a1a] border-[#ffdadc]/30 shadow-[#ba1a1a]/25'
+              : toast.type === 'success'
+              ? 'bg-[#1b3b22] border-emerald-500/25 shadow-[#1b3b22]/25'
+              : 'bg-[#3d1018] border-[#ffdadc]/20 shadow-[#3d1018]/25'
+          }`}
+        >
+          <span className="text-xs font-bold tracking-wide">{toast.message}</span>
         </div>
       )}
 

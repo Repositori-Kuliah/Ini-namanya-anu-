@@ -675,9 +675,9 @@ const KelolaMenuViewInner: React.FC = () => {
                                         setOpenIngActionId(null);
                                         setDeleteIngConfirm(ing);
                                       }}
-                                      className="w-full px-3 py-1.5 text-xs font-semibold text-[#ba1a1a] hover:bg-[#ffdadc]/40 flex items-center gap-2 cursor-pointer"
+                                      className="w-full px-3 py-1.5 text-xs font-semibold text-[#93000a] hover:bg-[#ffdadc] flex items-center gap-2 cursor-pointer transition-colors"
                                     >
-                                      <span className="material-symbols-outlined text-[15px] text-[#ba1a1a]">delete</span>
+                                      <span className="material-symbols-outlined text-[15px] text-[#93000a]">delete</span>
                                       <span>Hapus Bahan</span>
                                     </button>
                                   </div>
@@ -1117,7 +1117,7 @@ const KelolaMenuViewInner: React.FC = () => {
                   setEditingItem(null);
                   setDeleteMenuConfirm(itm);
                 }}
-                className="px-3 py-2 rounded-lg text-xs font-semibold text-[#ba1a1a] hover:bg-[#ffdadc]/40 hover:text-[#93000a] cursor-pointer flex items-center gap-1 transition-colors"
+                className="px-3 py-2 rounded-lg text-xs font-bold text-white bg-[#ba1a1a] hover:bg-[#93000a] cursor-pointer flex items-center gap-1 transition-colors shadow-xs"
               >
                 <span className="material-symbols-outlined text-[16px]">delete</span>
                 <span>Hapus Menu</span>
@@ -1424,10 +1424,7 @@ const KelolaMenuViewInner: React.FC = () => {
           }}
         >
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-[#ebe8e3] animate-in fade-in zoom-in-95 duration-150 cursor-default">
-            <div className="w-12 h-12 rounded-full bg-[#ffdadc]/40 text-[#ba1a1a] flex items-center justify-center mx-auto mb-3">
-              <span className="material-symbols-outlined text-2xl">warning</span>
-            </div>
-            <h3 className="text-base font-bold text-[#1c1c19] text-center mb-1">
+            <h3 className="text-base font-bold text-[#ba1a1a] text-center mb-1">
               Peringatan Konfirmasi Hapus
             </h3>
             <p className="text-xs text-[#524344] text-center mb-5 leading-relaxed">
@@ -1467,10 +1464,7 @@ const KelolaMenuViewInner: React.FC = () => {
           }}
         >
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-[#ebe8e3] animate-in fade-in zoom-in-95 duration-150 cursor-default">
-            <div className="w-12 h-12 rounded-full bg-[#ffdadc]/40 text-[#ba1a1a] flex items-center justify-center mx-auto mb-3">
-              <span className="material-symbols-outlined text-2xl">warning</span>
-            </div>
-            <h3 className="text-base font-bold text-[#1c1c19] text-center mb-1">
+            <h3 className="text-base font-bold text-[#ba1a1a] text-center mb-1">
               Peringatan Konfirmasi Hapus
             </h3>
             <p className="text-xs text-[#524344] text-center mb-5 leading-relaxed">

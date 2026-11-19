@@ -206,7 +206,7 @@ export const KitchenDisplayView: React.FC = () => {
               onClick={() => setStationFilter(st.id)}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 stationFilter === st.id
-                  ? 'bg-white text-[#3d1018] shadow-xs'
+                  ? 'bg-[#3d1018] text-white shadow-xs'
                   : 'text-[#524344] hover:text-[#1c1c19]'
               }`}
             >

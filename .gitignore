@@ -1,7 +1,7 @@
 node_modules
 dist
-docs
-supabase
+supabase/tests/
 .next
 .env
 .env.local
+antigravity-skills

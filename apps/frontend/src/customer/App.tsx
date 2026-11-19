@@ -26,7 +26,7 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#f6f3ee] flex flex-col items-center justify-start text-[#1c1c19] font-sans selection:bg-[#3d1018] selection:text-white">
-      <div className="w-full max-w-md md:max-w-3xl lg:max-w-5xl bg-[#fcf9f4] min-h-screen relative flex flex-col md:border-x md:border-[#ebe8e3] md:shadow-xs">
+      <div className="w-full max-w-md md:max-w-4xl lg:max-w-[1600px] bg-[#fcf9f4] min-h-screen relative flex flex-col md:border-x md:border-[#ebe8e3] md:shadow-xs">
         {tableState === 'loading' && (
           <Notice icon="hourglass_top" title="Memuat menu…" body="Sebentar ya, kami menyiapkan menu untuk meja Anda." />
         )}
