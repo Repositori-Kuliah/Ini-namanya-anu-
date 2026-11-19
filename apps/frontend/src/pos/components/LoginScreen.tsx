@@ -7,10 +7,22 @@ import heroRawonImg from '../../assets/images/hero_rawon_daging_1794405798124.jp
 export const LoginScreen: React.FC = () => {
   const { login } = useApp();
 
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => {
+    try {
+      return localStorage.getItem('pos.lastLoginId') || '';
+    } catch {
+      return '';
+    }
+  });
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(() => {
+    try {
+      return Boolean(localStorage.getItem('pos.lastLoginId'));
+    } catch {
+      return false;
+    }
+  });
   const [errorMsg, setErrorMsg] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -26,6 +38,16 @@ export const LoginScreen: React.FC = () => {
     setBusy(false);
     if (err) {
       setErrorMsg(err);
+    } else {
+      try {
+        if (rememberMe) {
+          localStorage.setItem('pos.lastLoginId', email.trim());
+        } else {
+          localStorage.removeItem('pos.lastLoginId');
+        }
+      } catch {
+        // Ignore localStorage errors (e.g. storage disabled or quota exceeded)
+      }
     }
   };
 
