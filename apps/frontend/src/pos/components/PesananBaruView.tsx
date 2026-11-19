@@ -196,7 +196,7 @@ export const PesananBaruView: React.FC = () => {
                     : 'bg-[#f0ede9] text-[#524344] hover:bg-[#e0dcd8]'
                 }`}
               >
-                <span className="material-symbols-outlined text-[14px]">star</span>
+                <span className="material-symbols-outlined text-[14px] text-amber-500">star</span>
                 <span>Favorit</span>
               </button>
 
@@ -255,7 +255,7 @@ export const PesananBaruView: React.FC = () => {
                           </span>
                           {item.isFavorite && !isOut && (
                             <span
-                              className="material-symbols-outlined text-[14px] text-[#994703] shrink-0"
+                              className="material-symbols-outlined text-[14px] text-amber-500 shrink-0"
                               aria-hidden="true"
                             >
                               star

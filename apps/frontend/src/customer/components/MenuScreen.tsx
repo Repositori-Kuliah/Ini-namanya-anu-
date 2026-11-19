@@ -217,7 +217,7 @@ export const MenuScreen: React.FC = () => {
                   }`}
                 >
                   {cat === 'Favorit' && (
-                    <span className="material-symbols-outlined text-[14px] inline-block mr-1 align-middle">star</span>
+                    <span className="material-symbols-outlined text-[14px] text-amber-500 inline-block mr-1 align-middle">star</span>
                   )}
                   {cat}
                 </button>
