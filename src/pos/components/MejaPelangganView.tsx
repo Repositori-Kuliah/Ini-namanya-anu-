@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { TableItem, OrderItemSummary } from '../types';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
@@ -22,8 +22,13 @@ const MejaPelangganViewInner: React.FC = () => {
     confirmCustomerOrder,
     rejectCustomerOrder,
     openVerificationModal,
+    kitchenTickets,
+    setOrderType,
+    advanceTicketStatus,
   } = useApp();
 
+  const [serviceMode, setServiceMode] = useState<'dine_in' | 'takeaway'>('dine_in');
+  const [takeawaySearch, setTakeawaySearch] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'terisi' | 'tersedia'>('all');
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
@@ -36,7 +41,10 @@ const MejaPelangganViewInner: React.FC = () => {
   useLockBodyScroll(mobileDrawerOpen || showConfirmModal || Boolean(itemToDelete) || isCancelTableModalOpen);
 
   // Filtered tables (Hanya 3 status: Semua Meja, Terisi, Tersedia)
-  const filteredTables = tables.filter((table) => {
+  // Kecualikan Meja 00 (Takeaway) dari grid meja makan fisik di restoran
+  const dineInTables = useMemo(() => tables.filter((t) => t.number !== '00' && t.number !== '0'), [tables]);
+
+  const filteredTables = dineInTables.filter((table) => {
     const matchesSearch =
       table.number.includes(searchQuery) ||
       (table.name && table.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -51,8 +59,9 @@ const MejaPelangganViewInner: React.FC = () => {
   });
 
   const selectedTable =
-    tables.find((t) => t.number === selectedTableId) ||
-    tables.find((t) => t.status !== 'kosong') ||
+    dineInTables.find((t) => t.number === selectedTableId) ||
+    dineInTables.find((t) => t.status !== 'kosong') ||
+    dineInTables[0] ||
     tables[0];
 
   // HANYA ada nilai jika meja ini memiliki pesanan dari self-order yang menunggu verifikasi kasir
@@ -89,14 +98,373 @@ const MejaPelangganViewInner: React.FC = () => {
     }
   };
 
-  // Metrics counts
-  const occupiedCount = tables.filter((t) => t.status !== 'kosong').length;
-  const emptyCount = tables.filter((t) => t.status === 'kosong').length;
+  // Metrics counts (khusus meja makan dine-in)
+  const occupiedCount = dineInTables.filter((t) => t.status !== 'kosong').length;
+  const emptyCount = dineInTables.filter((t) => t.status === 'kosong').length;
+
+  // Daftar antrean pesanan Bawa Pulang (Takeaway) aktif
+  const activeTakeaways = useMemo(() => {
+    const list: Array<{
+      id: string;
+      queueNumber: string;
+      customerName: string;
+      orderTime: string;
+      total: number;
+      paymentStatus: 'belum_dibayar' | 'lunas';
+      kitchenStatus: 'menunggu' | 'dimasak' | 'siap' | 'selesai';
+      kitchenTicketId?: string;
+      billId?: string;
+      items: Array<{ name: string; quantity: number }>;
+    }> = [];
+
+    // 1. Dari bills takeaway
+    bills
+      .filter((b) => b.isTakeaway || b.orderType === 'takeaway' || b.tableNumber === '00')
+      .forEach((b) => {
+        const kt = kitchenTickets.find(
+          (t) =>
+            t.type === 'Bawa Pulang' &&
+            (t.takeawayQueue === b.takeawayQueue ||
+              (b.takeawayQueue && t.tableNumber === b.takeawayQueue) ||
+              t.customerName === b.customerName)
+        );
+
+        let kStatus: 'menunggu' | 'dimasak' | 'siap' | 'selesai' = 'menunggu';
+        if (kt) {
+          if (kt.status === 'preparing') kStatus = 'dimasak';
+          else if (kt.status === 'ready') kStatus = 'siap';
+          else if (kt.status === 'served') kStatus = 'selesai';
+        }
+
+        list.push({
+          id: b.id,
+          queueNumber: b.takeawayQueue || (b.tableNumber === '00' ? 'Bungkus' : b.tableNumber) || 'Antrean 01',
+          customerName: b.customerName || 'Pelanggan Bungkus',
+          orderTime: b.openedAtTime || 'Baru saja',
+          total: b.total,
+          paymentStatus: b.status === 'lunas' ? 'lunas' : 'belum_dibayar',
+          kitchenStatus: kStatus,
+          kitchenTicketId: kt?.id,
+          billId: b.id,
+          items: (b.items || []).map((it) => ({
+            name: it.name || (it as any).productName || 'Menu',
+            quantity: it.quantity,
+          })),
+        });
+      });
+
+    // 2. Dari tiket dapur takeaway bila belum ada di list
+    kitchenTickets
+      .filter((t) => t.type === 'Bawa Pulang' && t.status !== 'served')
+      .forEach((t) => {
+        const queueLabel = t.takeawayQueue || (t.tableNumber === '00' ? 'Antrean 01' : `Antrean ${t.tableNumber}`);
+        const exists = list.some((item) => item.queueNumber === queueLabel || item.kitchenTicketId === t.id);
+        if (!exists) {
+          let kStatus: 'menunggu' | 'dimasak' | 'siap' | 'selesai' = 'menunggu';
+          if (t.status === 'preparing') kStatus = 'dimasak';
+          else if (t.status === 'ready') kStatus = 'siap';
+
+          list.push({
+            id: t.id,
+            queueNumber: queueLabel,
+            customerName: t.customerName || 'Pelanggan Bungkus',
+            orderTime: t.orderTime || 'Baru saja',
+            total: t.totalAmount || 0,
+            paymentStatus: 'belum_dibayar',
+            kitchenStatus: kStatus,
+            kitchenTicketId: t.id,
+            items: (t.items || []).map((it) => ({
+              name: it.name || (it as any).productName || 'Menu',
+              quantity: it.quantity,
+            })),
+          });
+        }
+      });
+
+    return list;
+  }, [bills, kitchenTickets]);
+
+  const filteredTakeaways = activeTakeaways.filter((t) => {
+    if (!takeawaySearch) return true;
+    const q = takeawaySearch.toLowerCase();
+    return (
+      t.queueNumber.toLowerCase().includes(q) ||
+      t.customerName.toLowerCase().includes(q) ||
+      t.items.some((it) => it.name.toLowerCase().includes(q))
+    );
+  });
+
+  const pendingTakeawayOrders = pendingQrOrders.filter(
+    (p) => p.tableNumber === '00' || p.tableNumber === '0' || p.note?.includes('[BAWA PULANG]') || p.note?.includes('[TAKEAWAY]')
+  );
+
+  const handleBukaTakeaway = () => {
+    setOrderType('takeaway');
+    setOrderTableNumber('00');
+    setOrderCustomerName('');
+    setActiveView('pesanan-baru');
+  };
+
+  const handleBayarTakeaway = (billId?: string) => {
+    if (billId) {
+      setSelectedBillId(billId);
+    }
+    setActiveView('checkout');
+  };
 
   return (
     <div className="flex flex-col w-full p-4 sm:p-6 lg:p-8 space-y-5 max-w-[1540px] mx-auto pb-4 md:pb-8">
 
-      {/* Search & Segmented Filter Bar (3 Tab Filter: Semua Meja, Terisi, Tersedia) */}
+      {/* Switcher Tab Utama: Santap di Tempat vs Pesanan Bawa Pulang */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#ebe8e3]">
+        <div className="inline-flex p-1 bg-[#f0ede9] rounded-xl border border-[#ebe8e3] self-start">
+          <button
+            type="button"
+            onClick={() => setServiceMode('dine_in')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              serviceMode === 'dine_in'
+                ? 'bg-white text-[#3d1018] shadow-xs'
+                : 'text-[#6b5a5b] hover:text-[#1c1c19]'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[17px]">table_restaurant</span>
+            <span>Santap di Tempat</span>
+            <span
+              className={`text-[10px] px-2 py-0.5 rounded-full font-bold tabular-nums ${
+                serviceMode === 'dine_in'
+                  ? 'bg-[#3d1018]/10 text-[#3d1018]'
+                  : 'bg-[#e2ded9] text-[#6b5a5b]'
+              }`}
+            >
+              {dineInTables.length} Meja
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setServiceMode('takeaway')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              serviceMode === 'takeaway'
+                ? 'bg-white text-[#994703] shadow-xs'
+                : 'text-[#6b5a5b] hover:text-[#1c1c19]'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[17px]">shopping_bag</span>
+            <span>Pesanan Bawa Pulang</span>
+            {activeTakeaways.length > 0 ? (
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-[#ffdbc9] text-[#753400] animate-pulse tabular-nums">
+                {activeTakeaways.length}
+              </span>
+            ) : (
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-[#e2ded9] text-[#6b5a5b] tabular-nums">
+                0
+              </span>
+            )}
+          </button>
+        </div>
+
+        {serviceMode === 'takeaway' && (
+          <button
+            type="button"
+            onClick={handleBukaTakeaway}
+            className="h-9 px-4 rounded-xl bg-[#994703] hover:bg-[#753400] text-white text-xs font-bold flex items-center gap-2 transition-all shadow-xs cursor-pointer active:scale-95 self-start sm:self-auto"
+          >
+            <span className="material-symbols-outlined text-[18px]">add_circle</span>
+            <span>+ Pesanan Bungkus Baru</span>
+          </button>
+        )}
+      </div>
+
+      {serviceMode === 'takeaway' ? (
+        <div className="space-y-4">
+          {/* Banner Notifikasi Pesanan Mandiri Bawa Pulang (Jika ada) */}
+          {pendingTakeawayOrders.length > 0 && (
+            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 flex items-center justify-between gap-3 shadow-2xs">
+              <div className="flex items-center gap-2.5">
+                <span className="material-symbols-outlined text-amber-600 text-xl animate-bounce">
+                  notifications_active
+                </span>
+                <span className="text-xs text-amber-950 font-medium">
+                  Ada <strong>{pendingTakeawayOrders.length} pesanan bungkus mandiri</strong> via QR yang menunggu konfirmasi kasir.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={openVerificationModal}
+                className="px-3 py-1.5 rounded-lg bg-[#994703] text-white text-xs font-bold hover:bg-[#753400] transition-colors cursor-pointer shrink-0"
+              >
+                Tinjau Sekarang
+              </button>
+            </div>
+          )}
+
+          {/* Search Bar untuk Takeaway */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="relative flex-1 max-w-md">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#847374] text-[18px]">
+                search
+              </span>
+              <input
+                type="text"
+                value={takeawaySearch}
+                onChange={(e) => setTakeawaySearch(e.target.value)}
+                placeholder="Cari nomor antrean atau nama pemesan bungkus..."
+                className="w-full h-10 pl-9 pr-8 rounded-xl bg-white text-[#1c1c19] placeholder-[#847374] text-xs border border-[#ebe8e3] outline-none focus:border-[#994703] transition-colors"
+              />
+              {takeawaySearch && (
+                <button
+                  type="button"
+                  onClick={() => setTakeawaySearch('')}
+                  aria-label="Bersihkan pencarian"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-[#f0ede9] flex items-center justify-center text-[#524344] hover:text-[#1c1c19] cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[13px]">close</span>
+                </button>
+              )}
+            </div>
+
+            <div className="text-xs text-[#524344] font-medium">
+              Total antrean aktif: <strong className="text-[#1c1c19] font-bold">{filteredTakeaways.length} antrean</strong>
+            </div>
+          </div>
+
+          {filteredTakeaways.length === 0 ? (
+            <div className="bg-white rounded-2xl p-12 text-center border border-[#ebe8e3] flex flex-col items-center">
+              <div className="w-14 h-14 rounded-2xl bg-[#ffdbc9]/40 text-[#994703] flex items-center justify-center mb-3 border border-[#994703]/20">
+                <span className="material-symbols-outlined text-3xl">shopping_bag</span>
+              </div>
+              <h3 className="font-serif text-lg font-bold text-[#1c1c19]">Belum Ada Antrean Bawa Pulang</h3>
+              <p className="text-xs text-[#524344] max-w-sm mt-1 mb-5">
+                Pesanan bungkus dari kasir atau pesanan mandiri pelanggan via scan QR counter akan tampil rapi di sini.
+              </p>
+              <button
+                type="button"
+                onClick={handleBukaTakeaway}
+                className="h-10 px-5 rounded-xl bg-[#994703] hover:bg-[#753400] text-white text-xs font-bold flex items-center gap-2 transition-all shadow-xs cursor-pointer active:scale-95"
+              >
+                <span className="material-symbols-outlined text-[18px]">add_circle</span>
+                <span>Buat Pesanan Bungkus Sekarang</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredTakeaways.map((ord) => {
+                const isPaid = ord.paymentStatus === 'lunas';
+                const isReady = ord.kitchenStatus === 'siap';
+                const isCooking = ord.kitchenStatus === 'dimasak';
+
+                return (
+                  <div
+                    key={ord.id}
+                    className="bg-white rounded-2xl border border-[#ebe8e3] p-4 flex flex-col justify-between gap-3 shadow-xs hover:shadow-sm transition-all"
+                  >
+                    <div>
+                      {/* Top Header Card */}
+                      <div className="flex items-start justify-between gap-2 pb-2.5 border-b border-[#f0ede9]">
+                        <div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#994703] bg-[#ffdbc9]/50 px-2 py-0.5 rounded border border-[#994703]/20">
+                              Bawa Pulang
+                            </span>
+                            <span className="text-[11px] text-[#847374]">{ord.orderTime}</span>
+                          </div>
+                          <h4 className="font-serif text-lg font-bold text-[#1c1c19] mt-1">
+                            {ord.queueNumber}
+                          </h4>
+                          <p className="text-xs font-semibold text-[#524344]">
+                            Pemesan: <span className="text-[#1c1c19]">{ord.customerName}</span>
+                          </p>
+                        </div>
+
+                        {/* Status Badges */}
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              isPaid
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-[#ffdadc] text-[#ba1a1a] border border-[#ba1a1a]/20'
+                            }`}
+                          >
+                            {isPaid ? 'LUNAS' : 'BELUM BAYAR'}
+                          </span>
+
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              isReady
+                                ? 'bg-emerald-500 text-white animate-pulse'
+                                : isCooking
+                                ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                : 'bg-stone-100 text-stone-600'
+                            }`}
+                          >
+                            {isReady
+                              ? 'Siap Diambil'
+                              : isCooking
+                              ? 'Sedang Dimasak'
+                              : 'Antre di Dapur'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Item List Preview */}
+                      <div className="py-2.5 space-y-1">
+                        {ord.items.slice(0, 3).map((it, idx) => (
+                          <div key={idx} className="flex items-center justify-between text-xs text-[#524344]">
+                            <span className="truncate max-w-[200px]">{it.name}</span>
+                            <span className="font-bold tabular-nums">x{it.quantity}</span>
+                          </div>
+                        ))}
+                        {ord.items.length > 3 && (
+                          <p className="text-[11px] text-[#847374] italic">
+                            +{ord.items.length - 3} menu lainnya...
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Bottom Card: Total & Action Button */}
+                    <div className="pt-2.5 border-t border-[#f0ede9] flex items-center justify-between gap-2">
+                      <div>
+                        <span className="text-[10px] text-[#847374] block">Total Belanja</span>
+                        <span className="font-bold text-sm text-[#1c1c19] tabular-nums">
+                          Rp {ord.total.toLocaleString('id-ID')}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        {!isPaid ? (
+                          <button
+                            type="button"
+                            onClick={() => handleBayarTakeaway(ord.billId)}
+                            className="h-8 px-3 rounded-lg bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1 active:scale-95"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">point_of_sale</span>
+                            <span>Bayar</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const matchedBill = bills.find((b) => b.id === ord.billId);
+                              if (matchedBill) openReceiptModal(matchedBill);
+                            }}
+                            className="h-8 px-2.5 rounded-lg bg-[#f0ede9] hover:bg-[#ebe8e3] text-[#3d1018] text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 active:scale-95"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">receipt_long</span>
+                            <span>Struk</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          {/* Search & Segmented Filter Bar (3 Tab Filter: Semua Meja, Terisi, Tersedia) */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         {/* Search Input */}
         <div className="relative flex-1 max-w-md">
@@ -125,7 +493,7 @@ const MejaPelangganViewInner: React.FC = () => {
         {/* Clean Segmented Control: 3 Status Saja (Semua Meja, Terisi, Tersedia) */}
         <div className="inline-flex items-center bg-white p-1 rounded-xl border border-[#ebe8e3] shadow-xs overflow-x-auto no-scrollbar">
           {[
-            { id: 'all', label: 'Semua Meja', count: tables.length },
+            { id: 'all', label: 'Semua Meja', count: dineInTables.length },
             { id: 'terisi', label: 'Terisi', count: occupiedCount },
             { id: 'tersedia', label: 'Tersedia', count: emptyCount },
           ].map((item) => {
@@ -358,6 +726,8 @@ const MejaPelangganViewInner: React.FC = () => {
           )}
         </div>
       </div>
+    </>
+  )}
 
       {/* Mobile Detail Meja Pop-up Modal */}
       {mobileDrawerOpen && (

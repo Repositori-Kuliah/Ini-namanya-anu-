@@ -266,16 +266,7 @@ const KelolaMejaViewInner: React.FC = () => {
                       title="Klik untuk edit &amp; kelola meja"
                     >
                       <td className="py-2.5 px-4 font-bold text-[#1c1c19] text-sm tabular-nums">
-                        {tbl.number === '00' ? (
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span>00</span>
-                            <span className="text-[10px] font-semibold text-[#994703] bg-[#ffdbc9]/50 px-1.5 py-0.5 rounded border border-[#994703]/20">
-                              Bawa Pulang (Takeaway)
-                            </span>
-                          </div>
-                        ) : (
-                          tbl.number
-                        )}
+                        {tbl.number}
                       </td>
                       <td className="py-2.5 px-4">
                         <span
