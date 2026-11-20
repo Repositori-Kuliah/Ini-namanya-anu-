@@ -86,3 +86,16 @@ Kombinasi tipografi dirancang untuk membedakan fungsi artistik restoran dengan f
 ### C. Desain Stepper Kuantiti & Aksi Destruktif
 - Tombol kuantiti `[-] [qty] [+]` menggunakan sudut membulat `rounded-lg` dengan kontras tinggi.
 - Tombol hapus (*delete*) diberi ruang visual tersendiri di ujung kanan baris menu, menggunakan warna latar solid **Crimson Wine** (`bg-[#ba1a1a] text-white`) agar mudah dibidik oleh jari atau tetikus tanpa risiko menekan kuantiti.
+
+### D. Simetri dan Keseimbangan Tab Kategori Menu
+- **Aturan**: Seluruh pil filter kategori menu di POS Pesanan Baru dan Customer Self-Order menggunakan tinggi dan padding horizontal yang seragam (`h-8 px-3 inline-flex items-center justify-center font-medium text-xs rounded-xl transition-all`).
+- **Prinsip Keseimbangan Gestalt**: Menghilangkan ornamen ikon bintang yang membuat tab "Favorit" tampak lebih tinggi dan lebar. Seluruh tombol kategori memiliki visual affordance yang seimbang tanpa elemen yang menciptakan kesan berat sebelah.
+
+### E. Tata Letak Ergonomis Kitchen Display System (KDS)
+- **Bilah Stasiun Sticky**: Bilah filter stasiun dapur terkunci di bagian atas kontainer (`shrink-0 sticky top-0 bg-[#fcf9f4] z-10`), menjaga navigasi filter stasiun selalu dapat diakses seketika saat antrean pesanan panjang bergulir ke bawah.
+- **Wadah Gulir Mandiri & Proteksi Teks**: Kartu tiket pesanan dapur dialokasikan ke dalam kontainer gulir mandiri (`flex-1 min-h-0 overflow-y-auto`) dengan penanganan teks pesanan panjang menggunakan `break-words` dan `break-all` untuk mencegah teks menembus batas kartu.
+- **Kendali Audio 1-Klik**: Tombol toggle audio bel dapur ditempatkan langsung di bilah KDS (`Suara Bel: Aktif / Senyap`) dengan transisi warna tegas (`bg-[#1b3b22]` aktif vs `#ba1a1a` senyap).
+
+### F. Penyelarasan Strip 4-Metrik Finansial
+- Panel ringkasan finansial pada Dashboard dan Laporan diseragamkan ke dalam format strip 4 kolom yang ringkas (`grid grid-cols-2 md:grid-cols-4 gap-3`): **TOTAL OMZET**, **PESANAN SELESAI**, **RATA-RATA**, dan **PELANGGAN**.
+- Format ini menjamin keselarasan model mental (*mental model consistency*) manajer saat berpindah antar layar analitik.

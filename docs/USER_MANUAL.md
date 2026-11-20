@@ -83,10 +83,13 @@ Jika terjadi kesalahan pemesanan atau pembatalan hidangan:
 ### 3.1 Memantau Pesanan Masuk
 1. Buka menu **Pantau Pesanan** pada perangkat tablet atau layar monitor dapur.
 2. Setiap kali ada pesanan baru (baik dari kasir maupun dari pemesanan mandiri QR pelanggan), sistem akan membunyikan nada lonceng (*audio chime*) otomatis.
-3. Kartu tiket pesanan menampilkan:
-   - Nomor tiket dan nomor meja (misal: `#1002 — Meja 03`).
+3. Koki dapat mengatur suara bel kapan saja via tombol **Suara Bel: Aktif / Senyap** di pojok kanan bilah atas KDS dengan 1 kali klik.
+4. Filter stasiun (**Semua Bagian**, **Dapur Makanan**, **Bar Minuman**) terkunci di bagian atas (*sticky*) sehingga memudahkan koki menyaring tiket hidangan spesifik.
+5. Kartu tiket pesanan menampilkan:
+   - Nomor tiket dan nomor meja/antrean (misal: `Meja 03` atau `Antrean 01`).
    - Waktu pemesanan dan durasi waktu tunggu.
    - Daftar hidangan beserta kuantiti porsi dan instruksi khusus dapur (catatan yang dicetak tebal/warna khusus).
+   - Seluruh teks catatan terproteksi *word-wrap* sehingga tidak akan keluar batas kartu.
 
 ### 3.2 Menyelesaikan Pesanan
 1. Setelah seluruh makanan siap saji, tekan tombol **"Tandai Siap Saji"** pada tiket pesanan.

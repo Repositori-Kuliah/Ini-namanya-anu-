@@ -1,32 +1,44 @@
 # Arsitektur Sistem & Alur Data (System Architecture)
 ## Sistem POS & Self-Ordering Rawon Gusti Surabaya
 
-Dokumen ini menjelaskan rancangan arsitektur perangkat lunak, pola manajemen *state*, mekanisme sinkronisasi data *realtime*, dan mitigasi keamanan sistem monorepo Rawon Gusti Surabaya.
+Dokumen ini menjelaskan rancangan arsitektur perangkat lunak, pola manajemen *state*, mekanisme sinkronisasi data *realtime*, dan mitigasi keamanan sistem terpadu (**Unified Next.js 16 Fullstack**) Rawon Gusti Surabaya.
 
 ---
 
-## 1. Topologi Arsitektur Monorepo
+## 1. Topologi Arsitektur Unified Fullstack Next.js 16
 
-Sistem mengadopsi pemisahan tanggung jawab (*Separation of Concerns*) berbasis monorepo:
+Sistem mengadopsi arsitektur terpadu berbasis **Next.js 16 App Router** dengan pemisahan tanggung jawab (*Separation of Concerns*) yang ketat:
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────┐
-│                        APLIKASI PENGGUNA (FRONTEND)                    │
-│  React 19 + TypeScript + Vite + Tailwind CSS v4                        │
+│               PRESENTASI PENGGUNA (NEXT.JS 16 APP ROUTER)              │
+│  React 19 + TypeScript + Tailwind CSS v4                               │
 ├───────────────────────────────────┬────────────────────────────────────┤
 │         CUSTOMER APP              │              POS APP               │
 │   (Pemesanan Mandiri QR Meja)     │    (Kasir, Waiter, KDS, Manajer)   │
-│   - Katalog Menu 2-Kolom          │    - Grid Meja 3-Kolom             │
-│   - Order Stacking                │    - Void Audit Kasir              │
-│   - URL Token Masking             │    - Checkout & Cetak Struk        │
+│   - Rute: /pesan                  │    - Rute: /                           │
+│   - Katalog Menu 2-Kolom          │    - Grid Meja 3-Kolom                 │
+│   - Order Stacking Otomatis       │    - Void Audit Kasir                  │
+│   - Tab Kategori Simetris         │    - KDS Sticky Station & Bel Audio    │
+│   - URL Token Masking             │    - 4-Card Metric Strip Selaras       │
 └─────────────────┬─────────────────┴──────────────────┬─────────────────┘
                   │                                    │
                   ▼                                    ▼
 ┌────────────────────────────────────────────────────────────────────────┐
-│                       DATA HUB & LOGIKA BISNIS                         │
-│  - Supabase PostgreSQL Client (Realtime Subscriptions & RLS)           │
-│  - Deterministik Billing Engine (PB1 10%, Service 5%, Kembalian Tunai) │
-│  - Resilient Local State Engine (Optimistic Update & Offline Fallback) │
+│             LAYER API ROUTE HANDLERS & KEAMANAN (/api/*)               │
+│  - /api/checkout/pay   : Validasi numerik & penyelesaian sesi bayar    │
+│  - /api/orders         : Sanitasi token, catatan, & batched RPC        │
+│  - /api/admin/staff    : Admin Bearer Token Auth & CORS Guard          │
+│  - /api/reports, menu  : Pipeline analitik & query katalog aman        │
+└─────────────────┬────────────────────────────────────┬─────────────────┘
+                  │                                    │
+                  ▼                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│             CORE DOMAIN & SERVICES (FP / FUNCTIONAL PIPELINES)         │
+│  - lib/domain/billing.js         : Pure billing engine (PB1, Layanan)  │
+│  - lib/domain/orderStateMachine  : Siklus hidup transisi pesanan       │
+│  - lib/services/*                : Order, payment, staff, & analytics  │
+│  - src/lib/supabase.ts           : Client-side realtime & SSR-safe env │
 └──────────────────────────────────┬─────────────────────────────────────┘
                                    │
                                    ▼
@@ -34,7 +46,7 @@ Sistem mengadopsi pemisahan tanggung jawab (*Separation of Concerns*) berbasis m
 │                     BASIS DATA (SUPABASE POSTGRESQL)                   │
 │  - 10 Tabel Relasional Ternormalisasi (3NF)                            │
 │  - Stored Procedures / RPC (Atomic Transaction & Security Definer)     │
-│  - Realtime Change Notifications                                       │
+│  - Realtime Change Notifications & Row Level Security (RLS)            │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -108,3 +120,11 @@ Salah satu keunggulan sistem ini adalah kemampuannya menggabungkan pesanan secar
 ### C. Keandalan Berlapis (*Resilient Offline Fallback*)
 - Jika koneksi jaringan ke server Supabase mengalami fluktuasi, sistem secara otomatis beralih ke engine *optimistic state* lokal (`rg_mock_sessions_v2`).
 - Kasir dan pelanggan tetap dapat melanjutkan transaksi secara mulus tanpa mengalami layar putih (*white screen of death*) atau macet di tengah antrean.
+
+### D. Pembatasan Origin CORS & Proteksi Hak Akses Admin
+- Endpoint administratif (`/api/admin/staff`) dipagari oleh verifikasi otorisasi Bearer token yang langsung memeriksa peran admin aktif di tabel `profiles`.
+- Mekanisme CORS secara ketat memvalidasi daftar origin terpercaya (`STAFF_ALLOWED_ORIGINS`). Sistem tidak memantulkan origin asing (*arbitrary origin reflection*) untuk mencegah serangan Cross-Origin.
+
+### E. Validasi Input Defensif & Pencegahan Kesalahan Relasi Null
+- Seluruh endpoint mutasi (`/api/checkout/pay`, `/api/orders`) melakukan validasi ketat terhadap tipe data, keabsahan token string meja, kewajaran array keranjang, dan kepastian numerik (`Number.isFinite`).
+- Data pemetaan transaksi pembayaran pada modul laporan menerapkan *optional chaining* defensif (`p.orders?.order_number`) guna mencegah insiden *runtime null pointer exception* saat data relasi kosong atau diarsipkan.

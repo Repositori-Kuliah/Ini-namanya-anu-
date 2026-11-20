@@ -410,7 +410,34 @@ Berdasarkan instruksi perapian menyeluruh:
   - Penutupan pop-up via klik di luar kartu (area gelap/void) diaktifkan khusus pada perangkat PC Desktop (mouse pointer / layar lebar).
   - Di perangkat HP layar sentuh (mobile), penutupan via klik luar dinonaktifkan untuk mencegah modal tertutup secara tidak sengaja saat pengguna menggulir atau mengetuk tepi layar.
 
+## 19. Migrasi Arsitektur Unified Fullstack Next.js, Audit Keamanan, & Ergonomi UI
+
+Berdasarkan audit komprehensif mengacu pada panduan `antigravity-skills` (Clean Code, Security Audit, dan No AI Slop):
+
+- **Migrasi Arsitektur ke Unified Next.js 16 Fullstack (App Router)**:
+  - Menggabungkan direktori terpisah `apps/frontend` dan `apps/backend` menjadi struktur proyek tunggal berbasis Next.js App Router.
+  - POS Kasir aktif di rute `/`, Pemesanan Mandiri Tamu QR di `/pesan`, dan seluruh serverless API route handlers di `/api/*`.
+  - Proses pengembangan dan build disederhanakan menjadi perintah tunggal `npm run dev` dan `npm run build` pada satu port (`localhost:3000`), meniadakan kendala port ganda maupun dependensi duplikat.
+  - Menghapus direktori `packages/contracts` yang tidak lagi digunakan (*orphaned legacy code*).
+- **Penguatan Keamanan & Validasi Input Defensif (`security-audit`)**:
+  - **CORS Protection**: Memperketat `lib/auth/adminAuth.js` agar tidak memantulkan origin asing (*arbitrary origin reflection*) saat konfigurasi origin kosong. Origin dibatasi pada domain yang terdaftar secara eksplisit atau dev local namespace saja.
+  - **Validasi Input API Checkout & Orders**: Memvalidasi kepastian numerik (`Number.isFinite`), mencegah NaN dan angka negatif pada `settleSessionPayment`, serta memastikan token string meja dan integritas array keranjang pada `submitQrOrder`.
+  - **SSR Compatibility**: Memperbaiki `src/lib/supabase.ts` agar aman dijalankan pada lingkungan Server-Side Rendering (SSR) dan Node.js tanpa memicu `ReferenceError: window is not defined`.
+  - **Null Safety Laporan**: Menambahkan *optional chaining* defensif pada `src/lib/report.ts` (`p.orders?.order_number`) untuk mencegah *uncaught type error* saat data relasi pembayaran tidak memiliki entri pesanan.
+- **Ergonomi & Kendali Suara KDS Dapur (`KitchenDisplayView.tsx`)**:
+  - Bilah filter stasiun dapur (`Semua Bagian`, `Dapur Makanan`, `Bar Minuman`) dikunci *sticky* di atas (`shrink-0`), sehingga tombol filter tetap terlihat saat koki meninjau antrean pesanan yang panjang.
+  - Kartu tiket pesanan dapur diberi wadah gulir mandiri (`flex-1 min-h-0 overflow-y-auto`) dengan proteksi pemotongan kata (*text wrap*) `break-words` dan `break-all` agar teks pesanan panjang tidak meluap keluar batas kartu.
+  - Menambahkan saklar audio bel chime 1-klik langsung di bilah KDS (`Suara Bel: Aktif / Senyap`) yang memungkinkan koki menghidupkan atau mematikan nada panggil pesanan seketika tanpa harus membuka pengaturan kasir.
+- **Penyeimbangan Simetris Tab Kategori Menu**:
+  - Menghapus ikon bintang oranye pada tab "Favorit" dan menyamakan tinggi serta padding seluruh tab kategori (`h-8 px-3 inline-flex items-center justify-center font-medium text-xs rounded-xl`) di POS Pesanan Baru dan Self-Order Tamu, menciptakan harmoni visual yang seimbang dan simetris.
+- **Pembersihan Modul Pengaturan Outlet (`PengaturanView.tsx`)**:
+  - Menghapus form jam operasional kaku dan selektor AM/PM yang menimbulkan kebingungan tampilan 12-jam vs 24-jam.
+  - Menghapus kartu saklar suara dari pengaturan (telah dipindahkan langsung ke bilah KDS).
+  - Memangkas teks penjelasan redundan, badge "Buka Normal", dan ikon tombol yang tidak diperlukan, berfokus murni pada kendali fungsional esensial: Saklar Pemesanan QR, Pajak PB1, Biaya Layanan, dan Kredensial WiFi Tamu.
+- **Penyelarasan Strip 4-Metrik Dashboard & Laporan**:
+  - Menyatukan kartu metrik performa menjadi strip 4 kolom yang seragam antara Dashboard dan Laporan (`Total Omzet`, `Pesanan Selesai`, `Rata-rata`, dan `Pelanggan`).
+
 ---
 
-*Terakhir diperbarui: 16 November 2026*
+*Terakhir diperbarui: 20 November 2026*
 

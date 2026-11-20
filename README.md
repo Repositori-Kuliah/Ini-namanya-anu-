@@ -6,20 +6,26 @@ Proyek ini dikembangkan untuk memenuhi standar mata kuliah **Interaksi User dan 
 
 ---
 
-## 1. Ikhtisar Arsitektur Monorepo
+## 1. Ikhtisar Arsitektur Unified Fullstack
 
-Proyek ini dibangun di atas fondasi monorepo yang bersih dan modular:
+Proyek ini dibangun di atas fondasi **Unified Next.js 16 Fullstack App Router** yang menggabungkan seluruh aplikasi POS, Self-Order Tamu, dan backend API Route Handlers ke dalam satu repositori terpadu:
 
 ```text
 Ini-namanya-anu-/
-├── apps/
-│   ├── frontend/             # Single Page Application (React 19 + TypeScript + Vite + Tailwind CSS)
-│   │   ├── src/
-│   │   │   ├── customer/     # Aplikasi Self-Order Pelanggan di Meja (Mobile & Desktop Responsive)
-│   │   │   ├── pos/          # Aplikasi Operasional Kasir, Waiter, KDS Dapur, & Manajer
-│   │   │   └── lib/          # Utilitas domain, adapter Supabase, & kalkulasi tagihan murni
-│   │   └── package.json
-│   └── backend/              # Next.js App Router (JavaScript FP / Functional Programming)
+├── app/                      # Next.js App Router (Halaman & Serverless API Routes)
+│   ├── page.tsx              # Rute Utama POS Kasir & Operasional (/)
+│   ├── layout.tsx            # Root Layout & DevTools Inspector
+│   ├── pesan/                # Rute Pemesanan Mandiri Tamu QR Meja (/pesan)
+│   └── api/                  # API Route Handlers (/api/checkout, /api/orders, dll)
+├── src/                      # Modul Antarmuka Pengguna (React 19 + TypeScript + Tailwind v4)
+│   ├── customer/             # Aplikasi Self-Order Pelanggan di Meja (Mobile & Desktop Responsive)
+│   ├── pos/                  # Aplikasi Operasional Kasir, Waiter, KDS Dapur, & Manajer
+│   └── lib/                  # Utilitas domain, adapter Supabase, & kalkulasi tagihan murni
+├── lib/                      # Backend Core Services & Functional Domain
+│   ├── auth/                 # Admin authentication & CORS guard
+│   ├── domain/               # Billing engine & state machine murni
+│   ├── fp/                   # Functional programming primitives (Result ok/err)
+│   └── services/             # Order, payment, report, & staff services
 ├── docs/                     # Dokumentasi Teknis, Desain, Arsitektur, & Panduan Pengguna
 │   ├── USER_MANUAL.md        # Panduan manual pengoperasian (Kasir, Pelayan, Dapur, Pelanggan, Admin)
 │   ├── MATRIX_PERUBAHAN.md   # Matriks perbandingan Sebelum vs Sesudah & justifikasi kaidah IUM
@@ -29,7 +35,7 @@ Ini-namanya-anu-/
 ├── supabase/                 # Basis data PostgreSQL, migrasi, dan seed data
 │   ├── migrations/           # Skema tabel (3NF), RLS policy, fungsi RPC aman
 │   └── seed/                 # Data katalog menu autentik, akun demo, & meja awal
-├── package.json              # Root workspace package.json
+├── package.json              # Unified root scripts & dependencies
 └── README.md
 ```
 
@@ -62,9 +68,11 @@ Ini-namanya-anu-/
    - Input tunai dilengkapi nominal cepat dan kalkulator uang kembalian instan.
    - Cetak struk belanja standar format kasir termal (58mm / 80mm).
 4. **Kitchen Display System (KDS)**:
-   - Panel antrean pesanan dapur dengan filter tiket dan nada notifikasi lonceng (*Web Audio chime*) saat pesanan baru masuk.
-5. **Manajemen Menu, Meja, & Laporan Penjualan**:
-   - Tambah/edit menu, toggle ketersediaan stok, unduh stand akrilik QR Code meja beresolusi tinggi, dan grafik analitik omzet.
+   - Panel antrean pesanan dapur dengan bilah filter stasiun *sticky*, proteksi *text overflow*, wadah gulir independen, dan tombol toggle bel audio (*Web Audio chime*) 1-klik aktif/senyap.
+5. **Dashboard & Laporan Selaras (4-Metric Strip)**:
+   - Dashboard dan Laporan diselaraskan dengan strip 4 metrik ringkas: Total Omzet, Pesanan Selesai, Rata-rata per Transaksi, dan Pelanggan.
+6. **Manajemen Menu, Meja, & Pengaturan**:
+   - Tab filter kategori simetris dan proporsional tanpa ikon asimetris, unduh stiker QR meja beresolusi tinggi, serta pengaturan fitur restoran yang ringkas dan bebas polusi visual.
 
 ---
 
@@ -93,7 +101,7 @@ Sistem menggunakan 10 tabel ternormalisasi (3NF) tanpa data statis palsu:
 - **Node.js** v18.0.0 atau lebih baru
 - **npm** v9.0.0 atau lebih baru
 
-### Langkah Instalasi & Menjalankan Frontend
+### Langkah Instalasi & Menjalankan Aplikasi
 ```bash
 # 1. Masuk ke direktori root proyek
 cd "d:/Documents/MataKuliah/Semester 5/IUM/Proyek/Ini-namanya-anu-"
@@ -101,17 +109,18 @@ cd "d:/Documents/MataKuliah/Semester 5/IUM/Proyek/Ini-namanya-anu-"
 # 2. Pasang dependensi
 npm install
 
-# 3. Jalankan server pengembangan Frontend (Vite)
-npm --prefix apps/frontend run dev
+# 3. Jalankan server pengembangan Fullstack Next.js
+npm run dev
 ```
 
-Aplikasi frontend akan aktif di:
-- **POS Kasir & Operasional**: `http://localhost:5173/`
-- **Customer Self-Order (Simulasi Meja 01)**: `http://localhost:5173/pesan?token=TABLE_01_DEMO`
+Aplikasi langsung aktif pada satu port tunggal:
+- **POS Kasir & Operasional**: `http://localhost:3000/`
+- **Customer Self-Order (Simulasi Meja 01)**: `http://localhost:3000/pesan?token=TABLE_01_DEMO`
+- **Backend API Routes**: `http://localhost:3000/api/tables`, `/api/orders`, `/api/checkout/pay`, dll.
 
 ### Verifikasi Build Produksi
 ```bash
-npm --prefix apps/frontend run build
+npm run build
 ```
 
 ---

@@ -1,0 +1,564 @@
+import React, { useState } from 'react';
+import { useApp, AppView } from '../context/AppContext';
+import { UserRole } from '../types';
+import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
+import { publicAsset } from '../../lib/publicAsset';
+
+export const HelpModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
+  isOpen,
+  onClose,
+}) => {
+  useLockBodyScroll(isOpen);
+  if (!isOpen) return null;
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 transition-opacity"
+        onClick={onClose}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="help-title"
+        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white rounded-2xl p-6 shadow-2xl z-50 border border-[#ebe8e3] max-h-[85vh] overflow-y-auto space-y-4"
+      >
+        <div className="flex items-center justify-between pb-3 border-b border-[#ebe8e3]">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-[#3d1018] text-white flex items-center justify-center">
+              <span className="material-symbols-outlined text-[18px]">help</span>
+            </div>
+            <div>
+              <h3 id="help-title" className="font-bold text-base text-[#1c1c19]">
+                Bantuan &amp; Panduan Operasional
+              </h3>
+              <p className="text-xs text-[#524344]">Sistem POS Rawon Gusti Surabaya</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-[#524344] hover:text-[#1c1c19] hover:bg-[#f0ede9] transition-colors cursor-pointer"
+            aria-label="Tutup panduan"
+          >
+            <span className="material-symbols-outlined text-[18px]">close</span>
+          </button>
+        </div>
+
+        <div className="space-y-3 text-xs text-[#524344] leading-relaxed">
+          <div className="p-3.5 bg-[#fcf9f4] rounded-xl border border-[#ebe8e3]">
+            <h4 className="font-bold text-[#3d1018] flex items-center gap-1.5 mb-1.5 text-xs">
+              <span className="material-symbols-outlined text-[16px]">point_of_sale</span>
+              <span>1. Peran Kasir POS</span>
+            </h4>
+            <p>
+              Kasir mengelola layanan santap di tempat pada <strong>Meja &amp; Pelanggan</strong>, pembuatan <strong>Pesanan Baru</strong>, pencatatan pembayaran (Tunai, QRIS, Kartu Debit), cetak struk termal, serta rekonsiliasi kas pada <strong>Tutup Kasir</strong>.
+            </p>
+          </div>
+
+          <div className="p-3.5 bg-[#fcf9f4] rounded-xl border border-[#ebe8e3]">
+            <h4 className="font-bold text-[#3d1018] flex items-center gap-1.5 mb-1.5 text-xs">
+              <span className="material-symbols-outlined text-[16px]">skillet</span>
+              <span>2. Peran Dapur &amp; Bar</span>
+            </h4>
+            <p>
+              Dapur dan bar memantau tiket pesanan pelanggan pada stasiun <strong>Dapur Utama (Makanan)</strong> dan <strong>Bar Minuman</strong> melalui alur penyajian <strong>Baru ➔ Dimasak ➔ Siap Diantar</strong>.
+            </p>
+          </div>
+
+          <div className="p-3.5 bg-[#fcf9f4] rounded-xl border border-[#ebe8e3]">
+            <h4 className="font-bold text-[#3d1018] flex items-center gap-1.5 mb-1.5 text-xs">
+              <span className="material-symbols-outlined text-[16px]">admin_panel_settings</span>
+              <span>3. Peran Admin Outlet</span>
+            </h4>
+            <p>
+              Admin memiliki otorisasi penuh: grafik analisis <strong>Dashboard Penjualan</strong>, manajemen <strong>Kelola Menu &amp; Stok Bahan Baku</strong>, pendaftaran <strong>Kelola Meja &amp; Kode QR</strong>, pengoperasian <strong>Akun Staf</strong>, serta audit <strong>Laporan Transaksi &amp; Rekap Kasir</strong>.
+            </p>
+          </div>
+        </div>
+
+        <div className="pt-2 flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl bg-[#3d1018] text-white text-xs font-bold hover:bg-[#58252c] transition-all cursor-pointer"
+          >
+            Mengerti &amp; Tutup
+          </button>
+        </div>
+      </div>
+    </>
+  );
+};
+
+export const MobileHeader: React.FC = () => {
+  const { activeView, logout, currentRole, pendingQrOrders, openVerificationModal } = useApp();
+  const pendingCount = pendingQrOrders.length;
+
+  const getPageTitleBadge = () => {
+    switch (activeView) {
+      case 'dashboard':
+        return 'Dashboard';
+      case 'meja-dan-pelanggan':
+        return 'Meja & Pelanggan';
+      case 'pesanan-baru':
+        return 'Pesanan Baru';
+      case 'checkout':
+      case 'pembayaran':
+        return 'Checkout & Bayar';
+      case 'pantau-pesanan':
+        return 'Pantau Pesanan';
+      case 'kelola-menu':
+        return 'Kelola Menu';
+      case 'kelola-meja':
+        return 'Kelola Meja';
+      case 'akun-staf-dan-role':
+        return 'Akun Staf & Role';
+      case 'laporan':
+        return 'Laporan Transaksi';
+      default:
+        return 'Operasional';
+    }
+  };
+
+  return (
+    <>
+      <header className="fixed top-0 inset-x-0 z-40 bg-[#3d1018] text-white pt-safe border-b border-white/10 shadow-sm">
+        <div className="h-16 px-4 flex items-center justify-between gap-2 max-w-[1720px] mx-auto relative">
+          {/* Left: Tombol Lonceng Verifikasi di Pojok Kiri */}
+          <div className="flex items-center shrink-0 z-10">
+            <button
+              type="button"
+              onClick={openVerificationModal}
+              className={`relative h-8 px-2 sm:px-2.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer border ${
+                pendingCount > 0
+                  ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-300 shadow-xs animate-pulse'
+                  : 'bg-[#58252c] hover:bg-white/20 text-[#ffdadc] border-white/10'
+              }`}
+              title="Verifikasi Pesanan Self-Order QR"
+              aria-label="Verifikasi Pesanan Self-Order QR"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                {pendingCount > 0 ? 'notifications_active' : 'notifications'}
+              </span>
+              {pendingCount > 0 && (
+                <span className="text-[11px] font-bold leading-none">
+                  {pendingCount}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* Center: Rawon Gusti & Surabaya di Tengah */}
+          <div className="absolute inset-x-0 flex flex-col items-center justify-center text-center pointer-events-none px-16">
+            <div className="flex items-center justify-center gap-1.5 max-w-full">
+              <span className="font-bold text-sm text-white truncate">
+                Rawon Gusti
+              </span>
+              <span className="px-1.5 py-0.2 rounded bg-[#58252c] text-[#ffdadc] text-[10px] font-semibold truncate hidden xs:inline border border-white/10">
+                {getPageTitleBadge()}
+              </span>
+            </div>
+            <span className="text-[11px] text-[#ffdadc]/70 truncate">
+              Surabaya
+            </span>
+          </div>
+
+          {/* Right: Role & Logout */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 z-10">
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#58252c] text-[#ffdadc] border border-white/10 uppercase tracking-wider">
+              {currentRole === 'admin' ? 'Admin' : currentRole === 'kitchen' ? 'Dapur' : 'Kasir'}
+            </span>
+            <button
+              type="button"
+              onClick={logout}
+              className="w-8 h-8 rounded-lg bg-[#58252c] text-[#ffdadc] hover:bg-white/20 hover:text-white flex items-center justify-center shrink-0 transition-colors cursor-pointer border border-white/10"
+              aria-label="Keluar shift"
+            >
+              <span className="material-symbols-outlined text-[18px]">logout</span>
+            </button>
+          </div>
+        </div>
+      </header>
+    </>
+  );
+};
+
+export const MobileBottomNav: React.FC = () => {
+  const { activeView, setActiveView, currentRole, storeSettings } = useApp();
+  const [mobileAdminOpen, setMobileAdminOpen] = useState(false);
+
+  // Role-based mobile navigation tabs
+  const getNavItems = (): { label: string; icon: string; view: AppView | 'admin-drawer' }[] => {
+    if (currentRole === 'kitchen') {
+      return storeSettings.enableKitchenDisplay
+        ? [{ label: 'Pantau Pesanan', icon: 'skillet', view: 'pantau-pesanan' }]
+        : [];
+    }
+    if (currentRole === 'kasir') {
+      return [
+        { label: 'Meja', icon: 'table_restaurant', view: 'meja-dan-pelanggan' },
+        { label: 'Pesanan', icon: 'add_shopping_cart', view: 'pesanan-baru' },
+        { label: 'Checkout', icon: 'point_of_sale', view: 'checkout' },
+      ];
+    }
+    // Admin
+    const items: { label: string; icon: string; view: AppView | 'admin-drawer' }[] = [
+      { label: 'Meja', icon: 'table_restaurant', view: 'meja-dan-pelanggan' },
+      { label: 'Pesanan', icon: 'add_shopping_cart', view: 'pesanan-baru' },
+      { label: 'Checkout', icon: 'point_of_sale', view: 'checkout' },
+    ];
+    if (storeSettings.enableKitchenDisplay) {
+      items.push({ label: 'Pantau', icon: 'skillet', view: 'pantau-pesanan' });
+    }
+    items.push({ label: 'Manajemen', icon: 'apps', view: 'admin-drawer' });
+    return items;
+  };
+
+  const navItems = getNavItems();
+
+  return (
+    <>
+      <nav
+        aria-label="Navigasi Bawah Ponsel"
+        className="fixed bottom-0 inset-x-0 z-40 pb-safe bg-[#3d1018] border-t border-white/10 shadow-lg"
+      >
+        <div className="flex justify-around items-center h-16 max-w-lg mx-auto px-1">
+          {navItems.map((item) => {
+            const isDrawer = item.view === 'admin-drawer';
+            const isActive =
+              !isDrawer &&
+              (activeView === item.view ||
+                (item.view === 'checkout' && activeView === 'pembayaran'));
+
+            return (
+              <button
+                key={item.label}
+                type="button"
+                onClick={() => {
+                  if (isDrawer) {
+                    setMobileAdminOpen(true);
+                  } else {
+                    setActiveView(item.view as AppView);
+                  }
+                }}
+                className={`flex flex-col items-center justify-center gap-0.5 w-16 h-12 rounded-xl transition-all cursor-pointer ${
+                  isActive
+                    ? 'bg-[#58252c] text-white font-bold shadow-xs'
+                    : 'text-[#ffdadc]/70 hover:text-white'
+                }`}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                <span
+                  className={`material-symbols-outlined text-[20px] transition-transform ${
+                    isActive ? 'scale-105 text-[#ffdadc]' : ''
+                  }`}
+                >
+                  {item.icon}
+                </span>
+                <span className="text-[10px] leading-tight text-center">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
+      {/* Admin Mobile Quick Menu Sheet */}
+      {mobileAdminOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 transition-opacity"
+            onClick={() => setMobileAdminOpen(false)}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="bottom-sheet-title"
+            className="fixed bottom-0 inset-x-0 z-50 bg-white rounded-t-2xl p-5 shadow-2xl border-t border-[#ebe8e3] space-y-3 max-h-[85vh] overflow-y-auto"
+          >
+            <div className="w-10 h-1 bg-[#d7c2c2] rounded-full mx-auto mb-1"></div>
+            <div className="flex items-center justify-between pb-2 border-b border-[#ebe8e3]">
+              <h3 id="bottom-sheet-title" className="font-bold text-sm text-[#1c1c19]">
+                Menu Manajemen Outlet
+              </h3>
+              <button
+                type="button"
+                onClick={() => setMobileAdminOpen(false)}
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-[#524344] hover:bg-[#f0ede9] cursor-pointer"
+                aria-label="Tutup menu"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: 'Dashboard', icon: 'grid_view', view: 'dashboard' as AppView },
+                { label: 'Kelola Menu', icon: 'restaurant_menu', view: 'kelola-menu' as AppView },
+                { label: 'Kelola Meja', icon: 'deck', view: 'kelola-meja' as AppView },
+                { label: 'Akun Staf & Role', icon: 'badge', view: 'akun-staf-dan-role' as AppView },
+                { label: 'Laporan Transaksi', icon: 'query_stats', view: 'laporan' as AppView },
+                { label: 'Pengaturan', icon: 'settings', view: 'pengaturan' as AppView },
+              ].map((m) => (
+                <button
+                  key={m.label}
+                  type="button"
+                  onClick={() => {
+                    setActiveView(m.view);
+                    setMobileAdminOpen(false);
+                  }}
+                  className={`p-3 rounded-xl border text-left flex items-center gap-2.5 transition-all cursor-pointer ${
+                    activeView === m.view
+                      ? 'bg-[#3d1018] text-white border-[#3d1018]'
+                      : 'bg-[#fcf9f4] hover:bg-[#f0ede9] text-[#1c1c19] border-[#ebe8e3]'
+                  }`}
+                >
+                  <span
+                    className={`material-symbols-outlined text-[18px] ${
+                      activeView === m.view ? 'text-[#ffdadc]' : 'text-[#994703]'
+                    }`}
+                  >
+                    {m.icon}
+                  </span>
+                  <span className="font-bold text-xs">{m.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </>
+  );
+};
+
+export const DesktopSidebar: React.FC = () => {
+  const { activeView, setActiveView, logout, currentUser, currentRole, desktopSidebarOpen, storeSettings, pendingQrOrders } = useApp();
+
+  // Kelompok A: Navigasi Operasional
+  const getOperationalNav = () => {
+    if (currentRole === 'kitchen') {
+      return storeSettings.enableKitchenDisplay
+        ? [{ label: 'Pantau Pesanan', icon: 'skillet', view: 'pantau-pesanan' as AppView }]
+        : [];
+    }
+    if (currentRole === 'kasir') {
+      return [
+        { label: 'Meja & Pelanggan', icon: 'table_restaurant', view: 'meja-dan-pelanggan' as AppView },
+        { label: 'Pesanan Baru', icon: 'add_shopping_cart', view: 'pesanan-baru' as AppView },
+        { label: 'Checkout & Bayar', icon: 'point_of_sale', view: 'checkout' as AppView },
+      ];
+    }
+    // Admin
+    const items = [
+      { label: 'Dashboard', icon: 'grid_view', view: 'dashboard' as AppView },
+      { label: 'Meja & Pelanggan', icon: 'table_restaurant', view: 'meja-dan-pelanggan' as AppView },
+      { label: 'Pesanan Baru', icon: 'add_shopping_cart', view: 'pesanan-baru' as AppView },
+      { label: 'Checkout & Bayar', icon: 'point_of_sale', view: 'checkout' as AppView },
+    ];
+    if (storeSettings.enableKitchenDisplay) {
+      items.push({ label: 'Pantau Pesanan', icon: 'skillet', view: 'pantau-pesanan' as AppView });
+    }
+    return items;
+  };
+
+  // Kelompok B: Navigasi Manajemen & Laporan (Khusus Admin)
+  const managementNav = [
+    { label: 'Kelola Menu', icon: 'restaurant_menu', view: 'kelola-menu' as AppView },
+    { label: 'Kelola Meja', icon: 'deck', view: 'kelola-meja' as AppView },
+    { label: 'Akun Staf & Role', icon: 'badge', view: 'akun-staf-dan-role' as AppView },
+    { label: 'Laporan', icon: 'query_stats', view: 'laporan' as AppView },
+    { label: 'Pengaturan', icon: 'settings', view: 'pengaturan' as AppView },
+  ];
+
+  const operationalNav = getOperationalNav();
+
+  return (
+    <aside
+      aria-label="Navigasi Utama Desktop"
+      className={`fixed left-0 top-0 h-screen w-64 bg-[#3d1018] text-white z-40 flex flex-col justify-between shadow-md transition-transform duration-300 ease-in-out ${
+        desktopSidebarOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
+      }`}
+    >
+      <div className="flex flex-col flex-1 min-h-0">
+        {/* Brand Header (Tanpa Logo) */}
+        <div className="p-4 flex items-center gap-3 bg-[#3d1018]/80 border-b border-white/10 shrink-0">
+          <div className="flex flex-col overflow-hidden">
+            <span className="font-bold text-sm text-[#ffdadc] leading-tight tracking-wide truncate">
+              Rawon Gusti
+            </span>
+            <span className="text-[11px] text-[#ffdadc]/70 truncate">Surabaya</span>
+          </div>
+        </div>
+
+        {/* Scrollable Navigation List */}
+        <nav className="p-3 space-y-4 overflow-y-auto custom-scrollbar flex-1">
+          {/* Kelompok A: OPERASIONAL */}
+          <div>
+            <span className="text-[10px] font-bold text-[#ffdadc]/70 uppercase tracking-wider block px-2 mb-1.5">
+              Operasional
+            </span>
+            <div className="space-y-0.5">
+              {operationalNav.map((item) => {
+                const isActive =
+                  activeView === item.view ||
+                  (item.view === 'checkout' && activeView === 'pembayaran');
+                return (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={() => setActiveView(item.view)}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all text-left cursor-pointer ${
+                      isActive
+                        ? 'bg-[#58252c] text-white shadow-xs'
+                        : 'text-white/80 hover:bg-[#58252c]/50 hover:text-white'
+                    }`}
+                    aria-current={isActive ? 'page' : undefined}
+                  >
+                    <span className="material-symbols-outlined text-[18px] shrink-0">
+                      {item.icon}
+                    </span>
+                    <span className="truncate">{item.label}</span>
+                    {item.view === 'meja-dan-pelanggan' && pendingQrOrders.length > 0 && (
+                      <span className="ml-auto px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-white animate-pulse">
+                        {pendingQrOrders.length}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Pemisah Visual Sederhana & Kelompok B: MANAJEMEN & LAPORAN */}
+          {currentRole === 'admin' && (
+            <div className="pt-2 border-t border-white/10">
+              <span className="text-[10px] font-bold text-[#ffdadc]/70 uppercase tracking-wider block px-2 mb-1.5">
+                Manajemen &amp; Laporan
+              </span>
+              <div className="space-y-0.5">
+                {managementNav.map((item) => {
+                  const isActive = activeView === item.view;
+                  return (
+                    <button
+                      key={item.label}
+                      type="button"
+                      onClick={() => setActiveView(item.view)}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all text-left cursor-pointer ${
+                        isActive
+                          ? 'bg-[#58252c] text-white shadow-xs'
+                          : 'text-white/80 hover:bg-[#58252c]/50 hover:text-white'
+                      }`}
+                      aria-current={isActive ? 'page' : undefined}
+                    >
+                      <span className="material-symbols-outlined text-[18px] shrink-0">
+                        {item.icon}
+                      </span>
+                      <span className="truncate">{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </nav>
+      </div>
+
+      {/* Sidebar Footer: Info Akun Staf & Tombol Logout */}
+      <div className="p-3.5 bg-[#58252c]/50 border-t border-white/10 flex items-center justify-between shrink-0">
+        <div className="flex flex-col min-w-0">
+          <span className="text-xs font-bold text-white truncate leading-tight">
+            {currentUser.name || 'Staf Operasional'}
+          </span>
+          <span className="text-[10px] text-[#ffdadc]/70 truncate capitalize">
+            {currentRole} Outlet
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={logout}
+          className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+          aria-label="Keluar shift"
+        >
+          <span className="material-symbols-outlined text-[18px]">logout</span>
+        </button>
+      </div>
+    </aside>
+  );
+};
+
+export const DesktopHeader: React.FC = () => {
+  const { activeView, desktopSidebarOpen, toggleDesktopSidebar, pendingQrOrders, openVerificationModal } = useApp();
+  const [helpOpen, setHelpOpen] = useState(false);
+  const pendingCount = pendingQrOrders.length;
+
+  const getViewTitle = () => {
+    switch (activeView) {
+      case 'dashboard':
+        return 'Dashboard Operasional';
+      case 'meja-dan-pelanggan':
+        return 'Meja & Pelanggan';
+      case 'pesanan-baru':
+        return 'Pesanan Baru';
+      case 'checkout':
+      case 'pembayaran':
+        return 'Checkout & Pembayaran';
+      case 'pantau-pesanan':
+        return 'Pantau Pesanan';
+      case 'kelola-menu':
+        return 'Kelola Menu';
+      case 'kelola-meja':
+        return 'Kelola Meja';
+      case 'akun-staf-dan-role':
+        return 'Akun Staf & Role';
+      case 'laporan':
+        return 'Laporan Transaksi';
+      default:
+        return 'Operasional';
+    }
+  };
+
+  return (
+    <>
+      <header className={`fixed top-0 ${desktopSidebarOpen ? 'left-64' : 'left-0'} right-0 z-30 bg-[#fcf9f4]/90 backdrop-blur-md border-b border-[#ebe8e3] transition-all duration-300`}>
+        <div className="h-16 px-6 flex items-center justify-between">
+          {/* Breadcrumb & Toggle Sidebar */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={toggleDesktopSidebar}
+              className="p-1.5 rounded-lg text-[#3d1018] bg-white border border-[#ebe8e3] hover:bg-[#ebe8e3] hover:text-[#1c1c19] transition-colors cursor-pointer flex items-center justify-center shadow-2xs"
+              aria-label={desktopSidebarOpen ? 'Tutup sidebar navigasi' : 'Buka sidebar navigasi'}
+            >
+              <span className="material-symbols-outlined text-[20px]">
+                {desktopSidebarOpen ? 'menu_open' : 'menu'}
+              </span>
+            </button>
+          </div>
+
+          {/* Right Action: Tombol Notifikasi Verifikasi Pesanan Self-Order QR (Anti-Order Fiktif) */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={openVerificationModal}
+              className={`h-9 px-3.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-2xs active:scale-95 border ${
+                pendingCount > 0
+                  ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-400 ring-2 ring-amber-300 ring-offset-1 animate-pulse'
+                  : 'bg-white hover:bg-[#f0ede9] text-[#524344] hover:text-[#1c1c19] border-[#ebe8e3]'
+              }`}
+              title="Verifikasi Pesanan Self-Order QR (Anti-Order Fiktif)"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                {pendingCount > 0 ? 'notifications_active' : 'notifications'}
+              </span>
+              <span>
+                {pendingCount > 0 ? `${pendingCount} Pesanan QR Menunggu` : 'Verifikasi Order'}
+              </span>
+              {pendingCount > 0 && (
+                <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+              )}
+            </button>
+          </div>
+        </div>
+      </header>
+    </>
+  );
+};
