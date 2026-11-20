@@ -76,15 +76,13 @@ export const QrCodeModal: React.FC = () => {
 
           <div className="mt-4">
             <span className="text-xs uppercase font-extrabold tracking-widest text-[#994703]">
-              {table.number === '00' ? 'Pesan Mandiri Bawa Pulang' : 'Pindai & Pesan Mandiri'}
+              Pindai & Pesan Mandiri
             </span>
             <h4 className="font-serif text-3xl font-extrabold text-[#1c1c19] mt-0.5">
-              {table.number === '00' ? 'BAWA PULANG' : `MEJA ${table.number}`}
+              MEJA {table.number}
             </h4>
             <p className="text-[11px] text-[#847374] mt-2 max-w-xs leading-relaxed">
-              {table.number === '00'
-                ? 'Buka kamera ponsel Anda, arahkan ke QR untuk memesan menu bawa pulang secara mandiri tanpa perlu antre di kasir.'
-                : 'Buka kamera ponsel Anda, arahkan ke QR untuk melihat katalog menu, memilih varian, dan memesan langsung dari meja.'}
+              Buka kamera ponsel Anda, arahkan ke QR untuk melihat katalog menu, memilih varian, dan memesan langsung dari meja.
             </p>
           </div>
         </div>

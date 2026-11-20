@@ -204,24 +204,14 @@ export const INITIAL_EXTRAS = [
   { extra_id: 4, name: 'Nasi Putih Hangat Tambahan', description: 'Beras pandan wangi pulen, 1 porsi', price: 5000, is_available: true },
 ];
 
-export const INITIAL_TABLES = [
-  {
-    table_id: 0,
-    table_number: 0,
-    qr_token: 'tbl_token_meja_00',
-    capacity: 0,
-    area: 'Kasir / Bawa Pulang (Takeaway)',
-    is_active: true,
-  },
-  ...Array.from({ length: 10 }, (_, i) => ({
-    table_id: i + 1,
-    table_number: i + 1,
-    qr_token: `tbl_token_meja_${String(i + 1).padStart(2, '0')}`,
-    capacity: i % 2 === 0 ? 4 : 2,
-    area: i < 5 ? 'Area Pendopo (Smoking)' : 'Area Ruang Utama (AC Non-Smoking)',
-    is_active: true,
-  })),
-];
+export const INITIAL_TABLES = Array.from({ length: 10 }, (_, i) => ({
+  table_id: i + 1,
+  table_number: i + 1,
+  qr_token: `tbl_token_meja_${String(i + 1).padStart(2, '0')}`,
+  capacity: i % 2 === 0 ? 4 : 2,
+  area: i < 5 ? 'Area Pendopo (Smoking)' : 'Area Ruang Utama (AC Non-Smoking)',
+  is_active: true,
+}));
 
 export const INITIAL_INGREDIENTS = [
   {

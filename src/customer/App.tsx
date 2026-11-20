@@ -10,7 +10,6 @@ import { ChangeTableModal } from './components/ChangeTableModal';
 import { Toast } from './components/Toast';
 import { supabaseConfigured } from '../lib/supabase';
 import { SetupNotice } from '../lib/SetupNotice';
-import DevVisualInspector from '../lib/DevVisualInspector';
 
 const Notice: React.FC<{ icon: string; title: string; body: string }> = ({ icon, title, body }) => (
   <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 p-8 min-h-screen bg-[#fcf9f4]">
@@ -51,7 +50,6 @@ const AppContent: React.FC = () => {
           </>
         )}
         <Toast />
-        <DevVisualInspector />
       </div>
     </div>
   );

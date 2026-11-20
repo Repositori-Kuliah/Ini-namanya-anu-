@@ -211,10 +211,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (!row) { setTableState('invalid'); return; }
         const tblNum = String(row.table_number).padStart(2, '0');
         setSelectedTable(tblNum);
-        setTableArea(row.area || (tblNum === '00' ? 'Kasir / Bawa Pulang' : 'Area Pendopo'));
+        setTableArea(row.area || 'Area Pendopo');
 
         // Deteksi bawa pulang vs santap di tempat
-        if (tblNum === '00' || row.area?.toLowerCase().includes('takeaway') || token.toLowerCase().includes('takeaway')) {
+        if (row.area?.toLowerCase().includes('takeaway') || token.toLowerCase().includes('takeaway')) {
           setOrderType('takeaway');
         } else {
           setOrderType('dine_in');
@@ -504,7 +504,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const sessions = rawSessions ? JSON.parse(rawSessions) : [];
 
           const targetTableNum = parseInt(selectedTable || '1', 10);
-          const isTakeaway = selectedTable === '00' || orderType === 'takeaway';
+          const isTakeaway = orderType === 'takeaway';
 
           const qrOrderObj = {
             order_id: now.getTime(),

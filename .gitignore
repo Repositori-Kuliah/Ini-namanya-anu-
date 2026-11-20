@@ -6,3 +6,6 @@ supabase/tests/
 .env
 .env.local
 antigravity-skills
+src/lib/DevVisualInspector.tsx
+**/DevVisualInspector.tsx
+

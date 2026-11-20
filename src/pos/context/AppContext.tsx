@@ -141,9 +141,8 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 // ---------- helper tampilan ----------
 const pad = (n: number | string) => {
-  if (n === 0 || n === '0' || n === '00') return '00';
   const num = typeof n === 'number' ? n : parseInt(String(n), 10);
-  if (isNaN(num) || num < 0) return '01';
+  if (isNaN(num) || num <= 0) return '01';
   return String(num).padStart(2, '0');
 };
 const WIB = 'Asia/Jakarta';

@@ -27,7 +27,6 @@ import { QrCodeModal } from './components/QrCodeModal';
 import { SelfOrderVerificationModal } from './components/SelfOrderVerificationModal';
 import { supabaseConfigured } from '../lib/supabase';
 import { SetupNotice } from '../lib/SetupNotice';
-import DevVisualInspector from '../lib/DevVisualInspector';
 
 const AppContent: React.FC = () => {
   const {
@@ -51,12 +50,7 @@ const AppContent: React.FC = () => {
   }
 
   if (!isLoggedIn) {
-    return (
-      <>
-        <LoginScreen />
-        <DevVisualInspector />
-      </>
-    );
+    return <LoginScreen />;
   }
 
   if (!dataReady) {
@@ -133,9 +127,6 @@ const AppContent: React.FC = () => {
 
       {/* Global Self-Order Verification Modal (Anti-Order Fiktif) */}
       <SelfOrderVerificationModal />
-
-      {/* Visual UI Inspector Tool */}
-      <DevVisualInspector />
     </div>
   );
 };
