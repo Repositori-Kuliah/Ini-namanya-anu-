@@ -9,12 +9,12 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ onBack }) => {
   const { currentScreen, navigate } = useApp();
 
-  const isMenu = currentScreen === 'menu';
+  const isDetail = currentScreen === 'detail';
 
   return (
     <header className="fixed top-0 inset-x-0 z-50 pt-safe bg-[#fcf9f4]/95 backdrop-blur-md border-b border-[#ebe8e3] transition-all">
       <div className="w-full max-w-md md:max-w-4xl lg:max-w-[1600px] mx-auto h-14 px-4 md:px-6 flex items-center justify-between gap-3">
-        {!isMenu ? (
+        {isDetail ? (
           <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
@@ -27,7 +27,7 @@ export const Header: React.FC<HeaderProps> = ({ onBack }) => {
               </span>
             </button>
             <h1 className="font-serif text-base font-bold text-[#3d1018] truncate">
-              {currentScreen === 'status' ? 'Rincian Pesanan' : 'Kustomisasi Menu'}
+              Kustomisasi Menu
             </h1>
           </div>
         ) : (
