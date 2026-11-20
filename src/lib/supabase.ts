@@ -54,7 +54,11 @@ export const appBaseUrl = () => {
   const configured = getEnv('APP_URL');
   if (configured) return configured.replace(/\/$/, '');
   if (typeof window !== 'undefined' && window.location?.origin) {
-    return window.location.origin;
+    const basePath = (
+      process.env.NEXT_PUBLIC_BASE_PATH ||
+      (process.env.NODE_ENV === 'production' ? '/Ini-namanya-anu-' : '')
+    ).replace(/\/$/, '');
+    return `${window.location.origin}${basePath}`;
   }
   return 'http://localhost:3000';
 };
