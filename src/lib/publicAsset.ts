@@ -1,14 +1,12 @@
+const basePath =
+  process.env.NEXT_PUBLIC_BASE_PATH ||
+  (process.env.NODE_ENV === 'production' ? '/Ini-namanya-anu-' : '');
+
 /**
- * Resolve a file served from /public against Vite or Next.js base path.
- *
- * Assets referenced as "/logo-rawon.png" break when the app is hosted under a
- * subpath (e.g. GitHub Pages /Ini-namanya-anu-/). Always use this helper for
- * public files referenced from JS/TS.
+ * Resolve a file served from /public against the configured application base
+ * path. This keeps public assets working on GitHub Pages project sites.
  */
 export const publicAsset = (path: string): string => {
-  const base = (typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env.BASE_URL)
-    ? (import.meta as any).env.BASE_URL
-    : '/';
   const cleanPath = path.replace(/^\/+/, '');
-  return `${base.endsWith('/') ? base : base + '/'}${cleanPath}`;
+  return `${basePath.replace(/\/$/, '')}/${cleanPath}`;
 };
