@@ -4,7 +4,7 @@ import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import { publicAsset } from '../../lib/publicAsset';
 
 export const ThermalReceiptModal: React.FC = () => {
-  const { receiptModalData, closeReceiptModal } = useApp();
+  const { receiptModalData, closeReceiptModal, storeSettings } = useApp();
 
   useLockBodyScroll(Boolean(receiptModalData));
 
@@ -93,7 +93,7 @@ export const ThermalReceiptModal: React.FC = () => {
             </div>
             <div className="flex justify-between">
               <span>No. Bill</span>
-              <span className="font-mono">{bill.billNumber.startsWith('ORD-') ? bill.billNumber : `ORD-${bill.billNumber}`}</span>
+              <span className="font-mono">{bill.billNumber}</span>
             </div>
             <div className="flex justify-between">
               <span>Layanan</span>
@@ -105,7 +105,7 @@ export const ThermalReceiptModal: React.FC = () => {
             </div>
             <div className="flex justify-between">
               <span>Pelanggan</span>
-              <span>{bill.customerName || 'Tamu'}</span>
+              <span>{bill.customerName || (bill.isTakeaway ? 'Pesanan Bawa Pulang' : `Tamu Meja ${bill.tableNumber}`)}</span>
             </div>
           </div>
 
@@ -139,14 +139,18 @@ export const ThermalReceiptModal: React.FC = () => {
               <span>Subtotal</span>
               <span className="font-mono">{bill.subtotal.toLocaleString('id-ID')}</span>
             </div>
-            <div className="flex justify-between">
-              <span>Layanan 5%</span>
-              <span className="font-mono">{bill.serviceFee.toLocaleString('id-ID')}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>PB1 10%</span>
-              <span className="font-mono">{bill.tax.toLocaleString('id-ID')}</span>
-            </div>
+            {bill.serviceFee > 0 && (
+              <div className="flex justify-between">
+                <span>{storeSettings?.serviceChargeName || 'Layanan'} {storeSettings?.serviceChargeRate ? `${storeSettings.serviceChargeRate}%` : '5%'}</span>
+                <span className="font-mono">{bill.serviceFee.toLocaleString('id-ID')}</span>
+              </div>
+            )}
+            {bill.tax > 0 && (
+              <div className="flex justify-between">
+                <span>{storeSettings?.taxName || 'PB1'} {storeSettings?.taxRate ? `${storeSettings.taxRate}%` : '10%'}</span>
+                <span className="font-mono">{bill.tax.toLocaleString('id-ID')}</span>
+              </div>
+            )}
           </div>
 
           {/* Garis Putus-Putus */}

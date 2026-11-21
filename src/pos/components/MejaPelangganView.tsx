@@ -9,6 +9,7 @@ const MejaPelangganViewInner: React.FC = () => {
     selectedTableId,
     setSelectedTableId,
     setActiveView,
+    setOrderType,
     setOrderTableNumber,
     setOrderCustomerName,
     setSelectedBillId,
@@ -71,6 +72,7 @@ const MejaPelangganViewInner: React.FC = () => {
   };
 
   const handleBukaPesanan = (tableNumber: string) => {
+    setOrderType('dine_in');
     setOrderTableNumber(tableNumber);
     setOrderCustomerName('');
     setMobileDrawerOpen(false);
@@ -183,13 +185,6 @@ const MejaPelangganViewInner: React.FC = () => {
                         : 'border-[#ebe8e3] hover:border-[#d8d1c7] shadow-xs hover:shadow-sm'
                     }`}
                   >
-                    {/* Badge Notifikasi Self-Order Menunggu Konfirmasi */}
-                    {hasPendingQr && (
-                      <span className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-[#15803d] text-[10px] font-bold border border-emerald-300 shadow-2xs animate-pulse">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#15803d]" />
-                        Self-Order
-                      </span>
-                    )}
                     {/* Tengah: Nomor Meja Besar & Tegas */}
                     <div className="flex flex-col items-center justify-center flex-1 py-3 text-center">
                       <span className="text-[10px] font-bold uppercase tracking-widest text-[#847374] mb-0.5">
@@ -315,20 +310,6 @@ const MejaPelangganViewInner: React.FC = () => {
 
               {/* Actions */}
               <div className="flex flex-col gap-2 pt-1">
-                {/* HANYA MUNCUL JIKA PESANAN BERASAL DARI SELF-ORDER (QR) DAN MENUNGGU KONFIRMASI */}
-                {pendingOrderForSelectedTable && (
-                  <button
-                    type="button"
-                    onClick={openVerificationModal}
-                    className="w-full h-11 rounded-xl bg-[#15803d] hover:bg-[#166534] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs cursor-pointer transition-all active:scale-[0.99]"
-                  >
-                    <span className="material-symbols-outlined text-[18px] animate-pulse">
-                      notifications_active
-                    </span>
-                    <span>Verifikasi Pesanan Self-Order</span>
-                  </button>
-                )}
-
                 <div className="grid grid-cols-2 gap-2.5">
                   <button
                     type="button"
@@ -470,20 +451,6 @@ const MejaPelangganViewInner: React.FC = () => {
                     {selectedTable.totalFormatted || 'Rp 0'}
                   </span>
                 </div>
-
-                {/* HANYA MUNCUL JIKA PESANAN BERASAL DARI SELF-ORDER (QR) DAN MENUNGGU KONFIRMASI */}
-                {pendingOrderForSelectedTable && (
-                  <button
-                    type="button"
-                    onClick={openVerificationModal}
-                    className="w-full h-11 rounded-xl bg-[#15803d] hover:bg-[#166534] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs cursor-pointer transition-all active:scale-[0.99] mt-2"
-                  >
-                    <span className="material-symbols-outlined text-[18px] animate-pulse">
-                      notifications_active
-                    </span>
-                    <span>Verifikasi Pesanan Self-Order</span>
-                  </button>
-                )}
 
                 <div className="grid grid-cols-2 gap-2 pt-2">
                   <button

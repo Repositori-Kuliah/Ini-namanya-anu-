@@ -3,7 +3,6 @@ import { CartItem, CustomizationSelection, MenuItem, ActiveOrder, ScreenType, Ex
 import { supabase } from '../../lib/supabase';
 import { billOfOrders } from '../../lib/domain';
 import { placeholderImage } from '../../lib/placeholder';
-import { INITIAL_TABLES } from '../../lib/mockData';
 
 interface ToastState {
   show: boolean;
@@ -72,7 +71,14 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 const EMPTY_ITEM: MenuItem = { id: '', name: '', price: 0, description: '', category: '', categories: [], tags: [], image: '' };
-const STAGE: Record<string, 1 | 2 | 3 | 4> = { submitted: 1, preparing: 2, ready: 3, served: 4 };
+const STAGE: Record<string, 0 | 1 | 2 | 3 | 4> = {
+  pending: 0,
+  pending_confirmation: 0,
+  submitted: 1,
+  preparing: 2,
+  ready: 3,
+  served: 4,
+};
 const formatRupiah = (n: number) => 'Rp' + n.toLocaleString('id-ID');
 const wib = (iso: string) => new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' }).replace(':', '.') + ' WIB';
 
@@ -87,6 +93,7 @@ const noteOf = (c: CustomizationSelection) => [
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const token = useMemo(() => {
+    if (typeof window === 'undefined') return '';
     // 1. Ambil dari URL jika baru pertama scan QR
     const urlParams = new URLSearchParams(window.location.search);
     const paramToken = urlParams.get('meja');
@@ -96,13 +103,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         sessionStorage.setItem('rg_active_table_token', paramToken);
       } catch {}
-
-      // Solusi 4: Masking URL - bersihkan token dari address bar browser agar hanya tampil /pesan
-      try {
-        const cleanUrl = window.location.pathname;
-        window.history.replaceState({}, document.title, cleanUrl);
-      } catch {}
-
       return paramToken;
     }
 
@@ -113,11 +113,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return '';
     }
   }, []);
+
+  // Bersihkan parameter token dari address bar setelah terbaca agar URL rapi (/pesan)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.search.includes('meja=')) {
+      try {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } catch {}
+    }
+  }, []);
+
   const cartKey = `rawon_gusti_cart_${token}`;
 
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('menu');
   const [tableState, setTableState] = useState<AppContextType['tableState']>('loading');
   const [selectedTable, setSelectedTable] = useState('');
+  const [currentTableDbId, setCurrentTableDbId] = useState<number | null>(null);
   const [tableArea, setTableArea] = useState('');
   const [guestsCount, setGuestsCount] = useState(1);
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
@@ -179,38 +190,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     (async () => {
       try {
-        const [t, cats, prods, ex, allTbls] = await Promise.all([
-          supabase.rpc('get_table', { p_token: token }),
+        const [cats, prods, ex, allTbls] = await Promise.all([
           supabase.from('categories').select('*').order('category_id'),
           supabase.from('products').select('*, categories(name)').order('product_id'),
           supabase.from('extras').select('*').eq('is_available', true).order('extra_id'),
-          supabase.from('tables').select('table_number').eq('is_active', true).order('table_number'),
+          supabase.from('tables').select('*').eq('is_active', true).order('table_number'),
         ]);
         if (prods.error) { setTableState('error'); return; }
 
-        let row = t.data?.[0];
-        if (t.error || !row) {
-          const tbl = await supabase.from('tables').select('*').eq('qr_token', token).eq('is_active', true).maybeSingle();
-          if (tbl.data) {
-            row = tbl.data;
-          }
-        }
-
-        if (!row) {
-          const match = INITIAL_TABLES.find((m) =>
-            m.qr_token === token ||
-            token === `tbl_token_meja_${String(m.table_number).padStart(2, '0')}` ||
-            token === String(m.table_number) ||
-            token === String(m.table_number).padStart(2, '0')
-          );
-          if (match) {
-            row = match;
-          }
-        }
+        const tablesList = allTbls.data || [];
+        const row = tablesList.find((m: any) =>
+          m.qr_token === token ||
+          token === `tbl_token_meja_${String(m.table_number).padStart(2, '0')}` ||
+          token === String(m.table_number) ||
+          token === String(m.table_number).padStart(2, '0')
+        );
 
         if (!row) { setTableState('invalid'); return; }
         const tblNum = String(row.table_number).padStart(2, '0');
         setSelectedTable(tblNum);
+        setCurrentTableDbId(row.table_id);
         setTableArea(row.area || 'Area Pendopo');
 
         // Deteksi bawa pulang vs santap di tempat
@@ -220,9 +219,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setOrderType('dine_in');
         }
 
-        if (allTbls.data) {
-          setAvailableTables(allTbls.data.map((at: any) => String(at.table_number).padStart(2, '0')));
-        }
+        setAvailableTables(tablesList.map((at: any) => String(at.table_number).padStart(2, '0')));
         setMenuCategories((cats.data ?? []).map((c: any) => ({ id: c.name, label: c.name })));
         const items: MenuItem[] = (prods.data ?? []).filter((p: any) => p.is_available).map((p: any) => {
           const cat = p.categories?.name ?? '';
@@ -248,60 +245,76 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     })();
   }, [token]);
 
-  // ---------- status pesanan (polling; pelanggan anon tidak punya akses realtime) ----------
+  // ---------- status pesanan langsung dari database Supabase ----------
   const lastSeen = useRef<ActiveOrder | null>(null);
   const loadOrders = useCallback(async () => {
-    if (!token) return;
+    if (!currentTableDbId) return;
     try {
-      const { data, error } = await supabase.rpc('my_orders', { p_token: token });
-      if (!error && data && data.length > 0) {
-        const orders: any[] = data;
-        const subs = orders.map((o) => o.items.reduce((a: number, i: any) => a + i.price * i.qty, 0));
-        const b = billOfOrders(subs);
-        const open = orders.filter((o) => o.status !== 'served');
-        const stage = open.length ? Math.min(...open.map((o) => STAGE[o.status])) : 4;
-        const last = orders[orders.length - 1];
+      const { data: sess, error } = await supabase
+        .from('table_sessions')
+        .select('session_id, customer_name, guest_count, opened_at, orders(order_id, order_number, order_status, total, note, created_at, payments(payment_id, status), order_items(order_item_id, product_name, unit_price, quantity, note))')
+        .eq('table_id', currentTableDbId)
+        .is('closed_at', null)
+        .maybeSingle();
+
+      if (!error && sess && sess.orders && sess.orders.length > 0) {
+        const orders: any[] = sess.orders;
+        const activeOrders = orders.filter((o) => o.order_status !== 'cancelled');
+        if (activeOrders.length === 0) {
+          setActiveOrder(null);
+          return;
+        }
+
+        const open = activeOrders.filter((o) => o.order_status !== 'served');
+        const stage = open.length ? Math.min(...open.map((o) => STAGE[o.order_status] ?? 1)) : 4;
+        const last = activeOrders[activeOrders.length - 1];
+        const allItems = activeOrders.flatMap((o) => (o.order_items || []).map((i: any, k: number) => ({
+          cartItemId: `${o.order_id}-${k}`,
+          menuItemId: '',
+          name: i.product_name,
+          basePrice: Number(i.unit_price),
+          quantity: i.quantity,
+          customization: { kitchenNotes: i.note || undefined } as any,
+          extraCost: 0,
+          totalPrice: Number(i.unit_price) * i.quantity,
+          image: menuItems.find((m) => m.name === i.product_name)?.image || placeholderImage(i.product_name),
+          subtitleDesc: `${i.quantity}x porsi (${formatRupiah(Number(i.unit_price))})`,
+        })));
+
+        const subtotal = allItems.reduce((acc, it) => acc + it.totalPrice, 0);
+        const b = billOfOrders([subtotal]);
+        const isPaid = activeOrders.some((o) => (o.payments || []).some((p: any) => p.status === 'paid'));
+
         const next: ActiveOrder = {
-          ticketNumber: '#' + last.order_number, orderNumbers: orders.map((o) => o.order_number),
-          tableNumber: selectedTable, tableArea, guestsCount: last.guests, orderTime: wib(orders[0].created_at),
-          orderTimestamp: new Date(orders[0].created_at).getTime(),
-          items: orders.flatMap((o) => o.items.map((i: any, k: number) => ({
-            cartItemId: `${o.order_id}-${k}`, menuItemId: '', name: i.name, basePrice: i.price, quantity: i.qty,
-            customization: { kitchenNotes: i.note || undefined } as any, extraCost: 0, totalPrice: i.price * i.qty,
-            image: menuItems.find((m) => m.name === i.name)?.image || placeholderImage(i.name),
-            subtitleDesc: `${i.qty}x porsi (${formatRupiah(i.price)})`,
-          }))),
-          tableNotes: orders.map((o) => o.note).filter(Boolean).join('; '),
+          ticketNumber: '#' + (last.order_number || String(last.order_id)),
+          orderNumbers: activeOrders.map((o) => o.order_number || String(o.order_id)),
+          tableNumber: selectedTable,
+          tableArea,
+          guestsCount: sess.guest_count,
+          orderTime: wib(activeOrders[0].created_at),
+          orderTimestamp: new Date(activeOrders[0].created_at).getTime(),
+          items: allItems,
+          tableNotes: activeOrders.map((o) => o.note).filter(Boolean).join('; '),
           paymentMethod: 'cashier',
-          paymentStatus: orders.every((o) => o.paid) ? 'LUNAS' : 'MENUNGGU DI KASIR',
-          statusStage: stage as 1 | 2 | 3 | 4, estimatedMinutes: '',
-          subtotal: b.subtotal, serviceFee: b.service, tax: b.tax, total: b.total,
+          paymentStatus: isPaid ? 'LUNAS' : 'MENUNGGU DI KASIR',
+          statusStage: stage as 0 | 1 | 2 | 3 | 4,
+          rawStatus: last.order_status,
+          estimatedMinutes: '',
+          subtotal: b.subtotal,
+          serviceFee: b.service,
+          tax: b.tax,
+          total: b.total,
         };
         lastSeen.current = next;
         setActiveOrder(next);
         return;
+      } else {
+        setActiveOrder(null);
       }
-    } catch {}
-
-    // Fallback baca dari local session jika RPC belum tersedia
-    try {
-      const saved = localStorage.getItem(`rg_customer_order_${token}`);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed) {
-          lastSeen.current = parsed;
-          setActiveOrder(parsed);
-          return;
-        }
-      }
-    } catch {}
-
-    if (lastSeen.current?.paymentStatus === 'LUNAS') {
-      setActiveOrder(lastSeen.current);
-    } else if (!lastSeen.current) {
-      setActiveOrder(null);
+    } catch (e) {
+      console.warn('loadOrders error:', e);
     }
-  }, [token, selectedTable, tableArea, menuItems]);
+  }, [currentTableDbId, selectedTable, tableArea, menuItems]);
 
   useEffect(() => {
     if (tableState !== 'ok') return;
@@ -408,12 +421,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const b = billOfOrders(cartItems.length ? [cartItems.reduce((a, i) => a + i.totalPrice, 0)] : []);
   const cartSubtotal = b.subtotal, cartServiceFee = b.service, cartTax = b.tax, cartTotal = b.total;
 
-  const submitOrder = async (paymentMethod: 'qris' | 'cashier', notes: string): Promise<boolean> => {
-    if (!cartItems.length) return false;
+  const submitOrder = async (_paymentMethod: 'qris' | 'cashier', notes: string): Promise<boolean> => {
+    if (!cartItems.length || !currentTableDbId) return false;
     try {
-      const idempotencyKey = `ord-${token}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-      let orderPlaced = false;
-
       // Gabungkan catatan pelanggan: nama tamu, meja gabung, catatan koki
       const noteParts: string[] = [];
       if (customerName.trim()) noteParts.push(`Tamu: ${customerName.trim()}`);
@@ -422,141 +432,105 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (notes && notes.trim() && !noteParts.includes(notes.trim())) noteParts.push(notes.trim());
       const compiledNotes = noteParts.join(' • ');
 
-      try {
-        const { data, error } = await supabase.rpc('place_order', {
-          p_token: token, p_guests: guestsCount, p_note: compiledNotes, p_pay_pref: paymentMethod,
-          p_idempotency_key: idempotencyKey,
-          p_items: cartItems.map((c) => ({
-            id: Number(c.menuItemId), qty: c.quantity, note: noteOf(c.customization),
-            extras: c.customization.extras.map((n) => extraIds.current[n]).filter(Boolean),
-          })),
-        });
+      // 1. Dapatkan atau buat sesi aktif di Supabase
+      let activeSessionId: number | null = null;
+      const { data: existingSess } = await supabase
+        .from('table_sessions')
+        .select('session_id')
+        .eq('table_id', currentTableDbId)
+        .is('closed_at', null)
+        .maybeSingle();
 
-        if (!error && !data?.error) {
-          orderPlaced = true;
+      if (existingSess) {
+        activeSessionId = existingSess.session_id;
+        if (customerName) {
+          await supabase.from('table_sessions').update({ customer_name: customerName }).eq('session_id', activeSessionId);
         }
-      } catch (rpcErr) {
-        console.warn('RPC place_order not available, using local session fallback', rpcErr);
+      } else {
+        const { data: newSess, error: sessErr } = await supabase
+          .from('table_sessions')
+          .insert({
+            table_id: currentTableDbId,
+            guest_count: guestsCount || 1,
+            customer_name: customerName || `Tamu Meja ${selectedTable}`,
+            is_takeaway: orderType === 'takeaway',
+          })
+          .select('session_id')
+          .single();
+
+        if (sessErr || !newSess) {
+          showToast('Gagal membuat sesi pesanan di Supabase', 'error');
+          return false;
+        }
+        activeSessionId = newSess.session_id;
       }
 
-      if (!orderPlaced) {
-        // Fallback: create or stack order locally so customer self-ordering always succeeds seamlessly
-        const generatedTicket = '#' + (1000 + Math.floor(Math.random() * 9000));
-        const now = new Date();
-        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} WIB`;
-
-        let existingActive: ActiveOrder | null = activeOrder;
-        if (!existingActive) {
-          try {
-            const saved = localStorage.getItem(`rg_customer_order_${token}`);
-            if (saved) {
-              const parsed = JSON.parse(saved);
-              if (parsed && parsed.paymentStatus !== 'LUNAS') {
-                existingActive = parsed;
-              }
-            }
-          } catch {}
-        }
-
-        let fallbackOrder: ActiveOrder;
-        if (existingActive) {
-          const combinedItems = [...existingActive.items, ...cartItems];
-          const newSubtotal = existingActive.subtotal + cartSubtotal;
-          const newServiceFee = Math.round(newSubtotal * 0.05);
-          const newTax = Math.round((newSubtotal + newServiceFee) * 0.1);
-          const newTotal = newSubtotal + newServiceFee + newTax;
-
-          fallbackOrder = {
-            ...existingActive,
-            orderNumbers: [...(existingActive.orderNumbers || [existingActive.ticketNumber.replace('#', '')]), generatedTicket.replace('#', '')],
-            items: combinedItems,
-            subtotal: newSubtotal,
-            serviceFee: newServiceFee,
-            tax: newTax,
-            total: newTotal,
-            statusStage: 1,
-          };
-        } else {
-          fallbackOrder = {
-            ticketNumber: generatedTicket,
-            orderNumbers: [generatedTicket.replace('#', '')],
-            tableNumber: selectedTable,
-            tableArea,
-            guestsCount,
-            orderTime: timeStr,
-            orderTimestamp: now.getTime(),
-            items: [...cartItems],
-            tableNotes: compiledNotes,
-            paymentMethod: 'cashier',
-            paymentStatus: 'MENUNGGU DI KASIR',
-            statusStage: 1,
-            estimatedMinutes: '',
-            subtotal: cartSubtotal,
-            serviceFee: cartServiceFee,
-            tax: cartTax,
-            total: cartTotal,
-          };
-        }
-
-        try {
-          localStorage.setItem(`rg_customer_order_${token}`, JSON.stringify(fallbackOrder));
-          const rawSessions = localStorage.getItem('rg_mock_sessions_v2');
-          const sessions = rawSessions ? JSON.parse(rawSessions) : [];
-
-          const targetTableNum = parseInt(selectedTable || '1', 10);
-          const isTakeaway = orderType === 'takeaway';
-
-          const qrOrderObj = {
-            order_id: now.getTime(),
-            order_number: generatedTicket.replace('#', ''),
-            order_status: 'pending_confirmation',
-            order_source: 'qr',
-            total: cartTotal,
-            note: compiledNotes || notes || (isTakeaway ? '[BAWA PULANG]' : ''),
-            created_at: now.toISOString(),
-            order_items: cartItems.map((i, idx) => ({
-              order_item_id: now.getTime() + idx,
-              product_id: Number(i.menuItemId) || idx + 1,
-              product_name: i.name,
-              unit_price: i.basePrice,
-              quantity: i.quantity,
-              note: i.customization?.kitchenNotes,
-            })),
-          };
-
-          const sessionIndex = sessions.findIndex((s: any) =>
-            s.table_id === targetTableNum ||
-            s.tableNumber === selectedTable ||
-            s.tableNumber === String(targetTableNum)
-          );
-
-          if (sessionIndex >= 0) {
-            sessions[sessionIndex].status = 'terisi';
-            sessions[sessionIndex].orders = [...(sessions[sessionIndex].orders || []), qrOrderObj];
-          } else {
-            const newSession = {
-              session_id: now.getTime(),
-              table_id: targetTableNum,
-              guest_count: guestsCount || 1,
-              customer_name: customerName || (isTakeaway ? 'Pelanggan Bawa Pulang' : `Tamu Meja ${selectedTable}`),
-              opened_at: now.toISOString(),
-              is_takeaway: isTakeaway,
-              takeaway_queue: isTakeaway ? `Antrean ${Math.floor(10 + Math.random() * 89)}` : undefined,
-              orders: [qrOrderObj],
-            };
-            sessions.push(newSession);
-          }
-
-          localStorage.setItem('rg_mock_sessions_v2', JSON.stringify(sessions));
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new Event('storage'));
-            window.dispatchEvent(new CustomEvent('rg_mock_sessions_updated'));
-          }
-        } catch {}
-
-        setActiveOrder(fallbackOrder);
-        lastSeen.current = fallbackOrder;
+      if (!activeSessionId) {
+        showToast('Gagal memvalidasi sesi meja di database', 'error');
+        return false;
       }
+
+      // 2. Buat Order di Supabase (order_source: 'qr')
+      const now = new Date();
+      const yy = String(now.getFullYear()).slice(-2);
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const dateCode = `${yy}${mm}${dd}`;
+      const seq = String(activeSessionId).slice(-3).padStart(3, '0');
+      const baseOrderNumber = orderType === 'takeaway' ? `TA-${dateCode}-${seq}` : `DIN-${dateCode}-${seq}`;
+
+      // Cek jumlah pesanan yang sudah ada di sesi ini untuk penomoran pesan tambahan unik
+      const { count: existingOrdersCount } = await supabase
+        .from('orders')
+        .select('order_id', { count: 'exact', head: true })
+        .eq('session_id', activeSessionId);
+
+      let orderNumber = baseOrderNumber;
+      if (existingOrdersCount && existingOrdersCount > 0) {
+        orderNumber = `${baseOrderNumber}-${existingOrdersCount + 1}`;
+      }
+
+      // Verifikasi keunikan mutlak agar tidak melanggar unique constraint orders_order_number_key
+      const { data: duplicateCheck } = await supabase
+        .from('orders')
+        .select('order_id')
+        .eq('order_number', orderNumber)
+        .maybeSingle();
+
+      if (duplicateCheck) {
+        const randSuffix = Math.floor(10 + Math.random() * 90);
+        orderNumber = `${orderNumber}-${randSuffix}`;
+      }
+
+      const { data: createdOrd, error: ordErr } = await supabase
+        .from('orders')
+        .insert({
+          session_id: activeSessionId,
+          order_number: orderNumber,
+          order_source: 'qr',
+          order_status: 'pending_confirmation',
+          total: cartTotal,
+          note: compiledNotes || null,
+        })
+        .select('order_id, order_number')
+        .single();
+
+      if (ordErr || !createdOrd) {
+        showToast('Gagal mengirim pesanan: ' + (ordErr?.message || 'Error'), 'error');
+        return false;
+      }
+
+      // 3. Masukkan item pesanan ke order_items
+      const itemsPayload = cartItems.map((c) => ({
+        order_id: createdOrd.order_id,
+        product_id: Number(c.menuItemId),
+        product_name: c.name,
+        unit_price: c.basePrice,
+        quantity: c.quantity,
+        note: noteOf(c.customization) || null,
+      }));
+
+      await supabase.from('order_items').insert(itemsPayload);
 
       setCartItems([]);
       await loadOrders();

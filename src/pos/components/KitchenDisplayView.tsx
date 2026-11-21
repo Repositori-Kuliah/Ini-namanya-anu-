@@ -55,8 +55,13 @@ export const KitchenDisplayView: React.FC = () => {
     );
   };
 
+  const lastChimeTimeRef = useRef<number>(0);
+
   const playKitchenChime = () => {
     if (!soundEnabled) return;
+    const now = Date.now();
+    if (now - lastChimeTimeRef.current < 800) return; // Mencegah bunyi bel bertumpuk / dobel jika ada pembaruan cepat
+    lastChimeTimeRef.current = now;
     try {
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
       if (audioCtx.state === 'suspended') {

@@ -6,42 +6,6 @@ import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) || 'http://localhost:3001';
 
-const DEFAULT_STAFF = [
-  {
-    id: 'usr-admin',
-    name: 'Arif Gusti',
-    email: 'admin@rawongusti.test',
-    role: 'admin' as UserRole,
-    avatar: '',
-    shift: 'Shift Pagi 07.00 - 15.00',
-    terminal: 'Terminal #01 (Kasir Utama)',
-    active: true,
-    lastLogin: 'Hari ini, 07:30 WIB',
-  },
-  {
-    id: 'usr-kasir',
-    name: 'Dewi Sartika',
-    email: 'kasir@rawongusti.test',
-    role: 'cashier' as UserRole,
-    avatar: '',
-    shift: 'Shift Siang 10.00 - 18.00',
-    terminal: 'Terminal #02 (Kasir Depan)',
-    active: true,
-    lastLogin: 'Hari ini, 09:45 WIB',
-  },
-  {
-    id: 'usr-kitchen',
-    name: 'Chef Sam R.',
-    email: 'dapur@rawongusti.test',
-    role: 'kitchen' as UserRole,
-    avatar: '',
-    shift: 'Shift Penuh 08.00 - 17.00',
-    terminal: 'KDS Stasiun Panas',
-    active: true,
-    lastLogin: 'Hari ini, 08:00 WIB',
-  },
-];
-
 const callStaffApi = async (method: string, query: string, body?: unknown): Promise<{ data?: any; error?: string }> => {
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData.session?.access_token;
@@ -88,22 +52,34 @@ export const StaffManagementView: React.FC = () => {
         .order('created_at', { ascending: false });
 
       if (!error && profiles && profiles.length > 0) {
-        const mapped: Row[] = profiles.map((p: any) => ({
-          id: p.id,
-          name: p.full_name || 'Tanpa Nama',
-          email: p.email || p.username || '-',
-          role: (p.role === 'staff' ? 'cashier' : p.role) as UserRole,
-          avatar: '',
-          shift: p.shift || '',
-          terminal: p.terminal || '',
-          active: p.is_active ?? true,
-          lastLogin: p.updated_at ? formatLastLogin(p.updated_at) : 'Belum pernah login',
-        }));
+        const seenIds = new Set<string>();
+        const seenEmails = new Set<string>();
+        const mapped: Row[] = [];
+
+        for (const p of profiles) {
+          const emailKey = (p.email || p.username || '').toLowerCase().trim();
+          if (seenIds.has(p.id) || (emailKey && seenEmails.has(emailKey))) {
+            continue;
+          }
+          seenIds.add(p.id);
+          if (emailKey) seenEmails.add(emailKey);
+
+          mapped.push({
+            id: p.id,
+            name: p.full_name || 'Tanpa Nama',
+            email: p.email || p.username || '-',
+            role: (p.role === 'staff' ? 'cashier' : p.role) as UserRole,
+            avatar: '',
+            shift: p.shift || '',
+            terminal: p.terminal || '',
+            active: p.is_active ?? true,
+            lastLogin: p.updated_at ? formatLastLogin(p.updated_at) : 'Belum pernah login',
+          });
+        }
         setStaffList(mapped);
-        try { localStorage.setItem('rg_mock_staff_list', JSON.stringify(mapped)); } catch {}
         return;
       }
-    } catch {}
+    } catch { }
 
     // 2. Fallback baca dari API Backend jika aktif
     try {
@@ -121,26 +97,12 @@ export const StaffManagementView: React.FC = () => {
           lastLogin: s.last_login ? formatLastLogin(s.last_login) : 'Belum pernah login',
         }));
         setStaffList(mapped);
-        try { localStorage.setItem('rg_mock_staff_list', JSON.stringify(mapped)); } catch {}
         return;
       }
-    } catch {}
+    } catch { }
 
-    // 3. Fallback baca dari local session jika offline
-    try {
-      const stored = localStorage.getItem('rg_mock_staff_list');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setStaffList(parsed);
-          return;
-        }
-      }
-    } catch {}
-
-    // 4. Default demo staff bawaan
-    setStaffList(DEFAULT_STAFF);
-    try { localStorage.setItem('rg_mock_staff_list', JSON.stringify(DEFAULT_STAFF)); } catch {}
+    // 3. Jika database kosong, set daftar kosong (tanpa mock fallback)
+    setStaffList([]);
   }, []);
 
   useEffect(() => {
@@ -195,7 +157,7 @@ export const StaffManagementView: React.FC = () => {
     }
     setSaving(true);
 
-    const newId = `usr-${Date.now().toString(36)}`;
+    const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : '00000000-0000-0000-0000-' + Date.now().toString(16).padStart(12, '0');
     const newStaffItem: Row = {
       id: newId,
       name: newName.trim(),
@@ -208,16 +170,25 @@ export const StaffManagementView: React.FC = () => {
       lastLogin: 'Baru ditambahkan',
     };
 
-    // 1. Coba simpan ke Supabase jika ada koneksi
+    // 1. Simpan langsung ke Supabase profiles
     try {
-      await supabase.from('profiles').insert({
-        id: crypto.randomUUID ? crypto.randomUUID() : newId,
+      const { error: insErr } = await supabase.from('profiles').insert({
+        id: newId,
         full_name: newName.trim(),
         email: newEmail.trim().toLowerCase(),
-        role: newRole === 'cashier' ? 'staff' : newRole,
+        role: newRole,
         is_active: true,
       });
-    } catch {}
+      if (insErr) {
+        showToast('Gagal simpan ke database: ' + insErr.message, 'warning');
+        setSaving(false);
+        return;
+      }
+    } catch (err: any) {
+      showToast('Gagal simpan ke database: ' + (err?.message || 'Error'), 'warning');
+      setSaving(false);
+      return;
+    }
 
     // 2. Coba simpan via API backend jika ada
     callStaffApi('POST', '', {
@@ -225,14 +196,10 @@ export const StaffManagementView: React.FC = () => {
       email: newEmail.trim().toLowerCase(),
       password: newPassword,
       role: newRole,
-    }).catch(() => {});
+    }).catch(() => { });
 
-    // 3. Update state lokal & localStorage (Optimistic)
-    setStaffList((prev) => {
-      const updated = [newStaffItem, ...prev];
-      try { localStorage.setItem('rg_mock_staff_list', JSON.stringify(updated)); } catch {}
-      return updated;
-    });
+    // 3. Update state lokal (Optimistic)
+    setStaffList((prev) => [newStaffItem, ...prev]);
 
     setSaving(false);
     setShowAddModal(false);
@@ -254,28 +221,19 @@ export const StaffManagementView: React.FC = () => {
     // 1. Sync Supabase
     try {
       await supabase.from('profiles').update({ is_active: nextActive }).eq('id', staf.id);
-    } catch {}
+    } catch { }
 
     // 2. Sync API
-    callStaffApi('PATCH', `?id=${encodeURIComponent(staf.id)}`, { is_active: nextActive }).catch(() => {});
+    callStaffApi('PATCH', `?id=${encodeURIComponent(staf.id)}`, { is_active: nextActive }).catch(() => { });
 
-    // 3. Update state & localStorage
-    setStaffList((prev) => {
-      const updated = prev.map((s) => (s.id === staf.id ? { ...s, active: nextActive } : s));
-      try { localStorage.setItem('rg_mock_staff_list', JSON.stringify(updated)); } catch {}
-      return updated;
-    });
+    // 3. Update state
+    setStaffList((prev) => prev.map((s) => (s.id === staf.id ? { ...s, active: nextActive } : s)));
 
     showToast(`${staf.name} berhasil ${nextActive ? 'diaktifkan kembali' : 'dinonaktifkan'}`, 'info');
   };
 
   const handleDeleteStaff = async (staf: Row) => {
-    if (
-      staf.role === 'admin' ||
-      staf.id === currentUser?.id ||
-      staf.id === 'usr-admin' ||
-      staf.email.includes('admin')
-    ) {
+    if (staf.role === 'admin' || staf.id === currentUser?.id) {
       showToast('Akun Admin outlet tidak dapat dihapus', 'warning');
       return;
     }
@@ -300,14 +258,8 @@ export const StaffManagementView: React.FC = () => {
       console.warn('API delete error:', e);
     }
 
-    // 3. Update state & localStorage
-    setStaffList((prev) => {
-      const updated = prev.filter((s) => s.id !== staf.id);
-      try {
-        localStorage.setItem('rg_mock_staff_list', JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
+    // 3. Update state
+    setStaffList((prev) => prev.filter((s) => s.id !== staf.id));
 
     setSaving(false);
     setEditingStaff(null);
@@ -334,9 +286,7 @@ export const StaffManagementView: React.FC = () => {
 
     const isStaffAdmin =
       editingStaff.role === 'admin' ||
-      editingStaff.id === currentUser?.id ||
-      editingStaff.id === 'usr-admin' ||
-      editingStaff.email.includes('admin');
+      editingStaff.id === currentUser?.id;
     const finalRole = isStaffAdmin ? 'admin' : editRole;
     const finalActive = isStaffAdmin ? true : editActive;
 
@@ -355,11 +305,11 @@ export const StaffManagementView: React.FC = () => {
         .update({
           full_name: editName.trim(),
           email: editEmail.trim(),
-          role: finalRole === 'cashier' ? 'staff' : finalRole,
+          role: finalRole,
           is_active: finalActive,
         })
         .eq('id', editingStaff.id);
-    } catch {}
+    } catch { }
 
     // 2. Sync API
     callStaffApi('PATCH', `?id=${encodeURIComponent(editingStaff.id)}`, {
@@ -368,24 +318,22 @@ export const StaffManagementView: React.FC = () => {
       role: finalRole,
       is_active: finalActive,
       ...(password ? { password } : {}),
-    }).catch(() => {});
+    }).catch(() => { });
 
-    // 3. Update state & localStorage
-    setStaffList((prev) => {
-      const updated = prev.map((s) =>
+    // 3. Update state
+    setStaffList((prev) =>
+      prev.map((s) =>
         s.id === editingStaff.id
           ? {
-              ...s,
-              name: editName.trim(),
-              email: editEmail.trim(),
-              role: finalRole,
-              active: finalActive,
-            }
+            ...s,
+            name: editName.trim(),
+            email: editEmail.trim(),
+            role: finalRole,
+            active: finalActive,
+          }
           : s
-      );
-      try { localStorage.setItem('rg_mock_staff_list', JSON.stringify(updated)); } catch {}
-      return updated;
-    });
+      )
+    );
 
     setSaving(false);
     showToast(`Akun ${editName} berhasil diperbarui`, 'success');
@@ -432,9 +380,10 @@ export const StaffManagementView: React.FC = () => {
               className="py-1.5 px-2.5 rounded-lg border border-[#ebe8e3] bg-[#f6f3ee] text-[#1c1c19] font-medium text-xs outline-none focus:border-[#3d1018] cursor-pointer"
             >
               <option value="all">Semua Peran</option>
+              <option value="owner">Owner</option>
+              <option value="admin">Admin</option>
               <option value="cashier">Kasir</option>
               <option value="kitchen">Dapur</option>
-              <option value="admin">Admin</option>
             </select>
           </div>
 
@@ -455,8 +404,9 @@ export const StaffManagementView: React.FC = () => {
 
       {/* Staff Table dengan Scroll Mandiri */}
       <div className="bg-white rounded-xl border border-[#ebe8e3] overflow-hidden shadow-2xs">
-        <div className="overflow-x-auto max-h-[calc(100vh-320px)] overflow-y-auto custom-scrollbar">
-          <table className="w-full text-left text-xs">
+        <div className="max-h-[calc(100vh-320px)] overflow-y-auto custom-scrollbar">
+          {/* Desktop View (Tampil pada layar >= md) */}
+          <table className="hidden md:table w-full text-left text-xs">
             <thead className="bg-[#f6f3ee] border-b border-[#ebe8e3] text-[11px] font-bold text-[#847374] uppercase tracking-wider sticky top-0 z-10">
               <tr>
                 <th className="py-2.5 px-4">Nama Staf</th>
@@ -478,9 +428,8 @@ export const StaffManagementView: React.FC = () => {
                     <tr
                       key={staf.id}
                       onClick={() => handleOpenEdit(staf)}
-                      className={`hover:bg-[#fcfaf7] transition-colors cursor-pointer ${
-                        staf.active ? '' : 'bg-[#faf8f5]/60 text-[#847374]'
-                      }`}
+                      className={`hover:bg-[#fcfaf7] transition-colors cursor-pointer ${staf.active ? '' : 'bg-[#faf8f5]/60 text-[#847374]'
+                        }`}
                       title="Klik untuk edit &amp; kelola akun staf"
                     >
                       <td className="py-3 px-4 font-semibold text-[#1c1c19]">
@@ -488,15 +437,16 @@ export const StaffManagementView: React.FC = () => {
                       </td>
                       <td className="py-3 px-4">
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${
-                            staf.role === 'admin'
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${staf.role === 'owner'
+                            ? 'bg-amber-100 text-amber-900 border-amber-300'
+                            : staf.role === 'admin'
                               ? 'bg-neutral-100 text-neutral-800 border-neutral-300'
                               : staf.role === 'kitchen'
-                              ? 'bg-amber-50 text-amber-900 border-amber-200'
-                              : 'bg-[#ffdadc]/40 text-[#3d1018] border-[#ba1a1a]/25'
-                          }`}
+                                ? 'bg-orange-50 text-orange-900 border-orange-200'
+                                : 'bg-[#ffdadc]/40 text-[#3d1018] border-[#ba1a1a]/25'
+                            }`}
                         >
-                          {staf.role === 'admin' ? 'Admin' : staf.role === 'kitchen' ? 'Dapur' : 'Kasir'}
+                          {staf.role === 'owner' ? 'Owner' : staf.role === 'admin' ? 'Admin' : staf.role === 'kitchen' ? 'Dapur' : 'Kasir'}
                         </span>
                       </td>
                       <td className="py-3 px-4">
@@ -519,6 +469,57 @@ export const StaffManagementView: React.FC = () => {
               )}
             </tbody>
           </table>
+
+          {/* Mobile View (Tampil pada layar < md) */}
+          <div className="md:hidden divide-y divide-[#ebe8e3]">
+            {filtered.length === 0 ? (
+              <div className="py-8 text-center text-xs text-[#847374] px-4">
+                Tidak ada akun staf yang cocok dengan kriteria pencarian.
+              </div>
+            ) : (
+              filtered.map((staf) => (
+                <div
+                  key={staf.id}
+                  onClick={() => handleOpenEdit(staf)}
+                  className={`p-3.5 space-y-1.5 hover:bg-[#fcfaf7] transition-colors cursor-pointer active:bg-[#f5efe6] ${
+                    staf.active ? '' : 'bg-[#faf8f5]/60 text-[#847374]'
+                  }`}
+                  title="Klik untuk edit & kelola akun staf"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-sm text-[#1c1c19]">
+                      {staf.name}
+                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border ${
+                          staf.role === 'owner'
+                            ? 'bg-amber-100 text-amber-900 border-amber-300'
+                            : staf.role === 'admin'
+                            ? 'bg-neutral-100 text-neutral-800 border-neutral-300'
+                            : staf.role === 'kitchen'
+                            ? 'bg-orange-50 text-orange-900 border-orange-200'
+                            : 'bg-[#ffdadc]/40 text-[#3d1018] border-[#ba1a1a]/25'
+                        }`}
+                      >
+                        {staf.role === 'owner' ? 'Owner' : staf.role === 'admin' ? 'Admin' : staf.role === 'kitchen' ? 'Dapur' : 'Kasir'}
+                      </span>
+                      <span
+                        className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                          staf.active ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-500'
+                        }`}
+                      >
+                        {staf.active ? 'Aktif' : 'Nonaktif'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-[11px] text-[#847374] font-mono">
+                    Login: {staf.lastLogin || 'Belum pernah login'}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
 
@@ -560,7 +561,7 @@ export const StaffManagementView: React.FC = () => {
 
               <div>
                 <label className="block font-semibold text-[#1c1c19] mb-1">
-                  Email / User ID Login <span className="text-[#ba1a1a]">*</span>
+                  Email <span className="text-[#ba1a1a]">*</span>
                 </label>
                 <input
                   type="email"
@@ -611,7 +612,15 @@ export const StaffManagementView: React.FC = () => {
                   <option value="cashier">Kasir</option>
                   <option value="kitchen">Dapur</option>
                   <option value="admin">Admin</option>
+                  <option value="owner">Owner</option>
                 </select>
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-[#fcf9f4] border border-[#ebe8e3] text-[11px] text-[#524344] flex items-start gap-2">
+                <span className="material-symbols-outlined text-[16px] text-[#994703] shrink-0 mt-0.5">info</span>
+                <p className="leading-relaxed text-[10px]">
+                  Staf baru akan tersimpan di database <strong>profiles</strong>. Untuk mengizinkan staf login langsung, pastikan email &amp; kata sandi staf juga terdaftar di <em>Supabase Dashboard &gt; Authentication &gt; Users</em>.
+                </p>
               </div>
             </div>
 
@@ -671,7 +680,7 @@ export const StaffManagementView: React.FC = () => {
 
               <div>
                 <label className="block font-semibold text-[#1c1c19] mb-1">
-                  Email / User ID Login <span className="text-[#ba1a1a]">*</span>
+                  Email <span className="text-[#ba1a1a]">*</span>
                 </label>
                 <input
                   type="text"
@@ -685,10 +694,7 @@ export const StaffManagementView: React.FC = () => {
 
               <div>
                 <label className="block font-semibold text-[#1c1c19] mb-1">Hak Akses (Role)</label>
-                {editingStaff.role === 'admin' ||
-                editingStaff.id === currentUser?.id ||
-                editingStaff.id === 'usr-admin' ||
-                editingStaff.email.includes('admin') ? (
+                {editingStaff.role === 'admin' || editingStaff.id === currentUser?.id ? (
                   <div className="flex items-center px-3 py-2 bg-[#f6f3ee] rounded-lg border border-[#ebe8e3] text-xs text-[#524344] select-none cursor-not-allowed">
                     <span className="font-semibold text-[#1c1c19]">-</span>
                   </div>
@@ -701,39 +707,33 @@ export const StaffManagementView: React.FC = () => {
                     <option value="cashier">Kasir</option>
                     <option value="kitchen">Dapur</option>
                     <option value="admin">Admin</option>
+                    <option value="owner">Owner</option>
                   </select>
                 )}
               </div>
 
               {/* Status Akun: hanya ditampilkan untuk staf biasa */}
-              {!(
-                editingStaff.role === 'admin' ||
-                editingStaff.id === currentUser?.id ||
-                editingStaff.id === 'usr-admin' ||
-                editingStaff.email.includes('admin')
-              ) && (
+              {!(editingStaff.role === 'admin' || editingStaff.id === currentUser?.id) && (
                 <div>
                   <label className="block font-semibold text-[#1c1c19] mb-1">Status Akun</label>
                   <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={() => setEditActive(true)}
-                      className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                        editActive
-                          ? 'bg-[#3d1018] text-white border-[#3d1018]'
-                          : 'bg-[#f6f3ee] text-[#524344] border-[#ebe8e3]'
-                      }`}
+                      className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${editActive
+                        ? 'bg-[#3d1018] text-white border-[#3d1018]'
+                        : 'bg-[#f6f3ee] text-[#524344] border-[#ebe8e3]'
+                        }`}
                     >
                       Aktif
                     </button>
                     <button
                       type="button"
                       onClick={() => setEditActive(false)}
-                      className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                        !editActive
-                          ? 'bg-[#ba1a1a] text-white border-[#ba1a1a]'
-                          : 'bg-[#f6f3ee] text-[#524344] border-[#ebe8e3]'
-                      }`}
+                      className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${!editActive
+                        ? 'bg-[#ba1a1a] text-white border-[#ba1a1a]'
+                        : 'bg-[#f6f3ee] text-[#524344] border-[#ebe8e3]'
+                        }`}
                     >
                       Nonaktif
                     </button>
@@ -778,12 +778,7 @@ export const StaffManagementView: React.FC = () => {
             </div>
 
             <div className="flex items-center justify-between pt-2 border-t border-[#ebe8e3]">
-              {!(
-                editingStaff.role === 'admin' ||
-                editingStaff.id === currentUser?.id ||
-                editingStaff.id === 'usr-admin' ||
-                editingStaff.email.includes('admin')
-              ) ? (
+              {!(editingStaff.role === 'admin' || editingStaff.id === currentUser?.id) ? (
                 <button
                   type="button"
                   disabled={saving}

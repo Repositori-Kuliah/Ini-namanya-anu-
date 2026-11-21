@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { today } from '../../lib/domain';
 import { fetchPaid } from '../../lib/report';
 import { TransactionRecord } from '../types';
-import { DashboardDatePicker } from './DashboardDatePicker';
+import { CustomDatePicker } from './CustomDatePicker';
 
 const toWIBDate = (iso: string) =>
   new Date(iso).toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' });
@@ -345,11 +345,11 @@ export const DashboardView: React.FC = () => {
           </div>
 
           {/* Single Date Picker Box (Kiri ke Kanan & Kalender Popover) */}
-          <DashboardDatePicker
-            dateFrom={dateFrom}
-            dateTo={dateTo}
-            maxDate={todayStr}
-            onSelectDate={(iso) => {
+          <CustomDatePicker
+            value={dateFrom}
+            max={todayStr}
+            align="right"
+            onChange={(iso) => {
               setDateFrom(iso);
               setDateTo(iso);
               setPeriod('custom');
@@ -358,34 +358,34 @@ export const DashboardView: React.FC = () => {
         </div>
       </div>
 
-      {/* 4 Compact Summary Metrics (Disamakan dengan di Laporan) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white p-3.5 rounded-xl border border-[#ebe8e3]">
-        <div className="px-2">
+      {/* 4 Compact Summary Metrics (Vertikal di Mobile, Horizontal di Desktop) */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[#ebe8e3] bg-white p-3 sm:p-3.5 rounded-xl border border-[#ebe8e3]">
+        <div className="flex items-center justify-between sm:flex-col sm:items-start py-2.5 sm:py-0 sm:px-2 first:pt-0 sm:first:pt-0 last:pb-0 sm:last:pb-0">
           <span className="text-[11px] font-semibold text-[#847374] uppercase tracking-wider">Total Penjualan Lunas</span>
-          <div className="text-xl font-bold font-serif text-[#1c1c19] mt-0.5 tabular-nums">
+          <div className="text-base sm:text-xl font-bold font-serif text-[#1c1c19] sm:mt-0.5 tabular-nums">
             Rp {totalPenjualan.toLocaleString('id-ID')}
           </div>
         </div>
 
-        <div className="px-2 border-l border-[#ebe8e3]">
+        <div className="flex items-center justify-between sm:flex-col sm:items-start py-2.5 sm:py-0 sm:px-2 first:pt-0 sm:first:pt-0 last:pb-0 sm:last:pb-0">
           <span className="text-[11px] font-semibold text-[#847374] uppercase tracking-wider">Jumlah Transaksi</span>
-          <div className="text-xl font-bold font-serif text-[#1c1c19] mt-0.5 tabular-nums">
+          <div className="text-base sm:text-xl font-bold font-serif text-[#1c1c19] sm:mt-0.5 tabular-nums">
             {transactions.length} <span className="text-xs font-normal text-[#847374]">struk</span>
           </div>
         </div>
 
-        <div className="px-2 border-l border-[#ebe8e3]">
+        <div className="flex items-center justify-between sm:flex-col sm:items-start py-2.5 sm:py-0 sm:px-2 first:pt-0 sm:first:pt-0 last:pb-0 sm:last:pb-0">
           <span className="text-[11px] font-semibold text-[#847374] uppercase tracking-wider">Rata-rata</span>
-          <div className="text-xl font-bold font-serif text-[#1c1c19] mt-0.5 tabular-nums">
+          <div className="text-base sm:text-xl font-bold font-serif text-[#1c1c19] sm:mt-0.5 tabular-nums">
             Rp {avgTransaksi.toLocaleString('id-ID')}
           </div>
         </div>
 
-        <div className="px-2 border-l border-[#ebe8e3]">
+        <div className="flex items-center justify-between sm:flex-col sm:items-start py-2.5 sm:py-0 sm:px-2 first:pt-0 sm:first:pt-0 last:pb-0 sm:last:pb-0">
           <span className="text-[11px] font-semibold text-[#847374] uppercase tracking-wider">
             {storeSettings?.taxName || 'Pajak Restoran (PB1)'} {storeSettings?.enableTax === false ? '(Nonaktif)' : ''}
           </span>
-          <div className="text-xl font-bold font-serif text-[#3d1018] mt-0.5 tabular-nums">
+          <div className="text-base sm:text-xl font-bold font-serif text-[#3d1018] sm:mt-0.5 tabular-nums">
             {storeSettings?.enableTax === false ? 'Rp 0' : `Rp ${totalPajak.toLocaleString('id-ID')}`}
           </div>
         </div>
@@ -618,52 +618,83 @@ export const DashboardView: React.FC = () => {
             </div>
 
             {/* Transaction Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="text-[#524344] uppercase tracking-wider bg-[#f6f3ee] text-[10px] font-bold">
-                    <th scope="col" className="py-2.5 px-3 rounded-l-xl">Pesanan</th>
-                    <th scope="col" className="py-2.5 px-3">Meja</th>
-                    <th scope="col" className="py-2.5 px-3">Metode</th>
-                    <th scope="col" className="py-2.5 px-3">Total</th>
-                    <th scope="col" className="py-2.5 px-3 rounded-r-xl text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#ebe8e3]">
-                  {filteredTrx.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="py-6 text-center text-xs text-[#524344]">
-                        Belum ada transaksi pada periode ini
-                      </td>
+            <div>
+              {/* Desktop View (Tampil pada layar >= md) */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="text-[#524344] uppercase tracking-wider bg-[#f6f3ee] text-[10px] font-bold">
+                      <th scope="col" className="py-2.5 px-3 rounded-l-xl">Pesanan</th>
+                      <th scope="col" className="py-2.5 px-3">Meja</th>
+                      <th scope="col" className="py-2.5 px-3">Metode</th>
+                      <th scope="col" className="py-2.5 px-3">Total</th>
+                      <th scope="col" className="py-2.5 px-3 rounded-r-xl text-right">Status</th>
                     </tr>
-                  ) : (
-                    filteredTrx.slice(0, 6).map((trx, idx) => (
-                      <tr
-                        key={trx.id}
-                        className={`hover:bg-[#f6f3ee] transition-colors ${
-                          idx === 0 ? 'bg-[#ffdadc]/30 font-medium' : ''
-                        }`}
-                      >
-                        <td className="py-3 px-3 font-bold text-[#3d1018]">{trx.code}</td>
-                        <td className="py-3 px-3 text-[#1c1c19]">{trx.typeMeja}</td>
-                        <td className="py-3 px-3">
-                          <span className="text-xs font-medium text-[#524344]">
-                            {trx.method}
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 font-bold text-[#1c1c19] tabular-nums">
-                          Rp {trx.total.toLocaleString('id-ID')}
-                        </td>
-                        <td className="py-3 px-3 text-right">
-                          <span className="text-xs font-semibold text-[#524344]">
-                            {trx.status}
-                          </span>
+                  </thead>
+                  <tbody className="divide-y divide-[#ebe8e3]">
+                    {filteredTrx.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-6 text-center text-xs text-[#524344]">
+                          Belum ada transaksi pada periode ini
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      filteredTrx.slice(0, 6).map((trx) => (
+                        <tr
+                          key={trx.id}
+                          className="hover:bg-[#f6f3ee] transition-colors"
+                        >
+                          <td className="py-3 px-3 font-semibold text-[#1c1c19]">{trx.code}</td>
+                          <td className="py-3 px-3 text-[#1c1c19]">{trx.typeMeja}</td>
+                          <td className="py-3 px-3">
+                            <span className="text-xs font-medium text-[#524344]">
+                              {trx.method}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 font-bold text-[#1c1c19] tabular-nums">
+                            Rp {trx.total.toLocaleString('id-ID')}
+                          </td>
+                          <td className="py-3 px-3 text-right">
+                            <span className="text-xs font-semibold text-emerald-700">
+                              {trx.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile View (Tampil pada layar < md) */}
+              <div className="md:hidden divide-y divide-[#ebe8e3]">
+                {filteredTrx.length === 0 ? (
+                  <div className="py-6 text-center text-xs text-[#524344]">
+                    Belum ada transaksi pada periode ini
+                  </div>
+                ) : (
+                  filteredTrx.slice(0, 6).map((trx) => (
+                    <div
+                      key={trx.id}
+                      className="py-3 space-y-1 hover:bg-[#fcfaf7] transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-xs text-[#1c1c19]">{trx.code}</span>
+                          <span className="text-[#847374] text-[11px]">• {trx.typeMeja}</span>
+                        </div>
+                        <span className="font-bold text-xs text-[#1c1c19] tabular-nums">
+                          Rp {trx.total.toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-[#524344] font-medium">{trx.method}</span>
+                        <span className="font-semibold text-emerald-700">{trx.status}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>

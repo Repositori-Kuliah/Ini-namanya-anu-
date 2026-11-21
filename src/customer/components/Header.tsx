@@ -7,7 +7,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onBack }) => {
-  const { currentScreen, navigate } = useApp();
+  const { currentScreen, navigate, selectedTable } = useApp();
 
   const isDetail = currentScreen === 'detail';
 

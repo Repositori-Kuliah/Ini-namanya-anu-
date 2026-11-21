@@ -116,20 +116,17 @@ export const LoginScreen: React.FC = () => {
 
           {/* Error Banner */}
           {errorMsg && (
-            <div className="flex items-start gap-2.5 rounded-xl bg-[#ffdadc]/40 border border-[#ba1a1a]/25 p-3.5 text-xs text-[#ba1a1a] animate-in fade-in">
-              <AlertCircle className="w-4 h-4 text-[#ba1a1a] shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <span className="font-semibold block">{errorMsg}</span>
-                <span className="text-[11px] opacity-90">Periksa kembali kredensial Anda atau hubungi admin outlet.</span>
-              </div>
+            <div className="flex items-center gap-2.5 rounded-xl bg-[#ffdadc]/40 border border-[#ba1a1a]/25 px-3.5 py-2.5 text-xs text-[#ba1a1a] animate-in fade-in">
+              <AlertCircle className="w-4 h-4 text-[#ba1a1a] shrink-0" />
+              <span className="font-semibold">{errorMsg}</span>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Input Email / Username */}
+            {/* Input Email atau Username */}
             <div>
               <label htmlFor="email" className="block text-xs font-semibold text-[#1c1c19] mb-1.5">
-                Email atau username
+                Email atau Username
               </label>
               <input
                 id="email"

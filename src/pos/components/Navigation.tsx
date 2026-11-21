@@ -72,7 +72,7 @@ export const HelpModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
               <span>3. Peran Admin Outlet</span>
             </h4>
             <p>
-              Admin memiliki otorisasi penuh: grafik analisis <strong>Dashboard Penjualan</strong>, manajemen <strong>Kelola Menu &amp; Stok Bahan Baku</strong>, pendaftaran <strong>Kelola Meja &amp; Kode QR</strong>, pengoperasian <strong>Akun Staf</strong>, serta audit <strong>Laporan Transaksi &amp; Rekap Kasir</strong>.
+              Admin memiliki otorisasi penuh: grafik analisis <strong>Dashboard Penjualan</strong>, manajemen <strong>Kelola Menu Restoran</strong>, pendaftaran <strong>Kelola Meja &amp; Kode QR</strong>, pengoperasian <strong>Akun Staf</strong>, serta audit <strong>Laporan Transaksi &amp; Rekap Kasir</strong>.
             </p>
           </div>
         </div>
@@ -125,28 +125,26 @@ export const MobileHeader: React.FC = () => {
     <>
       <header className="fixed top-0 inset-x-0 z-40 bg-[#3d1018] text-white pt-safe border-b border-white/10 shadow-sm">
         <div className="h-16 px-4 flex items-center justify-between gap-2 max-w-[1720px] mx-auto relative">
-          {/* Left: Tombol Lonceng Verifikasi di Pojok Kiri */}
+          {/* Left: Tombol Verifikasi Pesanan di Header Mobile */}
           <div className="flex items-center shrink-0 z-10">
-            <button
-              type="button"
-              onClick={openVerificationModal}
-              className={`relative h-8 px-2 sm:px-2.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer border ${
-                pendingCount > 0
-                  ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-300 shadow-xs animate-pulse'
-                  : 'bg-[#58252c] hover:bg-white/20 text-[#ffdadc] border-white/10'
-              }`}
-              title="Verifikasi Pesanan Self-Order QR"
-              aria-label="Verifikasi Pesanan Self-Order QR"
-            >
-              <span className="material-symbols-outlined text-[18px]">
-                {pendingCount > 0 ? 'notifications_active' : 'notifications'}
-              </span>
-              {pendingCount > 0 && (
-                <span className="text-[11px] font-bold leading-none">
-                  {pendingCount}
-                </span>
-              )}
-            </button>
+            {currentRole !== 'owner' ? (
+              <button
+                type="button"
+                onClick={openVerificationModal}
+                className="relative h-8 px-2.5 rounded-lg flex items-center justify-center transition-all cursor-pointer bg-[#58252c] text-white text-xs font-bold border border-white/10"
+                title="Verifikasi Pesanan"
+                aria-label="Verifikasi Pesanan"
+              >
+                <span>Verifikasi</span>
+                {pendingCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-[#ba1a1a] text-white text-[10px] font-bold rounded-full min-w-[18px] h-4.5 px-1 flex items-center justify-center shadow-xs border-2 border-[#3d1018]">
+                    {pendingCount}
+                  </span>
+                )}
+              </button>
+            ) : (
+              <div className="w-8" />
+            )}
           </div>
 
           {/* Center: Rawon Gusti & Surabaya di Tengah */}
@@ -167,7 +165,7 @@ export const MobileHeader: React.FC = () => {
           {/* Right: Role & Logout */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 z-10">
             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#58252c] text-[#ffdadc] border border-white/10 uppercase tracking-wider">
-              {currentRole === 'admin' ? 'Admin' : currentRole === 'kitchen' ? 'Dapur' : 'Kasir'}
+              {currentRole === 'owner' ? 'Owner' : currentRole === 'admin' ? 'Admin' : currentRole === 'kitchen' ? 'Dapur' : 'Kasir'}
             </span>
             <button
               type="button"
@@ -185,11 +183,19 @@ export const MobileHeader: React.FC = () => {
 };
 
 export const MobileBottomNav: React.FC = () => {
-  const { activeView, setActiveView, currentRole, storeSettings } = useApp();
+  const { activeView, setActiveView, currentRole, storeSettings, setSelectedBillId } = useApp();
   const [mobileAdminOpen, setMobileAdminOpen] = useState(false);
 
   // Role-based mobile navigation tabs
   const getNavItems = (): { label: string; icon: string; view: AppView | 'admin-drawer' }[] => {
+    if (currentRole === 'owner') {
+      return [
+        { label: 'Dashboard', icon: 'grid_view', view: 'dashboard' },
+        { label: 'Menu', icon: 'restaurant_menu', view: 'kelola-menu' },
+        { label: 'Laporan', icon: 'query_stats', view: 'laporan' },
+        { label: 'Manajemen', icon: 'apps', view: 'admin-drawer' },
+      ];
+    }
     if (currentRole === 'kitchen') {
       return storeSettings.enableKitchenDisplay
         ? [{ label: 'Pantau Pesanan', icon: 'skillet', view: 'pantau-pesanan' }]
@@ -239,6 +245,9 @@ export const MobileBottomNav: React.FC = () => {
                   if (isDrawer) {
                     setMobileAdminOpen(true);
                   } else {
+                    if (item.view === 'checkout') {
+                      setSelectedBillId('');
+                    }
                     setActiveView(item.view as AppView);
                   }
                 }}
@@ -331,10 +340,13 @@ export const MobileBottomNav: React.FC = () => {
 };
 
 export const DesktopSidebar: React.FC = () => {
-  const { activeView, setActiveView, logout, currentUser, currentRole, desktopSidebarOpen, storeSettings, pendingQrOrders } = useApp();
+  const { activeView, setActiveView, logout, currentUser, currentRole, desktopSidebarOpen, storeSettings, pendingQrOrders, setSelectedBillId } = useApp();
 
-  // Kelompok A: Navigasi Operasional
+  // Kelompok A: Navigasi Operasional (Hanya Kasir, Dapur, dan Admin - Owner TIDAK ada operasional)
   const getOperationalNav = () => {
+    if (currentRole === 'owner') {
+      return [];
+    }
     if (currentRole === 'kitchen') {
       return storeSettings.enableKitchenDisplay
         ? [{ label: 'Pantau Pesanan', icon: 'skillet', view: 'pantau-pesanan' as AppView }]
@@ -349,7 +361,6 @@ export const DesktopSidebar: React.FC = () => {
     }
     // Admin
     const items = [
-      { label: 'Dashboard', icon: 'grid_view', view: 'dashboard' as AppView },
       { label: 'Meja & Pelanggan', icon: 'table_restaurant', view: 'meja-dan-pelanggan' as AppView },
       { label: 'Pesanan Baru', icon: 'add_shopping_cart', view: 'pesanan-baru' as AppView },
       { label: 'Checkout & Bayar', icon: 'point_of_sale', view: 'checkout' as AppView },
@@ -360,8 +371,9 @@ export const DesktopSidebar: React.FC = () => {
     return items;
   };
 
-  // Kelompok B: Navigasi Manajemen & Laporan (Khusus Admin)
+  // Kelompok B: Navigasi Manajemen & Laporan (Khusus Admin & Owner)
   const managementNav = [
+    { label: 'Dashboard', icon: 'grid_view', view: 'dashboard' as AppView },
     { label: 'Kelola Menu', icon: 'restaurant_menu', view: 'kelola-menu' as AppView },
     { label: 'Kelola Meja', icon: 'deck', view: 'kelola-meja' as AppView },
     { label: 'Akun Staf & Role', icon: 'badge', view: 'akun-staf-dan-role' as AppView },
@@ -391,46 +403,48 @@ export const DesktopSidebar: React.FC = () => {
 
         {/* Scrollable Navigation List */}
         <nav className="p-3 space-y-4 overflow-y-auto custom-scrollbar flex-1">
-          {/* Kelompok A: OPERASIONAL */}
-          <div>
-            <span className="text-[10px] font-bold text-[#ffdadc]/70 uppercase tracking-wider block px-2 mb-1.5">
-              Operasional
-            </span>
-            <div className="space-y-0.5">
-              {operationalNav.map((item) => {
-                const isActive =
-                  activeView === item.view ||
-                  (item.view === 'checkout' && activeView === 'pembayaran');
-                return (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={() => setActiveView(item.view)}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all text-left cursor-pointer ${
-                      isActive
-                        ? 'bg-[#58252c] text-white shadow-xs'
-                        : 'text-white/80 hover:bg-[#58252c]/50 hover:text-white'
-                    }`}
-                    aria-current={isActive ? 'page' : undefined}
-                  >
-                    <span className="material-symbols-outlined text-[18px] shrink-0">
-                      {item.icon}
-                    </span>
-                    <span className="truncate">{item.label}</span>
-                    {item.view === 'meja-dan-pelanggan' && pendingQrOrders.length > 0 && (
-                      <span className="ml-auto px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-white animate-pulse">
-                        {pendingQrOrders.length}
+          {/* Kelompok A: OPERASIONAL (Hanya tampil jika ada menu operasional) */}
+          {operationalNav.length > 0 && (
+            <div>
+              <span className="text-[10px] font-bold text-[#ffdadc]/70 uppercase tracking-wider block px-2 mb-1.5">
+                Operasional
+              </span>
+              <div className="space-y-0.5">
+                {operationalNav.map((item) => {
+                  const isActive =
+                    activeView === item.view ||
+                    (item.view === 'checkout' && activeView === 'pembayaran');
+                  return (
+                    <button
+                      key={item.label}
+                      type="button"
+                      onClick={() => {
+                        if (item.view === 'checkout') {
+                          setSelectedBillId('');
+                        }
+                        setActiveView(item.view);
+                      }}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all text-left cursor-pointer ${
+                        isActive
+                          ? 'bg-[#58252c] text-white shadow-xs'
+                          : 'text-white/80 hover:bg-[#58252c]/50 hover:text-white'
+                      }`}
+                      aria-current={isActive ? 'page' : undefined}
+                    >
+                      <span className="material-symbols-outlined text-[18px] shrink-0">
+                        {item.icon}
                       </span>
-                    )}
-                  </button>
-                );
-              })}
+                      <span className="truncate">{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Pemisah Visual Sederhana & Kelompok B: MANAJEMEN & LAPORAN */}
-          {currentRole === 'admin' && (
-            <div className="pt-2 border-t border-white/10">
+          {/* Kelompok B: MANAJEMEN & LAPORAN (Khusus Admin & Owner) */}
+          {(currentRole === 'admin' || currentRole === 'owner') && (
+            <div className={operationalNav.length > 0 ? "pt-2 border-t border-white/10" : ""}>
               <span className="text-[10px] font-bold text-[#ffdadc]/70 uppercase tracking-wider block px-2 mb-1.5">
                 Manajemen &amp; Laporan
               </span>
@@ -534,26 +548,19 @@ export const DesktopHeader: React.FC = () => {
             </button>
           </div>
 
-          {/* Right Action: Tombol Notifikasi Verifikasi Pesanan Self-Order QR (Anti-Order Fiktif) */}
+          {/* Right Action: Tombol Verifikasi Pesanan */}
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={openVerificationModal}
-              className={`h-9 px-3.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-2xs active:scale-95 border ${
-                pendingCount > 0
-                  ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-400 ring-2 ring-amber-300 ring-offset-1 animate-pulse'
-                  : 'bg-white hover:bg-[#f0ede9] text-[#524344] hover:text-[#1c1c19] border-[#ebe8e3]'
-              }`}
-              title="Verifikasi Pesanan Self-Order QR (Anti-Order Fiktif)"
+              className="relative h-9 px-4 rounded-xl font-bold text-xs bg-[#3d1018] hover:bg-[#58252c] text-white transition-all cursor-pointer shadow-xs active:scale-95 flex items-center justify-center border border-white/10"
+              title="Verifikasi Pesanan"
             >
-              <span className="material-symbols-outlined text-[18px]">
-                {pendingCount > 0 ? 'notifications_active' : 'notifications'}
-              </span>
-              <span>
-                {pendingCount > 0 ? `${pendingCount} Pesanan QR Menunggu` : 'Verifikasi Order'}
-              </span>
+              <span>Verifikasi Pesanan</span>
               {pendingCount > 0 && (
-                <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                <span className="absolute -top-1.5 -right-1.5 bg-[#ba1a1a] text-white text-[10px] font-bold rounded-full min-w-[20px] h-5 px-1 flex items-center justify-center shadow-xs border-2 border-[#fcf9f4]">
+                  {pendingCount}
+                </span>
               )}
             </button>
           </div>

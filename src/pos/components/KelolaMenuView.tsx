@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { MenuItem, RawIngredient } from '../types';
+import { MenuItem } from '../types';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import { publicAsset } from '../../lib/publicAsset';
 
@@ -11,17 +11,8 @@ const KelolaMenuViewInner: React.FC = () => {
     updateMenuItem,
     addMenuItem,
     deleteMenuItem,
-    rawIngredients,
-    restockIngredient,
-    updateIngredientMinimum,
-    addRawIngredient,
-    deleteRawIngredient,
     showToast,
-    storeSettings,
   } = useApp();
-
-  // Tab utama: 'katalog' | 'stok'
-  const [activeTab, setActiveTab] = useState<'katalog' | 'stok'>('katalog');
 
   // --- State Katalog Menu ---
   const [searchMenuQuery, setSearchMenuQuery] = useState('');
@@ -67,48 +58,14 @@ const KelolaMenuViewInner: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
-  // --- State Stok Bahan Baku ---
-  const [searchStockQuery, setSearchStockQuery] = useState('');
-  const [stockCategoryFilter, setStockCategoryFilter] = useState('Semua');
-  const [stockStatusFilter, setStockStatusFilter] = useState<'semua' | 'aman' | 'menipis' | 'kritis'>('semua');
-
-  // Modal Restock
-  const [restockItem, setRestockItem] = useState<RawIngredient | null>(null);
-  const [restockQty, setRestockQty] = useState('5');
-  const [restockNote, setRestockNote] = useState('Penerimaan rutin supplier');
-
-  // Modal Ubah Stok Minimum
-  const [editMinItem, setEditMinItem] = useState<RawIngredient | null>(null);
-  const [editMinVal, setEditMinVal] = useState('5');
-
-  // Modal Tambah Bahan Baku
-  const [showAddIngredientModal, setShowAddIngredientModal] = useState(false);
-  const [newIngCode, setNewIngCode] = useState('');
-  const [newIngName, setNewIngName] = useState('');
-  const [newIngCategory, setNewIngCategory] = useState<RawIngredient['category']>('Bumbu & Rempah');
-  const [newIngStock, setNewIngStock] = useState('10');
-  const [newIngMin, setNewIngMin] = useState('5');
-  const [newIngUnit, setNewIngUnit] = useState('kg');
-  const [newIngSupplier, setNewIngSupplier] = useState('');
-
   // Modals Peringatan Konfirmasi Hapus
   const [deleteMenuConfirm, setDeleteMenuConfirm] = useState<MenuItem | null>(null);
-  const [deleteIngConfirm, setDeleteIngConfirm] = useState<RawIngredient | null>(null);
 
   // Active action menu id
   const [openMenuActionId, setOpenMenuActionId] = useState<string | number | null>(null);
-  const [openIngActionId, setOpenIngActionId] = useState<string | number | null>(null);
 
   // Kunci scroll background saat modal apa pun terbuka
-  const isAnyModalOpen = Boolean(
-    showAddMenuModal ||
-    editingItem ||
-    restockItem ||
-    editMinItem ||
-    showAddIngredientModal ||
-    deleteMenuConfirm ||
-    deleteIngConfirm
-  );
+  const isAnyModalOpen = Boolean(showAddMenuModal || editingItem || deleteMenuConfirm);
   useLockBodyScroll(isAnyModalOpen);
 
   // Hitung jumlah menu favorit
@@ -132,26 +89,6 @@ const KelolaMenuViewInner: React.FC = () => {
 
     if (filterMenuAvailability === 'tersedia' && !item.isAvailable) return false;
     if (filterMenuAvailability === 'habis' && item.isAvailable) return false;
-
-    return true;
-  });
-
-  // --- Filter Logic: Bahan Baku ---
-  const filteredIngredients = rawIngredients.filter((ing) => {
-    const matchesSearch =
-      (ing.name || '').toLowerCase().includes(searchStockQuery.toLowerCase()) ||
-      (ing.code || '').toLowerCase().includes(searchStockQuery.toLowerCase());
-    if (!matchesSearch) return false;
-
-    if (stockCategoryFilter !== 'Semua' && ing.category !== stockCategoryFilter) return false;
-
-    const isCritical = ing.currentStock <= 0;
-    const isLow = ing.currentStock <= ing.minimumStock && ing.currentStock > 0;
-    const isSafe = ing.currentStock > ing.minimumStock;
-
-    if (stockStatusFilter === 'kritis' && !isCritical) return false;
-    if (stockStatusFilter === 'menipis' && !isLow) return false;
-    if (stockStatusFilter === 'aman' && !isSafe) return false;
 
     return true;
   });
@@ -239,125 +176,28 @@ const KelolaMenuViewInner: React.FC = () => {
     showToast(`Menu "${newItem.name}" berhasil ditambahkan!`, 'success');
   };
 
-  // --- Handlers: Bahan Baku ---
-  const handleRestockSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!restockItem) return;
-    const qty = parseFloat(restockQty);
-    if (isNaN(qty) || qty <= 0) {
-      showToast('Jumlah restock harus angka positif', 'warning');
-      return;
-    }
-    restockIngredient(restockItem.id, qty);
-    showToast(`Stok ${restockItem.name} bertambah ${qty} ${restockItem.unit}`, 'success');
-    setRestockItem(null);
-  };
-
-  const handleEditMinSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editMinItem) return;
-    const minVal = parseFloat(editMinVal);
-    if (isNaN(minVal) || minVal < 0) {
-      showToast('Stok minimum harus angka non-negatif', 'warning');
-      return;
-    }
-    updateIngredientMinimum(editMinItem.id, minVal);
-    showToast(`Batas minimum ${editMinItem.name} diubah menjadi ${minVal} ${editMinItem.unit}`, 'success');
-    setEditMinItem(null);
-  };
-
-  const handleDeleteIngredient = async (ing: RawIngredient) => {
-    const ok = await deleteRawIngredient(ing.id);
-    if (ok) {
-      showToast(`Bahan baku "${ing.name}" berhasil dihapus`, 'success');
-    }
-  };
-
-  const handleCreateIngredient = (e: React.FormEvent) => {
-    e.preventDefault();
-    const stockVal = parseFloat(newIngStock);
-    const minVal = parseFloat(newIngMin);
-    if (!newIngName.trim() || isNaN(stockVal) || isNaN(minVal)) {
-      showToast('Lengkapi data bahan baku dengan benar', 'warning');
-      return;
-    }
-
-    const newIng: RawIngredient = {
-      id: `ing-${Date.now()}`,
-      code: newIngCode.trim() || `BAHAN-${String(rawIngredients.length + 1).padStart(2, '0')}`,
-      name: newIngName.trim(),
-      category: newIngCategory,
-      currentStock: stockVal,
-      minimumStock: minVal,
-      unit: newIngUnit.trim() || 'kg',
-      costPerUnit: 0,
-      supplier: newIngSupplier.trim() || '-',
-      lastRestocked: new Date().toLocaleDateString('id-ID'),
-      linkedMenuItems: [],
-    };
-
-    addRawIngredient(newIng);
-    setShowAddIngredientModal(false);
-    setNewIngName('');
-    setNewIngCode('');
-    setNewIngSupplier('');
-    showToast(`Bahan baku "${newIng.name}" berhasil didaftarkan!`, 'success');
-  };
-
   return (
     <div className="flex flex-col w-full pb-4 md:pb-8 max-w-[1600px] mx-auto px-4 sm:px-6 pt-3 space-y-4">
       {/* Header Halaman & Tombol Aksi */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-3 pb-3 border-b border-[#ebe8e3]">
-        <div className="flex items-center gap-2">
-          {storeSettings.enableInventoryTracking && (
-            <div className="flex bg-[#f6f3ee] p-1 rounded-xl border border-[#ebe8e3]">
-              <button
-                type="button"
-                onClick={() => setActiveTab('katalog')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  activeTab === 'katalog' ? 'bg-[#3d1018] text-white shadow-xs' : 'text-[#524344] hover:text-[#1c1c19]'
-                }`}
-              >
-                Katalog Menu
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('stok')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  activeTab === 'stok' ? 'bg-[#3d1018] text-white shadow-xs' : 'text-[#524344] hover:text-[#1c1c19]'
-                }`}
-              >
-                Stok Bahan Baku
-              </button>
-            </div>
-          )}
-          {activeTab === 'katalog' || !storeSettings.enableInventoryTracking ? (
-            <button
-              type="button"
-              onClick={() => setShowAddMenuModal(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[16px]">add</span>
-              <span>Tambah Menu</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setShowAddIngredientModal(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[16px]">add</span>
-              <span>Tambah Bahan</span>
-            </button>
-          )}
+      <div className="flex items-center justify-between pb-3 border-b border-[#ebe8e3]">
+        <div>
+          <h2 className="font-serif text-lg font-bold text-[#1c1c19]">Katalog Menu Restoran</h2>
+          <p className="text-xs text-[#847374]">Kelola daftar makanan, minuman, dan ketersediaan menu</p>
         </div>
+        <button
+          type="button"
+          onClick={() => setShowAddMenuModal(true)}
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+        >
+          <span className="material-symbols-outlined text-[16px]">add</span>
+          <span>Tambah Menu</span>
+        </button>
       </div>
 
       {/* =========================================================================
           KATALOG MENU RESTORAN (Tersedia / Habis On-Off Toggle Cepat)
          ========================================================================= */}
-      {(!storeSettings.enableInventoryTracking || activeTab === 'katalog') && (
-        <section aria-label="Katalog Menu" className="space-y-3">
+      <section aria-label="Katalog Menu" className="space-y-3">
         {/* Baris Filter & Search Menu */}
         <div className="bg-white p-3 rounded-xl border border-[#ebe8e3] flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="relative flex-1 max-w-md">
@@ -411,8 +251,9 @@ const KelolaMenuViewInner: React.FC = () => {
 
         {/* Tabel Menu Compact dengan Scroll Mandiri */}
         <div className="bg-white rounded-xl border border-[#ebe8e3] shadow-xs overflow-hidden">
-          <div className="overflow-x-auto max-h-[calc(100vh-270px)] overflow-y-auto custom-scrollbar">
-            <table className="w-full text-left text-xs border-collapse">
+          <div className="max-h-[calc(100vh-270px)] overflow-y-auto custom-scrollbar">
+            {/* Desktop View (Tampil pada layar >= md) */}
+            <table className="hidden md:table w-full text-left text-xs border-collapse">
               <thead className="bg-[#f6f3ee] text-[#524344] uppercase tracking-wider text-[10px] font-bold border-b border-[#ebe8e3] sticky top-0 z-10">
                 <tr>
                   <th className="py-2.5 px-4">Nama Menu</th>
@@ -464,197 +305,52 @@ const KelolaMenuViewInner: React.FC = () => {
                 )}
               </tbody>
             </table>
+
+            {/* Mobile View (Tampil pada layar < md) */}
+            <div className="md:hidden divide-y divide-[#ebe8e3]">
+              {filteredMenuItems.length === 0 ? (
+                <div className="py-8 text-center text-xs text-[#847374] px-4">
+                  Tidak ada menu yang sesuai dengan filter.
+                </div>
+              ) : (
+                filteredMenuItems.map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => handleOpenEdit(item)}
+                    className="p-3.5 space-y-1.5 hover:bg-[#fcf9f4] transition-colors cursor-pointer active:bg-[#f5efe6]"
+                    title="Klik untuk edit & kelola menu"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-bold text-sm text-[#1c1c19] leading-tight">
+                          {item.name}
+                        </span>
+                        {!item.isAvailable && (
+                          <span className="px-1.5 py-0.2 rounded bg-[#ffdadc] text-[#ba1a1a] text-[10px] font-bold shrink-0">
+                            Habis
+                          </span>
+                        )}
+                        {Boolean(item.isRecommended || item.isFavorite) && (
+                          <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 text-[10px] font-bold shrink-0 flex items-center gap-0.5">
+                            <span className="material-symbols-outlined text-[11px] text-amber-600">star</span>
+                            <span>Favorit</span>
+                          </span>
+                        )}
+                      </div>
+                      <span className="font-bold text-xs text-[#3d1018] tabular-nums shrink-0">
+                        Rp {item.price.toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-[#847374] font-medium">
+                      {item.category}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       </section>
-      )}
-
-      {/* =========================================================================
-          SUB-BAGIAN B: STOK BAHAN BAKU
-         ========================================================================= */}
-      {storeSettings.enableInventoryTracking && activeTab === 'stok' && (
-        <section aria-label="Stok Bahan Baku" className="space-y-3">
-          {/* Baris Filter & Search Bahan Baku */}
-          <div className="bg-white p-3 rounded-xl border border-[#ebe8e3] flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div className="relative flex-1 max-w-md">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#847374] text-[18px]">
-                search
-              </span>
-              <input
-                type="text"
-                value={searchStockQuery}
-                onChange={(e) => setSearchStockQuery(e.target.value)}
-                placeholder="Cari nama bahan atau kode..."
-                className="w-full pl-9 pr-3 py-1.5 bg-[#fcf9f4] rounded-lg text-xs text-[#1c1c19] outline-none border border-[#ebe8e3] focus:border-[#3d1018]"
-                aria-label="Cari bahan baku"
-              />
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Filter Kategori Bahan */}
-              <div className="flex items-center gap-1.5 text-xs text-[#524344]">
-                <span>Kategori:</span>
-                <select
-                  value={stockCategoryFilter}
-                  onChange={(e) => setStockCategoryFilter(e.target.value)}
-                  className="bg-[#fcf9f4] border border-[#ebe8e3] rounded-lg px-2.5 py-1 text-xs font-semibold text-[#1c1c19] outline-none cursor-pointer focus:border-[#3d1018]"
-                >
-                  <option value="Semua">Semua Kategori</option>
-                  <option value="Daging & Unggas">Daging &amp; Unggas</option>
-                  <option value="Bumbu & Rempah">Bumbu &amp; Rempah</option>
-                  <option value="Beras & Pokok">Beras &amp; Pokok</option>
-                  <option value="Sayur & Pelengkap">Sayur &amp; Pelengkap</option>
-                  <option value="Minuman">Minuman</option>
-                </select>
-              </div>
-
-              {/* Filter Status Stok */}
-              <div className="flex items-center gap-1.5 text-xs text-[#524344]">
-                <span>Status:</span>
-                <select
-                  value={stockStatusFilter}
-                  onChange={(e) => setStockStatusFilter(e.target.value as any)}
-                  className="bg-[#fcf9f4] border border-[#ebe8e3] rounded-lg px-2.5 py-1 text-xs font-semibold text-[#1c1c19] outline-none cursor-pointer focus:border-[#3d1018]"
-                >
-                  <option value="semua">Semua Status</option>
-                  <option value="aman">Aman</option>
-                  <option value="menipis">Menipis</option>
-                  <option value="kritis">Kritis (Habis)</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Tabel Bahan Baku Compact dengan Scroll Mandiri */}
-          <div className="bg-white rounded-xl border border-[#ebe8e3] overflow-hidden shadow-xs">
-            <div className="overflow-x-auto max-h-[calc(100vh-270px)] overflow-y-auto custom-scrollbar">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#f6f3ee] text-[#524344] uppercase tracking-wider text-[10px] font-bold border-b border-[#ebe8e3] sticky top-0 z-10">
-                  <tr>
-                    <th className="py-2.5 px-4">Bahan Baku</th>
-                    <th className="py-2.5 px-4">Kategori</th>
-                    <th className="py-2.5 px-4">Stok Saat Ini</th>
-                    <th className="py-2.5 px-4">Stok Min.</th>
-                    <th className="py-2.5 px-4">Status</th>
-                    <th className="py-2.5 px-4 text-center">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#ebe8e3]">
-                  {filteredIngredients.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="py-8 text-center text-xs text-[#847374]">
-                        Tidak ada bahan baku yang cocok dengan filter.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredIngredients.map((ing) => {
-                      const isCritical = ing.currentStock <= 0;
-                      const isLow = ing.currentStock <= ing.minimumStock && ing.currentStock > 0;
-
-                      return (
-                        <tr key={ing.id} className="hover:bg-[#fcf9f4] transition-colors">
-                          <td className="py-2.5 px-4">
-                            <span className="font-bold text-[#1c1c19] block leading-tight">
-                              {ing.name}
-                            </span>
-                            <span className="text-[10px] text-[#847374] font-mono">
-                              {ing.code}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-4 text-[#524344]">{ing.category}</td>
-                          <td className="py-2.5 px-4 font-bold text-[#1c1c19] tabular-nums">
-                            {ing.currentStock} {ing.unit}
-                          </td>
-                          <td className="py-2.5 px-4 text-[#524344] tabular-nums">
-                            {ing.minimumStock} {ing.unit}
-                          </td>
-                          <td className="py-2.5 px-4">
-                            <span
-                              className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                                isCritical
-                                  ? 'bg-[#ffdadc] text-[#ba1a1a]'
-                                  : isLow
-                                  ? 'bg-[#ffdbc9] text-[#753400]'
-                                  : 'bg-[#f0ede9] text-[#1c1c19]'
-                              }`}
-                            >
-                              {isCritical ? 'Kritis' : isLow ? 'Menipis' : 'Aman'}
-                            </span>
-                          </td>
-                        <td className="py-2.5 px-4 text-center relative">
-                          <div className="relative inline-block text-left">
-                            <button
-                              type="button"
-                              onClick={() => setOpenIngActionId(openIngActionId === ing.id ? null : ing.id)}
-                              className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-[#f6f3ee] hover:bg-[#ebe8e3] text-[#1c1c19] border border-[#ebe8e3] text-xs font-semibold cursor-pointer transition-colors"
-                            >
-                              <span>Aksi</span>
-                              <span className="material-symbols-outlined text-[14px] text-[#524344]">
-                                {openIngActionId === ing.id ? 'expand_less' : 'expand_more'}
-                              </span>
-                            </button>
-
-                            {openIngActionId === ing.id && (
-                              <>
-                                <div
-                                  className="fixed inset-0 z-20"
-                                  onClick={() => setOpenIngActionId(null)}
-                                />
-                                <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl shadow-xl border border-[#ebe8e3] py-1 z-30 text-left divide-y divide-[#ebe8e3] animate-in fade-in zoom-in-95 duration-100">
-                                  <div className="py-1">
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setOpenIngActionId(null);
-                                        setRestockItem(ing);
-                                        setRestockQty('5');
-                                      }}
-                                      className="w-full px-3 py-1.5 text-xs font-medium text-[#1c1c19] hover:bg-[#f6f3ee] flex items-center gap-2 cursor-pointer"
-                                    >
-                                      <span className="material-symbols-outlined text-[15px] text-[#994703]">add_box</span>
-                                      <span>Restock Stok</span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setOpenIngActionId(null);
-                                        setEditMinItem(ing);
-                                        setEditMinVal(ing.minimumStock.toString());
-                                      }}
-                                      className="w-full px-3 py-1.5 text-xs font-medium text-[#1c1c19] hover:bg-[#f6f3ee] flex items-center gap-2 cursor-pointer"
-                                    >
-                                      <span className="material-symbols-outlined text-[15px] text-[#524344]">tune</span>
-                                      <span>Edit Stok Min.</span>
-                                    </button>
-                                  </div>
-                                  <div className="py-1">
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setOpenIngActionId(null);
-                                        setDeleteIngConfirm(ing);
-                                      }}
-                                      className="w-full px-3 py-1.5 text-xs font-semibold text-[#93000a] hover:bg-[#ffdadc] flex items-center gap-2 cursor-pointer transition-colors"
-                                    >
-                                      <span className="material-symbols-outlined text-[15px] text-[#93000a]">delete</span>
-                                      <span>Hapus Bahan</span>
-                                    </button>
-                                  </div>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* =========================================================================
           MODALS
@@ -1094,277 +790,6 @@ const KelolaMenuViewInner: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Restock Bahan */}
-      {restockItem && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="restock-title"
-          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 lg:cursor-pointer"
-          onClick={(e) => {
-            if (e.target === e.currentTarget && typeof window !== 'undefined' && window.innerWidth >= 1024) {
-              setRestockItem(null);
-            }
-          }}
-        >
-          <form
-            onSubmit={handleRestockSubmit}
-            className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-2xl border border-[#ebe8e3] flex flex-col gap-3 cursor-default"
-          >
-            <div className="flex items-center justify-between pb-2 border-b border-[#ebe8e3]">
-              <h3 id="restock-title" className="font-bold text-base text-[#1c1c19]">
-                Restock: {restockItem.name}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setRestockItem(null)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-[#524344] hover:bg-[#f0ede9]"
-                aria-label="Tutup modal"
-              >
-                <span className="material-symbols-outlined text-[18px]">close</span>
-              </button>
-            </div>
-
-            <p className="text-xs text-[#524344]">
-              Stok saat ini: <strong>{restockItem.currentStock} {restockItem.unit}</strong>
-            </p>
-
-            <div className="space-y-2.5 text-xs">
-              <div>
-                <label className="font-bold text-[#1c1c19] block mb-1">
-                  Jumlah Tambahan ({restockItem.unit}) *
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  required
-                  value={restockQty}
-                  onChange={(e) => setRestockQty(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#fcf9f4] rounded-lg border border-[#ebe8e3] outline-none font-bold text-sm focus:border-[#3d1018]"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-[#1c1c19] block mb-1">Catatan Pengiriman</label>
-                <input
-                  type="text"
-                  value={restockNote}
-                  onChange={(e) => setRestockNote(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#fcf9f4] rounded-lg border border-[#ebe8e3] outline-none focus:border-[#3d1018]"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-2 border-t border-[#ebe8e3]">
-              <button
-                type="button"
-                onClick={() => setRestockItem(null)}
-                className="flex-1 py-2 rounded-lg bg-[#f0ede9] text-[#1c1c19] text-xs font-semibold cursor-pointer"
-              >
-                Batal
-              </button>
-              <button
-                type="submit"
-                className="flex-1 py-2 rounded-lg bg-[#3d1018] text-white text-xs font-bold hover:bg-[#58252c] cursor-pointer shadow-xs"
-              >
-                Tambah Stok
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Modal Ubah Stok Minimum */}
-      {editMinItem && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="edit-min-title"
-          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 lg:cursor-pointer"
-          onClick={(e) => {
-            if (e.target === e.currentTarget && typeof window !== 'undefined' && window.innerWidth >= 1024) {
-              setEditMinItem(null);
-            }
-          }}
-        >
-          <form
-            onSubmit={handleEditMinSubmit}
-            className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-2xl border border-[#ebe8e3] flex flex-col gap-3 cursor-default"
-          >
-            <div className="flex items-center justify-between pb-2 border-b border-[#ebe8e3]">
-              <h3 id="edit-min-title" className="font-bold text-base text-[#1c1c19]">
-                Ambang Batas Minimum: {editMinItem.name}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setEditMinItem(null)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-[#524344] hover:bg-[#f0ede9]"
-                aria-label="Tutup modal"
-              >
-                <span className="material-symbols-outlined text-[18px]">close</span>
-              </button>
-            </div>
-
-            <div className="text-xs">
-              <label className="font-bold text-[#1c1c19] block mb-1">
-                Batas Peringatan ({editMinItem.unit}) *
-              </label>
-              <input
-                type="number"
-                step="0.1"
-                required
-                value={editMinVal}
-                onChange={(e) => setEditMinVal(e.target.value)}
-                className="w-full px-3 py-2 bg-[#fcf9f4] rounded-lg border border-[#ebe8e3] outline-none font-bold text-sm focus:border-[#3d1018]"
-              />
-            </div>
-
-            <div className="flex gap-2 pt-2 border-t border-[#ebe8e3]">
-              <button
-                type="button"
-                onClick={() => setEditMinItem(null)}
-                className="flex-1 py-2 rounded-lg bg-[#f0ede9] text-[#1c1c19] text-xs font-semibold cursor-pointer"
-              >
-                Batal
-              </button>
-              <button
-                type="submit"
-                className="flex-1 py-2 rounded-lg bg-[#3d1018] text-white text-xs font-bold hover:bg-[#58252c] cursor-pointer shadow-xs"
-              >
-                Simpan
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Modal Tambah Bahan Baku Baru */}
-      {showAddIngredientModal && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="add-ing-title"
-          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 lg:cursor-pointer"
-          onClick={(e) => {
-            if (e.target === e.currentTarget && typeof window !== 'undefined' && window.innerWidth >= 1024) {
-              setShowAddIngredientModal(false);
-            }
-          }}
-        >
-          <form
-            onSubmit={handleCreateIngredient}
-            className="bg-white rounded-2xl p-5 w-full max-w-md shadow-2xl border border-[#ebe8e3] flex flex-col gap-3 cursor-default"
-          >
-            <div className="flex items-center justify-between pb-2 border-b border-[#ebe8e3]">
-              <h3 id="add-ing-title" className="font-bold text-base text-[#1c1c19]">
-                Tambah Bahan Baku Baru
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowAddIngredientModal(false)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-[#524344] hover:bg-[#f0ede9]"
-                aria-label="Tutup modal"
-              >
-                <span className="material-symbols-outlined text-[18px]">close</span>
-              </button>
-            </div>
-
-            <div className="space-y-2.5 text-xs">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="font-bold text-[#1c1c19] block mb-1">Kode Bahan</label>
-                  <input
-                    type="text"
-                    value={newIngCode}
-                    onChange={(e) => setNewIngCode(e.target.value)}
-                    placeholder="Contoh: BAHAN-12"
-                    className="w-full px-3 py-1.5 bg-[#fcf9f4] rounded-lg border border-[#ebe8e3] outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-[#1c1c19] block mb-1">Kategori *</label>
-                  <select
-                    value={newIngCategory}
-                    onChange={(e) => setNewIngCategory(e.target.value as any)}
-                    className="w-full px-3 py-1.5 bg-[#fcf9f4] rounded-lg border border-[#ebe8e3] outline-none cursor-pointer"
-                  >
-                    <option value="Daging & Unggas">Daging &amp; Unggas</option>
-                    <option value="Bumbu & Rempah">Bumbu &amp; Rempah</option>
-                    <option value="Beras & Pokok">Beras &amp; Pokok</option>
-                    <option value="Sayur & Pelengkap">Sayur &amp; Pelengkap</option>
-                    <option value="Minuman">Minuman</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="font-bold text-[#1c1c19] block mb-1">Nama Bahan Baku *</label>
-                <input
-                  type="text"
-                  required
-                  value={newIngName}
-                  onChange={(e) => setNewIngName(e.target.value)}
-                  placeholder="Contoh: Daging Kisi Sapi"
-                  className="w-full px-3 py-1.5 bg-[#fcf9f4] rounded-lg border border-[#ebe8e3] outline-none focus:border-[#3d1018]"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="font-bold text-[#1c1c19] block mb-1">Stok Awal *</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    required
-                    value={newIngStock}
-                    onChange={(e) => setNewIngStock(e.target.value)}
-                    className="w-full px-3 py-1.5 bg-[#fcf9f4] rounded-lg border border-[#ebe8e3] outline-none tabular-nums"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-[#1c1c19] block mb-1">Stok Min *</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    required
-                    value={newIngMin}
-                    onChange={(e) => setNewIngMin(e.target.value)}
-                    className="w-full px-3 py-1.5 bg-[#fcf9f4] rounded-lg border border-[#ebe8e3] outline-none tabular-nums"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-[#1c1c19] block mb-1">Satuan *</label>
-                  <input
-                    type="text"
-                    required
-                    value={newIngUnit}
-                    onChange={(e) => setNewIngUnit(e.target.value)}
-                    placeholder="kg / butir"
-                    className="w-full px-3 py-1.5 bg-[#fcf9f4] rounded-lg border border-[#ebe8e3] outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-2 border-t border-[#ebe8e3]">
-              <button
-                type="button"
-                onClick={() => setShowAddIngredientModal(false)}
-                className="flex-1 py-2 rounded-lg bg-[#f0ede9] text-[#1c1c19] text-xs font-semibold cursor-pointer"
-              >
-                Batal
-              </button>
-              <button
-                type="submit"
-                className="flex-1 py-2 rounded-lg bg-[#3d1018] text-white text-xs font-bold hover:bg-[#58252c] cursor-pointer shadow-xs"
-              >
-                Simpan Bahan
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
       {/* Modal Peringatan Konfirmasi Hapus Menu */}
       {deleteMenuConfirm && (
         <div
@@ -1399,46 +824,6 @@ const KelolaMenuViewInner: React.FC = () => {
                 className="flex-1 py-2 rounded-xl bg-[#ba1a1a] hover:bg-[#93000a] text-white text-xs font-bold cursor-pointer shadow-xs transition-colors"
               >
                 Hapus Menu
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Peringatan Konfirmasi Hapus Bahan Baku */}
-      {deleteIngConfirm && (
-        <div
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs lg:cursor-pointer"
-          onClick={(e) => {
-            if (e.target === e.currentTarget && typeof window !== 'undefined' && window.innerWidth >= 1024) {
-              setDeleteIngConfirm(null);
-            }
-          }}
-        >
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-[#ebe8e3] animate-in fade-in zoom-in-95 duration-150 cursor-default">
-            <h3 className="text-base font-bold text-[#ba1a1a] text-center mb-1">
-              Peringatan Konfirmasi Hapus
-            </h3>
-            <p className="text-xs text-[#524344] text-center mb-5 leading-relaxed">
-              Apakah Anda yakin ingin menghapus bahan baku <strong className="text-[#1c1c19]">{deleteIngConfirm.name}</strong>? Tindakan ini tidak dapat dibatalkan.
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setDeleteIngConfirm(null)}
-                className="flex-1 py-2 rounded-xl bg-[#f0ede9] hover:bg-[#ebe8e3] text-[#1c1c19] text-xs font-semibold cursor-pointer transition-colors"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  handleDeleteIngredient(deleteIngConfirm);
-                  setDeleteIngConfirm(null);
-                }}
-                className="flex-1 py-2 rounded-xl bg-[#ba1a1a] hover:bg-[#93000a] text-white text-xs font-bold cursor-pointer shadow-xs transition-colors"
-              >
-                Hapus Bahan
               </button>
             </div>
           </div>

@@ -7,7 +7,7 @@ import { exportTableQrs, QrExportFormat } from '../lib/qrExport';
 const MAX_BATCH_TABLES = 50;
 
 const KelolaMejaViewInner: React.FC = () => {
-  const { tables, updateTable, addTable, deleteTable, openQrModal, showToast } = useApp();
+  const { tables, updateTable, addTable, deleteTable, rotateTableQr, openQrModal, showToast } = useApp();
 
   const [filterMode, setFilterMode] = useState<'Semua' | 'Terisi' | 'Kosong'>('Semua');
   const [searchQuery, setSearchQuery] = useState('');
@@ -16,6 +16,7 @@ const KelolaMejaViewInner: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [addMode, setAddMode] = useState<'single' | 'range'>('single');
   const [newTableNum, setNewTableNum] = useState('');
+  const [addError, setAddError] = useState('');
   const [rangeStart, setRangeStart] = useState('');
   const [rangeEnd, setRangeEnd] = useState('');
   const [isAddingTables, setIsAddingTables] = useState(false);
@@ -24,6 +25,8 @@ const KelolaMejaViewInner: React.FC = () => {
   const [editingTable, setEditingTable] = useState<TableItem | null>(null);
   const [editNumber, setEditNumber] = useState('');
   const [editStatus, setEditStatus] = useState<TableStatus>('kosong');
+  const [editError, setEditError] = useState('');
+  const [isRegeneratingQr, setIsRegeneratingQr] = useState(false);
 
   // Action dropdown & Delete confirm modal state
   const [openTableActionId, setOpenTableActionId] = useState<string | null>(null);
@@ -43,42 +46,53 @@ const KelolaMejaViewInner: React.FC = () => {
   const openEditModal = (tbl: TableItem) => {
     setEditingTable(tbl);
     setEditNumber(tbl.number);
-    setEditStatus(tbl.status);
+    setEditStatus(tbl.status === 'kosong' ? 'kosong' : 'terisi');
+    setEditError('');
   };
 
-  const handleSaveTable = (e: React.FormEvent) => {
+  const handleSaveTable = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingTable) return;
-    if (!editNumber.trim()) {
+    const trimmed = editNumber.trim();
+    if (!trimmed) {
+      setEditError('Nomor meja wajib diisi');
       showToast('Nomor meja wajib diisi', 'warning');
+      return;
+    }
+
+    const num = parseInt(trimmed, 10);
+    if (isNaN(num) || num <= 0) {
+      setEditError('Nomor meja harus berupa angka minimal 1');
+      showToast('Nomor meja harus berupa angka minimal 1', 'warning');
+      return;
+    }
+
+    if (tables.some((t) => t.dbId !== editingTable.dbId && parseInt(t.number, 10) === num)) {
+      setEditError(`Nomor meja ${num} sudah terdaftar`);
+      showToast(`Nomor meja ${num} sudah terdaftar`, 'warning');
       return;
     }
 
     const updated: TableItem = {
       ...editingTable,
-      number: editNumber.trim(),
+      number: trimmed.padStart(2, '0'),
       capacity: 4,
       area: 'Lantai 1',
       status: editStatus,
-      statusLabel:
-        editStatus === 'kosong'
-          ? 'Kosong'
-          : editStatus === 'checkout'
-          ? 'Minta Checkout'
-          : editStatus === 'diproses'
-          ? 'Diproses'
-          : 'Terisi',
+      statusLabel: editStatus === 'kosong' ? 'Tersedia' : 'Terisi',
     };
 
-    updateTable(updated);
-    showToast(`Meja ${updated.number} berhasil diperbarui`, 'success');
-    setEditingTable(null);
+    const ok = await updateTable(updated, editStatus);
+    if (ok) {
+      setEditingTable(null);
+    }
   };
 
   const closeAddModal = () => {
     setShowAddModal(false);
     setAddMode('single');
     setNewTableNum('');
+    setAddError('');
     setRangeStart('');
     setRangeEnd('');
   };
@@ -88,17 +102,30 @@ const KelolaMejaViewInner: React.FC = () => {
     if (isAddingTables) return;
 
     if (addMode === 'single') {
-      const num = parseInt(newTableNum, 10);
-      if (!num || num <= 0) {
-        showToast('Masukkan nomor meja yang valid (angka positif)', 'warning');
+      const trimmed = newTableNum.trim();
+      if (!trimmed) {
+        setAddError('Nomor meja wajib diisi');
+        showToast('Nomor meja wajib diisi', 'warning');
+        return;
+      }
+      const num = parseInt(trimmed, 10);
+      if (isNaN(num) || num <= 0) {
+        setAddError('Nomor meja harus berupa angka minimal 1');
+        showToast('Nomor meja harus berupa angka minimal 1', 'warning');
         return;
       }
       if (tables.some((t) => parseInt(t.number, 10) === num)) {
+        setAddError(`Nomor meja ${num} sudah terdaftar`);
         showToast(`Nomor meja ${num} sudah terdaftar`, 'warning');
         return;
       }
-      const ok = await addTable(num, 4, 'Lantai 1');
-      if (ok) closeAddModal();
+      setIsAddingTables(true);
+      try {
+        const ok = await addTable(num, 4, 'Lantai 1');
+        if (ok) closeAddModal();
+      } finally {
+        setIsAddingTables(false);
+      }
       return;
     }
 
@@ -238,18 +265,20 @@ const KelolaMejaViewInner: React.FC = () => {
 
       {/* Tabel Meja Compact dengan Scroll Mandiri */}
       <div className="bg-white rounded-xl border border-[#ebe8e3] shadow-xs overflow-hidden">
-        <div className="overflow-x-auto max-h-[calc(100vh-250px)] overflow-y-auto custom-scrollbar">
-          <table className="w-full text-left text-xs border-collapse">
+        <div className="max-h-[calc(100vh-250px)] overflow-y-auto custom-scrollbar">
+          {/* Tampilan Desktop Table */}
+          <table className="hidden md:table w-full text-left text-xs border-collapse">
             <thead className="bg-[#f6f3ee] text-[#524344] uppercase tracking-wider text-[10px] font-bold border-b border-[#ebe8e3] sticky top-0 z-10">
               <tr>
-                <th className="py-2.5 px-4">No. Meja</th>
-                <th className="py-2.5 px-4">Status Meja</th>
+                <th className="py-2.5 px-4 w-24">No. Meja</th>
+                <th className="py-2.5 px-4 w-32">Status Meja</th>
+                <th className="py-2.5 px-4">URL Meja</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#ebe8e3]">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={2} className="py-8 text-center text-xs text-[#847374]">
+                  <td colSpan={3} className="py-8 text-center text-xs text-[#847374]">
                     {searchQuery ? `Tidak ada meja yang cocok dengan pencarian ${searchQuery}.` : 'Tidak ada meja yang cocok.'}
                   </td>
                 </tr>
@@ -270,7 +299,7 @@ const KelolaMejaViewInner: React.FC = () => {
                       </td>
                       <td className="py-2.5 px-4">
                         <span
-                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                          className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                             isCheckout
                               ? 'bg-[#ffdbc9] text-[#753400]'
                               : isOccupied
@@ -278,7 +307,12 @@ const KelolaMejaViewInner: React.FC = () => {
                               : 'bg-[#f0ede9] text-[#524344]'
                           }`}
                         >
-                          {tbl.statusLabel || (isOccupied ? 'Terisi' : 'Kosong')}
+                          {tbl.statusLabel || (isOccupied ? 'Terisi' : 'Tersedia')}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-4">
+                        <span className="text-xs text-[#524344] break-all block">
+                          {tbl.qrUrl}
                         </span>
                       </td>
                     </tr>
@@ -287,6 +321,52 @@ const KelolaMejaViewInner: React.FC = () => {
               )}
             </tbody>
           </table>
+
+          {/* Tampilan Mobile: Kartu Responsif */}
+          <div className="md:hidden divide-y divide-[#ebe8e3]">
+            {filtered.length === 0 ? (
+              <div className="py-8 text-center text-xs text-[#847374] px-4">
+                {searchQuery ? `Tidak ada meja yang cocok dengan pencarian ${searchQuery}.` : 'Tidak ada meja yang cocok.'}
+              </div>
+            ) : (
+              filtered.map((tbl, idx) => {
+                const isOccupied = tbl.status !== 'kosong';
+                const isCheckout = tbl.status === 'checkout';
+
+                return (
+                  <div
+                    key={tbl.dbId ? `mob-${tbl.dbId}` : `mob-${tbl.number}-${idx}`}
+                    onClick={() => openEditModal(tbl)}
+                    className="p-3.5 space-y-2 hover:bg-[#fcf9f4] transition-colors cursor-pointer active:bg-[#f5efe6]"
+                    title="Klik untuk edit & kelola meja"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-[11px] uppercase tracking-wider font-semibold text-[#847374]">Meja</span>
+                        <span className="font-bold text-[#1c1c19] text-base tabular-nums">
+                          {tbl.number}
+                        </span>
+                      </div>
+                      <span
+                        className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                          isCheckout
+                            ? 'bg-[#ffdbc9] text-[#753400]'
+                            : isOccupied
+                            ? 'bg-[#58252c] text-white'
+                            : 'bg-[#f0ede9] text-[#524344]'
+                        }`}
+                      >
+                        {tbl.statusLabel || (isOccupied ? 'Terisi' : 'Tersedia')}
+                      </span>
+                    </div>
+                    <div className="text-xs text-[#524344] break-all pt-0.5">
+                      {tbl.qrUrl}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
       </div>
 
@@ -300,6 +380,7 @@ const KelolaMejaViewInner: React.FC = () => {
         >
           <form
             onSubmit={handleCreateNewTable}
+            noValidate
             className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-2xl border border-[#ebe8e3] flex flex-col gap-3.5"
           >
             <div className="flex items-center justify-between pb-2 border-b border-[#ebe8e3]">
@@ -320,13 +401,25 @@ const KelolaMejaViewInner: React.FC = () => {
               <div>
                 <label className="font-bold text-[#1c1c19] block mb-1">Nomor Meja *</label>
                 <input
-                  type="number"
-                  required
-                  min={1}
+                  type="text"
+                  inputMode="numeric"
                   value={newTableNum}
-                  onChange={(e) => setNewTableNum(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#fcf9f4] rounded-lg border border-[#ebe8e3] outline-none font-bold text-sm focus:border-[#3d1018]"
+                  placeholder="Contoh: 15"
+                  onChange={(e) => {
+                    const clean = e.target.value.replace(/\D/g, '');
+                    setNewTableNum(clean);
+                    if (addError) setAddError('');
+                  }}
+                  className={`w-full px-3 py-2 bg-[#fcf9f4] rounded-lg border outline-none font-bold text-sm transition-colors ${
+                    addError ? 'border-[#ba1a1a] bg-[#ffdadc]/20 focus:border-[#ba1a1a]' : 'border-[#ebe8e3] focus:border-[#3d1018]'
+                  }`}
                 />
+                {addError && (
+                  <div className="flex items-center gap-1.5 mt-1.5 text-[#ba1a1a]">
+                    <span className="material-symbols-outlined text-[16px]">error</span>
+                    <span className="text-[11px] font-semibold">{addError}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -361,6 +454,7 @@ const KelolaMejaViewInner: React.FC = () => {
         >
           <form
             onSubmit={handleSaveTable}
+            noValidate
             className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-2xl border border-[#ebe8e3] flex flex-col gap-3.5"
           >
             <div className="flex items-center justify-between pb-2 border-b border-[#ebe8e3]">
@@ -382,11 +476,23 @@ const KelolaMejaViewInner: React.FC = () => {
                 <label className="font-bold text-[#1c1c19] block mb-1">Nomor Meja</label>
                 <input
                   type="text"
-                  required
+                  inputMode="numeric"
                   value={editNumber}
-                  onChange={(e) => setEditNumber(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#fcf9f4] rounded-lg border border-[#ebe8e3] outline-none font-bold text-sm focus:border-[#3d1018]"
+                  onChange={(e) => {
+                    const clean = e.target.value.replace(/\D/g, '');
+                    setEditNumber(clean);
+                    if (editError) setEditError('');
+                  }}
+                  className={`w-full px-3 py-2 bg-[#fcf9f4] rounded-lg border outline-none font-bold text-sm transition-colors ${
+                    editError ? 'border-[#ba1a1a] bg-[#ffdadc]/20 focus:border-[#ba1a1a]' : 'border-[#ebe8e3] focus:border-[#3d1018]'
+                  }`}
                 />
+                {editError && (
+                  <div className="flex items-center gap-1.5 mt-1.5 text-[#ba1a1a]">
+                    <span className="material-symbols-outlined text-[16px]">error</span>
+                    <span className="text-[11px] font-semibold">{editError}</span>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -415,20 +521,34 @@ const KelolaMejaViewInner: React.FC = () => {
                   <span>Unduh &amp; Cetak QR Meja {editingTable.number}</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newQrId = `RG-M${editingTable.number}-${Math.floor(1000 + Math.random() * 9000)}`;
-                    const updated = { ...editingTable, qrCodeId: newQrId };
-                    showToast(`QR Code Meja ${editingTable.number} berhasil di-generate ulang!`, 'success');
-                    setEditingTable(null);
-                    openQrModal(updated);
-                  }}
-                  className="w-full py-2.5 px-3 rounded-xl bg-[#f0ede9] hover:bg-[#ebe8e3] text-xs font-semibold text-[#3d1018] flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-[#ebe8e3]"
-                >
-                  <span className="material-symbols-outlined text-[16px] text-[#994703]">sync</span>
-                  <span>Generate Ulang Kode QR</span>
-                </button>
+                <div>
+                  <button
+                    type="button"
+                    disabled={isRegeneratingQr}
+                    onClick={async () => {
+                      if (!editingTable.dbId || isRegeneratingQr) return;
+                      setIsRegeneratingQr(true);
+                      try {
+                        const updated = await rotateTableQr(editingTable.dbId);
+                        if (updated) {
+                          setEditingTable(updated);
+                          openQrModal(updated);
+                        }
+                      } finally {
+                        setIsRegeneratingQr(false);
+                      }
+                    }}
+                    className="w-full py-2.5 px-3 rounded-xl bg-[#f0ede9] hover:bg-[#ebe8e3] text-xs font-semibold text-[#3d1018] flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-[#ebe8e3] disabled:opacity-50"
+                  >
+                    <span className={`material-symbols-outlined text-[16px] text-[#994703] ${isRegeneratingQr ? 'animate-spin' : ''}`}>
+                      sync
+                    </span>
+                    <span>{isRegeneratingQr ? 'Sedang Mereset QR…' : 'Generate Ulang Kode QR'}</span>
+                  </button>
+                  <p className="text-[10px] text-[#847374] text-center mt-1">
+                    Mereset token keamanan QR di database. Link lama otomatis hangus.
+                  </p>
+                </div>
               </div>
             </div>
 

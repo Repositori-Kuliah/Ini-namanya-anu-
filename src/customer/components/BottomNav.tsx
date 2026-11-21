@@ -4,10 +4,6 @@ import { useApp } from '../context/AppContext';
 export const BottomNav: React.FC = () => {
   const { currentScreen, navigate, activeOrder } = useApp();
 
-  if (currentScreen === 'welcome' || currentScreen === 'detail') {
-    return null;
-  }
-
   const hasOngoingOrder = Boolean(activeOrder && activeOrder.statusStage < 4);
 
   const tabs = [

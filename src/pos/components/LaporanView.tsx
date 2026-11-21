@@ -107,7 +107,7 @@ export const LaporanView: React.FC = () => {
         });
         setCustomRangeTrx(mapped);
       } else {
-        setCustomRangeTrx(null);
+        setCustomRangeTrx([]);
       }
       showToast(`Filter laporan diterapkan (${startDate} s/d ${endDate})`, 'success');
     } catch (e) {
@@ -131,8 +131,18 @@ export const LaporanView: React.FC = () => {
       t.total,
       t.status,
     ]);
+
+    const summaryRows = [
+      [''],
+      ['=== RINGKASAN LAPORAN ===', '', '', '', '', '', '', '', ''],
+      ['Total Penjualan Lunas', '', '', '', '', '', '', totalPenjualan, ''],
+      ['Jumlah Transaksi', '', '', '', '', '', '', `${filteredTransactions.length} struk`, ''],
+      ['Rata-rata Transaksi', '', '', '', '', '', '', avgTransaksi, ''],
+      [`Total ${storeSettings.taxName || 'PB1 (Pajak Restoran)'}`, '', '', '', '', '', '', storeSettings.enableTax === false ? 0 : totalPajak, ''],
+    ];
+
     const csvContent =
-      'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+      'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(',')), ...summaryRows.map((e) => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
@@ -427,34 +437,34 @@ export const LaporanView: React.FC = () => {
         </div>
       </div>
 
-      {/* 4 Compact Summary Metrics */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white p-3.5 rounded-xl border border-[#ebe8e3]">
-        <div className="px-2">
+      {/* 4 Compact Summary Metrics (Vertikal di Mobile, Horizontal di Desktop) */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[#ebe8e3] bg-white p-3 sm:p-3.5 rounded-xl border border-[#ebe8e3]">
+        <div className="flex items-center justify-between sm:flex-col sm:items-start py-2.5 sm:py-0 sm:px-2 first:pt-0 sm:first:pt-0 last:pb-0 sm:last:pb-0">
           <span className="text-[11px] font-semibold text-[#847374] uppercase tracking-wider">Total Penjualan Lunas</span>
-          <div className="text-xl font-bold font-serif text-[#1c1c19] mt-0.5 tabular-nums">
+          <div className="text-base sm:text-xl font-bold font-serif text-[#1c1c19] sm:mt-0.5 tabular-nums">
             Rp {totalPenjualan.toLocaleString('id-ID')}
           </div>
         </div>
 
-        <div className="px-2 border-l border-[#ebe8e3]">
+        <div className="flex items-center justify-between sm:flex-col sm:items-start py-2.5 sm:py-0 sm:px-2 first:pt-0 sm:first:pt-0 last:pb-0 sm:last:pb-0">
           <span className="text-[11px] font-semibold text-[#847374] uppercase tracking-wider">Jumlah Transaksi</span>
-          <div className="text-xl font-bold font-serif text-[#1c1c19] mt-0.5 tabular-nums">
+          <div className="text-base sm:text-xl font-bold font-serif text-[#1c1c19] sm:mt-0.5 tabular-nums">
             {filteredTransactions.length} <span className="text-xs font-normal text-[#847374]">struk</span>
           </div>
         </div>
 
-        <div className="px-2 border-l border-[#ebe8e3]">
+        <div className="flex items-center justify-between sm:flex-col sm:items-start py-2.5 sm:py-0 sm:px-2 first:pt-0 sm:first:pt-0 last:pb-0 sm:last:pb-0">
           <span className="text-[11px] font-semibold text-[#847374] uppercase tracking-wider">Rata-rata</span>
-          <div className="text-xl font-bold font-serif text-[#1c1c19] mt-0.5 tabular-nums">
+          <div className="text-base sm:text-xl font-bold font-serif text-[#1c1c19] sm:mt-0.5 tabular-nums">
             Rp {avgTransaksi.toLocaleString('id-ID')}
           </div>
         </div>
 
-        <div className="px-2 border-l border-[#ebe8e3]">
+        <div className="flex items-center justify-between sm:flex-col sm:items-start py-2.5 sm:py-0 sm:px-2 first:pt-0 sm:first:pt-0 last:pb-0 sm:last:pb-0">
           <span className="text-[11px] font-semibold text-[#847374] uppercase tracking-wider">
             {storeSettings.taxName || 'Pajak Restoran (PB1)'} {storeSettings.enableTax === false ? '(Nonaktif)' : ''}
           </span>
-          <div className="text-xl font-bold font-serif text-[#3d1018] mt-0.5 tabular-nums">
+          <div className="text-base sm:text-xl font-bold font-serif text-[#3d1018] sm:mt-0.5 tabular-nums">
             {storeSettings.enableTax === false ? 'Rp 0' : `Rp ${totalPajak.toLocaleString('id-ID')}`}
           </div>
         </div>
@@ -641,7 +651,7 @@ export const LaporanView: React.FC = () => {
               ) : (
                 filteredTransactions.map((trx) => (
                   <tr key={trx.id} className="hover:bg-[#fcfaf7] transition-colors">
-                    <td className="py-2.5 px-3.5 font-bold text-[#3d1018]">{trx.code}</td>
+                    <td className="py-2.5 px-3.5 font-semibold text-[#1c1c19]">{trx.code}</td>
                     <td className="py-2.5 px-3 text-[#524344] font-mono text-[11px]">{trx.time}</td>
                     <td className="py-2.5 px-3.5 font-medium text-[#1c1c19]">{trx.typeMeja}</td>
                     <td className="py-2.5 px-3 text-[#847374] text-[11px]">{trx.source}</td>
@@ -691,7 +701,7 @@ export const LaporanView: React.FC = () => {
                 itemCount: 1,
                 items: [{ name: 'Pesanan Meja Restoran', quantity: 1, price: trx.subtotal }],
                 subtotal: trx.subtotal,
-                serviceFee: Math.round(trx.subtotal * 0.05),
+                serviceFee: trx.billData?.serviceFee ?? (trx.total > trx.subtotal + trx.tax ? (trx.total - trx.subtotal - trx.tax) : 0),
                 tax: trx.tax,
                 total: trx.total,
                 requestedAt: trx.time,
@@ -707,7 +717,7 @@ export const LaporanView: React.FC = () => {
                 <div key={trx.id} className="p-3.5 space-y-2 hover:bg-[#fcfaf7] transition-colors">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-xs text-[#3d1018]">{trx.code}</span>
+                      <span className="font-semibold text-xs text-[#1c1c19]">{trx.code}</span>
                       <span className="text-[#847374] text-[11px] font-mono">• {trx.time} WIB</span>
                     </div>
                     <span

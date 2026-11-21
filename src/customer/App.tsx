@@ -3,10 +3,7 @@ import { AppProvider, useApp } from './context/AppContext';
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
 import { MenuScreen } from './components/MenuScreen';
-import { DetailScreen } from './components/DetailScreen';
-import { CartScreen } from './components/CartScreen';
 import { StatusScreen } from './components/StatusScreen';
-import { ChangeTableModal } from './components/ChangeTableModal';
 import { Toast } from './components/Toast';
 import { supabaseConfigured } from '../lib/supabase';
 import { SetupNotice } from '../lib/SetupNotice';
@@ -40,13 +37,9 @@ const AppContent: React.FC = () => {
           <>
             <Header />
             <main className="flex-1 w-full flex flex-col relative">
-              {(currentScreen === 'menu' || currentScreen === 'welcome') && <MenuScreen />}
-              {currentScreen === 'detail' && <DetailScreen />}
-              {currentScreen === 'cart' && <CartScreen />}
-              {currentScreen === 'status' && <StatusScreen />}
+              {currentScreen === 'status' ? <StatusScreen /> : <MenuScreen />}
             </main>
             <BottomNav />
-            <ChangeTableModal />
           </>
         )}
         <Toast />

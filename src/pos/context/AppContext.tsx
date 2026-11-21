@@ -7,7 +7,6 @@ import {
 import { supabase, tableUrl } from '../../lib/supabase';
 import { billOfOrders, itemsSubtotal, today } from '../../lib/domain';
 import { placeholderImage, isPlaceholder } from '../../lib/placeholder';
-import { INITIAL_TABLES, INITIAL_INGREDIENTS, INITIAL_CATEGORIES, INITIAL_PRODUCTS } from '../../lib/mockData';
 
 export type AppView =
   | 'login' | 'meja-dan-pelanggan' | 'pesanan-baru' | 'checkout' | 'pembayaran'
@@ -38,7 +37,7 @@ interface AppContextType {
   tables: TableItem[];
   selectedTableId: string;
   setSelectedTableId: (id: string) => void;
-  updateTable: (table: TableItem) => void;
+  updateTable: (table: TableItem, newStatus?: TableStatus) => Promise<boolean>;
   addTable: (tableNumber: number, capacity: number, area: string) => Promise<boolean>;
   deleteTable: (tableId: number) => Promise<boolean>;
   rotateTableQr: (tableId: number) => Promise<TableItem | null>;
@@ -152,8 +151,8 @@ const minsSince = (iso?: string | null) => (iso ? Math.max(0, Math.floor((Date.n
 const idDate = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', timeZone: WIB }) : '-');
 const rp = (n: number) => `Rp ${Math.round(n).toLocaleString('id-ID')}`;
 
-const ROLE_FROM_DB: Record<string, UserRole> = { admin: 'admin', staff: 'kasir', cashier: 'kasir', kitchen: 'kitchen' };
-const ROLE_TO_DB: Record<string, string> = { admin: 'admin', kasir: 'staff', kitchen: 'kitchen' };
+const ROLE_FROM_DB: Record<string, UserRole> = { admin: 'admin', owner: 'owner', staff: 'kasir', cashier: 'kasir', kitchen: 'kitchen' };
+const ROLE_TO_DB: Record<string, string> = { admin: 'admin', owner: 'owner', kasir: 'cashier', kitchen: 'kitchen' };
 const METHOD_TO_DB: Record<PayMethod, string> = { Tunai: 'cash', QRIS: 'qris', 'Kartu Debit': 'debit' };
 const METHOD_FROM_DB: Record<string, TransactionRecord['method']> = { cash: 'Tunai', qris: 'QRIS', debit: 'Kartu Debit' };
 const BAR_CATEGORIES = ['Teh', 'Kopi', 'Wedang', 'Lainnya'];
@@ -170,18 +169,7 @@ const toStaffUser = (p: any, email: string): StaffUser => ({
   id: p.id, name: p.full_name, email: p.email || email, role: ROLE_FROM_DB[p.role] ?? 'kasir',
   avatar: '', shift: p.shift || '', terminal: p.terminal || '',
 });
-const homeView = (r: UserRole): AppView => (r === 'kitchen' ? 'pantau-pesanan' : r === 'admin' ? 'dashboard' : 'meja-dan-pelanggan');
-
-const MASTER_CACHE_KEY = 'rg_pos_master_cache_v2';
-const readMasterCache = () => {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = localStorage.getItem(MASTER_CACHE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-};
+const homeView = (r: UserRole): AppView => (r === 'kitchen' ? 'pantau-pesanan' : (r === 'admin' || r === 'owner') ? 'dashboard' : 'meja-dan-pelanggan');
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<StaffUser>(GUEST_USER);
@@ -214,17 +202,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setDesktopSidebarOpen((prev) => !prev);
   }, []);
 
-  // Cache dibaca sekali saat mount. useRef agar tidak re-read setiap render.
-  const masterCacheRef = useRef(readMasterCache());
   const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
-  // data dari database (dengan fallback awal ke cache offline lokal)
-  const [rawTables, setRawTables] = useState<any[]>(() => masterCacheRef.current?.tables || []);
+  // Bersihkan sisa cache mock lama di localStorage agar murni 100% online dari Supabase
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('rg_mock_sessions_v2');
+        localStorage.removeItem('rg_pos_master_cache_v2');
+        localStorage.removeItem('rg_recent_receipts');
+        localStorage.removeItem('rg_mock_staff_list');
+      } catch {}
+    }
+  }, []);
+
+  // Data murni langsung dari database Supabase (tanpa fallback dummy cache)
+  const [rawTables, setRawTables] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
   const [requests, setRequests] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>(() => (masterCacheRef.current?.products?.length ? masterCacheRef.current.products : INITIAL_PRODUCTS));
-  const [categories, setCategories] = useState<any[]>(() => (masterCacheRef.current?.categories?.length ? masterCacheRef.current.categories : INITIAL_CATEGORIES));
-  const [rawIngredients, setRawIngredients] = useState<RawIngredient[]>(() => masterCacheRef.current?.ingredients || []);
+  const [products, setProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [rawIngredients, setRawIngredients] = useState<RawIngredient[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [now, setNow] = useState(Date.now());
 
@@ -330,6 +328,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         localStorage.setItem('rg_pos_store_settings', JSON.stringify(updated));
       } catch {}
+
+      // Sinkronisasi online ke tabel store_settings di Supabase
+      supabase
+        .from('store_settings')
+        .update({
+          tax_name: updated.taxName,
+          tax_rate: updated.taxRate,
+          enable_tax: updated.enableTax,
+          service_charge_name: updated.serviceChargeName,
+          service_charge_rate: updated.serviceChargeRate,
+          enable_service_charge: updated.enableServiceCharge,
+          guest_wifi_ssid: updated.wifiSsid,
+          guest_wifi_password: updated.wifiPassword,
+          kds_enabled: updated.enableKitchenDisplay,
+          auto_inventory_deduction: updated.enableInventoryTracking,
+          open_hour: updated.openHour,
+          close_hour: updated.closeHour,
+          force_close: updated.forceClose,
+          sound_enabled: updated.soundEnabled,
+          sound_station: updated.soundStation,
+          rounding_rule: updated.roundingRule,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('setting_id', 1)
+        .then(() => {});
+
       return updated;
     });
   }, []);
@@ -417,34 +441,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { difference: diff };
   }, [cashierShift]);
 
-  const [recentReceipts, setRecentReceipts] = useState<BillItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('rg_recent_receipts');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
+  // In-memory receipts untuk sesi transaksi kasir aktif (tanpa ketergantungan localStorage)
+  const [inMemoryReceipts, setInMemoryReceipts] = useState<BillItem[]>([]);
   const saveRecentReceipt = useCallback((receipt: BillItem) => {
-    setRecentReceipts((prev) => {
-      const filtered = prev.filter((r) => {
-        if (r.sessionId && receipt.sessionId) return r.sessionId !== receipt.sessionId;
-        return r.id !== receipt.id && r.billNumber !== receipt.billNumber;
-      });
-      const updated = [receipt, ...filtered].slice(0, 50);
-      try {
-        localStorage.setItem('rg_recent_receipts', JSON.stringify(updated));
-      } catch (err) {
-        console.warn('Failed to save receipt to localStorage', err);
-      }
-      return updated;
-    });
+    setInMemoryReceipts((prev) => [receipt, ...prev.filter((r) => r.id !== receipt.id && r.billNumber !== receipt.billNumber)].slice(0, 50));
   }, []);
 
   const rawTablesRef = useRef<any[]>([]);
   rawTablesRef.current = rawTables;
   const seenRequests = useRef<Set<number> | null>(null);
+  const seenPendingOrders = useRef<Set<string> | null>(null);
   const roleRef = useRef<UserRole>('kasir');
   const currentUserRef = useRef<StaffUser>(GUEST_USER);
   currentUserRef.current = currentUser;
@@ -463,11 +469,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ---------- muat data katalog statis (hybrid offline-online) ----------
   const loadMasterData = useCallback(async () => {
     try {
-      const [cats, prods, tbls, ings] = await Promise.all([
+      const [cats, prods, tbls, ings, stRes] = await Promise.all([
         supabase.from('categories').select('*').order('category_id'),
         supabase.from('products').select('*, categories(name)').order('product_id'),
         supabase.from('tables').select('*').eq('is_active', true).order('table_number'),
         supabase.from('ingredients').select('*').order('ingredient_id'),
+        supabase.from('store_settings').select('*').limit(1).maybeSingle(),
       ]);
 
       const loadedCats = cats.data || [];
@@ -480,51 +487,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         lastRestocked: idDate(i.last_restocked), linkedMenuItems: i.linked_menu_items || [],
       })) : [];
 
-      if (loadedCats.length) {
-        setCategories(loadedCats);
-      } else {
-        setCategories((prev) => (prev.length ? prev : INITIAL_CATEGORIES));
-      }
-      if (loadedProds.length) {
-        setProducts(loadedProds);
-      } else {
-        setProducts((prev) => (prev.length ? prev : INITIAL_PRODUCTS));
-      }
-      if (loadedTbls.length) {
-        setRawTables(loadedTbls);
-      } else {
-        setRawTables((prev) => (prev.length ? prev : INITIAL_TABLES));
-      }
-      const initialMappedIngs: RawIngredient[] = INITIAL_INGREDIENTS.map((i: any) => ({
-        id: String(i.ingredient_id), code: i.code, name: i.name, category: i.category,
-        currentStock: Number(i.current_stock), minimumStock: Number(i.minimum_stock), unit: i.unit,
-        costPerUnit: Number(i.cost_per_unit), supplier: i.supplier || '-',
-        lastRestocked: idDate(i.last_restocked), linkedMenuItems: i.linked_menu_items || [],
-      }));
-
-      if (loadedIngs.length) {
-        setRawIngredients(loadedIngs);
-      } else {
-        setRawIngredients((prev) => (prev.length ? prev : initialMappedIngs));
+      if (stRes.data) {
+        const st = stRes.data;
+        setStoreSettings((prev) => ({
+          ...prev,
+          enableTax: st.enable_tax ?? prev.enableTax,
+          taxName: st.tax_name || prev.taxName,
+          taxRate: st.tax_rate != null ? Number(st.tax_rate) : prev.taxRate,
+          enableServiceCharge: st.enable_service_charge ?? prev.enableServiceCharge,
+          serviceChargeName: st.service_charge_name || prev.serviceChargeName,
+          serviceChargeRate: st.service_charge_rate != null ? Number(st.service_charge_rate) : prev.serviceChargeRate,
+          wifiSsid: st.guest_wifi_ssid || prev.wifiSsid,
+          wifiPassword: st.guest_wifi_password || prev.wifiPassword,
+          openHour: st.open_hour || prev.openHour,
+          closeHour: st.close_hour || prev.closeHour,
+          forceClose: st.force_close ?? prev.forceClose,
+          kdsEnabled: st.kds_enabled ?? prev.kdsEnabled,
+          enableKitchenDisplay: st.kds_enabled ?? prev.enableKitchenDisplay,
+          autoInventoryDeduction: st.auto_inventory_deduction ?? prev.autoInventoryDeduction,
+          enableInventoryTracking: st.auto_inventory_deduction ?? prev.enableInventoryTracking,
+          soundEnabled: st.sound_enabled ?? prev.soundEnabled,
+          soundStation: st.sound_station || prev.soundStation,
+          roundingRule: st.rounding_rule || prev.roundingRule,
+        }));
       }
 
-      // Simpan ke cache offline lokal
-      try {
-        const prevCache = masterCacheRef.current;
-        const newCache = {
-          categories: loadedCats.length ? loadedCats : (prevCache?.categories || []),
-          products: loadedProds.length ? loadedProds : (prevCache?.products || []),
-          tables: loadedTbls.length ? loadedTbls : (prevCache?.tables || []),
-          ingredients: loadedIngs.length ? loadedIngs : (prevCache?.ingredients || []),
-          cachedAt: Date.now(),
-        };
-        localStorage.setItem(MASTER_CACHE_KEY, JSON.stringify(newCache));
-        masterCacheRef.current = newCache;
-      } catch (err) {
-        console.warn('[pos cache write error]', err);
-      }
+      setCategories(loadedCats);
+      setProducts(loadedProds);
+      setRawTables(loadedTbls);
+      setRawIngredients(loadedIngs);
     } catch (e) {
-      console.warn('[supabase master load fallback to cache]', e);
+      console.error('[supabase master load error]', e);
     }
   }, []);
 
@@ -535,11 +528,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const [ses, reqs, pays] = await Promise.all([
         supabase.from('table_sessions')
-          .select('session_id,table_id,guest_count,customer_name,opened_at,orders(order_id,order_number,order_status,order_source,total,note,created_at,ready_at,served_at,profiles(full_name),order_items(order_item_id,product_id,product_name,unit_price,quantity,note))')
+          .select('session_id,table_id,guest_count,customer_name,opened_at,is_takeaway,takeaway_queue,orders(order_id,order_number,order_status,order_source,total,note,created_at,ready_at,served_at,order_items(order_item_id,product_id,product_name,unit_price,quantity,note))')
           .is('closed_at', null),
         supabase.from('service_requests').select('*').eq('status', 'pending'),
         canSeeMoney
-          ? supabase.from('payments').select('payment_id,transaction_code,method,amount,cash_received,change_amount,paid_at,orders(order_id,order_number,order_source,total,created_at,profiles(full_name),table_sessions(session_id,customer_name,guest_count,tables(table_number)),order_items(order_item_id,product_name,unit_price,quantity,note))')
+          ? supabase.from('payments').select('payment_id,transaction_code,method,amount,cash_received,change_amount,paid_at,orders(order_id,order_number,order_source,total,created_at,table_sessions(session_id,customer_name,guest_count,tables(table_number)),order_items(order_item_id,product_name,unit_price,quantity,note))')
               .eq('status', 'paid').gte('paid_at', today() + 'T00:00:00+07:00').order('paid_at', { ascending: false })
           : Promise.resolve({ data: [] }),
       ]);
@@ -547,31 +540,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const reqData = reqs.data ?? [];
       const tblData = rawTablesRef.current;
 
-      if (ses.data && ses.data.length > 0) {
-        // Otomatis filter & bersihkan sesi kosong zombie (0 menu / total 0)
-        const activeSessions = ses.data.filter((s: any) => {
-          const orders = s.orders || [];
-          const totalItems = orders.reduce((acc: number, o: any) => acc + (o.order_items?.length || 0), 0);
-          const totalAmount = orders.reduce((acc: number, o: any) => acc + Number(o.total || 0), 0);
-          if (orders.length === 0 || (totalItems === 0 && totalAmount === 0)) {
-            // Tutup sesi kosong di database di background
-            supabase.from('table_sessions').update({ closed_at: new Date().toISOString() }).eq('session_id', s.session_id).then(() => {});
-            return false;
-          }
-          return true;
-        });
-        setSessions(activeSessions);
+      if (ses.data) {
+        setSessions(ses.data);
       } else {
-        // Fallback muat session dari rg_mock_sessions_v2 jika Supabase offline/kosong
-        try {
-          const stored = localStorage.getItem('rg_mock_sessions_v2');
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setSessions(parsed);
-            }
-          }
-        } catch {}
+        setSessions([]);
       }
       if (reqs.data) setRequests(reqData);
       if (pays.data) setPayments(pays.data);
@@ -589,6 +561,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
       seenRequests.current = new Set(reqData.map((r: any) => r.request_id));
+
+      // Notifikasi suara & toast jika ada pesanan QR mandiri baru yang butuh verifikasi kasir
+      const pendingOrders = (ses.data || []).flatMap((s: any) => {
+        const t = tblData.find((x: any) => x.table_id === s.table_id);
+        return (s.orders || [])
+          .filter((o: any) => o.order_source === 'qr' && (o.order_status === 'pending' || o.order_status === 'pending_confirmation'))
+          .map((o: any) => ({
+            orderId: String(o.order_id),
+            tableNumber: pad(t?.table_number ?? '?'),
+            itemsCount: (o.order_items || []).reduce((acc: number, it: any) => acc + (it.quantity || 1), 0),
+          }));
+      });
+
+      const prevPending = seenPendingOrders.current;
+      if (prevPending && role !== 'kitchen') {
+        const newPending = pendingOrders.filter((p: any) => !prevPending.has(p.orderId));
+        if (newPending.length > 0) {
+          playDingSoundRef.current();
+          newPending.forEach((p: any) => {
+            showToastRef.current(`🔔 Pesanan QR Baru dari Meja ${p.tableNumber} (${p.itemsCount} item) - Menunggu Verifikasi!`, 'warning');
+          });
+        }
+      }
+      seenPendingOrders.current = new Set(pendingOrders.map((p: any) => p.orderId));
       setDataReady(true);
     } catch (e) {
       console.warn('[supabase dynamic refresh error]', e);
@@ -600,10 +596,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [loadMasterData, refreshDynamic]);
 
   // ---------- auth ----------
-  const loadProfile = async (uid: string, email: string) => {
-    const { data, error } = await supabase.from('profiles').select('*').eq('id', uid).eq('is_active', true).maybeSingle();
-    if (error || !data) return null;
-    return ['admin', 'staff', 'kitchen', 'cashier'].includes(data.role) ? toStaffUser(data, email) : null;
+  const loadProfile = async (uid: string, email: string, authUser?: any): Promise<StaffUser | null> => {
+    // 1. Cari berdasarkan id uid di profiles
+    let { data } = await supabase.from('profiles').select('*').eq('id', uid).eq('is_active', true).maybeSingle();
+    // 2. Jika tidak ditemukan berdasarkan id (misal auth dibuat via dashboard), cari berdasarkan email
+    if (!data && email) {
+      const res = await supabase.from('profiles').select('*').eq('email', email.toLowerCase()).eq('is_active', true).maybeSingle();
+      data = res.data;
+    }
+    // 3. Fallback jika tabel profiles belum disinkronkan / RLS mengunci: baca langsung metadata akun Supabase Auth
+    if (!data && authUser) {
+      const metaRole = authUser.user_metadata?.role || authUser.app_metadata?.role;
+      const metaName = authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Staf';
+      if (metaRole && (['admin', 'owner', 'staff', 'kitchen', 'cashier'].includes(metaRole) || ROLE_FROM_DB[metaRole])) {
+        return {
+          id: uid,
+          name: metaName,
+          email: email,
+          role: ROLE_FROM_DB[metaRole] ?? (metaRole as UserRole),
+          avatar: '',
+          shift: 'Shift Aktif',
+          terminal: 'Terminal POS #01',
+        };
+      }
+    }
+    if (!data) return null;
+    return ['admin', 'owner', 'staff', 'kitchen', 'cashier'].includes(data.role) ? toStaffUser(data, email) : null;
   };
   const enter = (u: StaffUser, redirect = false) => {
     roleRef.current = u.role;
@@ -628,9 +646,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let alive = true;
     supabase.auth.getSession().then(async ({ data }) => {
       const s = data.session;
-      const u = s ? await loadProfile(s.user.id, s.user.email || '') : null;
+      const u = s ? await loadProfile(s.user.id, s.user.email || '', s.user) : null;
       if (!alive) return;
-      if (u) enter(u, false); else if (s) await supabase.auth.signOut();
+      if (u) {
+        enter(u, false);
+      } else if (s) {
+        await supabase.auth.signOut();
+      }
       setAuthLoading(false);
     });
 
@@ -641,7 +663,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (currentUserRef.current?.id === session.user.id) {
           return;
         }
-        const u = await loadProfile(session.user.id, session.user.email || '');
+        const u = await loadProfile(session.user.id, session.user.email || '', session.user);
         if (u) enter(u, false);
       } else if (event === 'SIGNED_OUT') {
         setIsLoggedIn(false);
@@ -661,29 +683,70 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
-  const login = async (email: string, password: string) => {
-    const cleanEmail = email.trim().toLowerCase();
+  const login = async (emailOrUsername: string, password: string) => {
+    let cleanInput = emailOrUsername.trim().toLowerCase();
+
+    // Resolusi cerdas: jika pengguna mengetik nama/username tanpa '@', cocokkan ke email resmi
+    if (!cleanInput.includes('@')) {
+      const quickMap: Record<string, string> = {
+        admin: 'admin@rawongusti.test',
+        'budi admin': 'admin@rawongusti.test',
+        budi: 'admin@rawongusti.test',
+        kasir: 'kasir@rawongusti.test',
+        'dewi sartika': 'kasir@rawongusti.test',
+        'dewi sartika (kasir)': 'kasir@rawongusti.test',
+        dewi: 'kasir@rawongusti.test',
+        dapur: 'dapur@rawongusti.test',
+        kitchen: 'dapur@rawongusti.test',
+        'chef sam': 'dapur@rawongusti.test',
+        'chef sam (dapur)': 'dapur@rawongusti.test',
+        sam: 'dapur@rawongusti.test',
+        owner: 'owner@rawongusti.test',
+        'haji gusti': 'owner@rawongusti.test',
+        'haji gusti (owner)': 'owner@rawongusti.test',
+        gusti: 'owner@rawongusti.test',
+        rian: 'rian@rawongusti.test',
+        'rian pratama': 'rian@rawongusti.test',
+      };
+
+      if (quickMap[cleanInput]) {
+        cleanInput = quickMap[cleanInput];
+      } else {
+        try {
+          const { data: matched } = await supabase
+            .from('profiles')
+            .select('email')
+            .ilike('full_name', `%${cleanInput}%`)
+            .limit(1)
+            .maybeSingle();
+          if (matched?.email) {
+            cleanInput = matched.email.toLowerCase();
+          }
+        } catch {}
+      }
+    }
+
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email: cleanInput, password });
       if (error) {
-        return error.message || 'Email atau kata sandi tidak cocok.';
+        return 'Email atau kata sandi salah.';
       }
       if (data?.user) {
-        const u = await loadProfile(data.user.id, data.user.email || cleanEmail);
+        const u = await loadProfile(data.user.id, data.user.email || cleanInput, data.user);
         if (u) {
           enter(u, true);
           showToast(`Berhasil masuk sebagai ${u.role.toUpperCase()}`, 'success');
           return null;
         } else {
           await supabase.auth.signOut();
-          return 'Akun Anda tidak memiliki hak akses operasional atau sedang dinonaktifkan.';
+          return 'Email atau kata sandi salah.';
         }
       }
-    } catch (err: any) {
-      return err?.message || 'Terjadi kesalahan saat menghubungi server autentikasi.';
+    } catch {
+      return 'Email atau kata sandi salah.';
     }
 
-    return 'Email atau kata sandi tidak cocok.';
+    return 'Email atau kata sandi salah.';
   };
   const logout = () => {
     supabase.auth.signOut();
@@ -697,14 +760,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } catch {}
     }
     seenRequests.current = null;
+    seenPendingOrders.current = null;
     setSessions([]);
     setPayments([]);
     showToast('Sesi berakhir. Sampai jumpa!');
   };
-  // hanya admin yang boleh "melihat sebagai" peran lain (pratinjau tampilan)
-  const setCurrentRole = (r: UserRole) => { if (currentUser.role === 'admin') setCurrentRoleState(r); };
+  // hanya admin & owner yang boleh "melihat sebagai" peran lain (pratinjau tampilan)
+  const setCurrentRole = (r: UserRole) => { if (currentUser.role === 'admin' || currentUser.role === 'owner') setCurrentRoleState(r); };
 
-  // Status koneksi jaringan (Hybrid Offline / Online)
+  // Status koneksi jaringan
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
@@ -713,31 +777,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     const handleOffline = () => {
       setIsOnline(false);
-      showToastRef.current('Mode Offline aktif: Operasi menggunakan cache lokal.', 'warning');
+      showToastRef.current('Koneksi internet terputus!', 'warning');
     };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    const handleStorageUpdate = () => {
-      try {
-        const stored = localStorage.getItem('rg_mock_sessions_v2');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) {
-            setSessions(parsed);
-          }
-        }
-      } catch {}
-    };
-    window.addEventListener('storage', handleStorageUpdate);
-    window.addEventListener('rg_mock_sessions_updated', handleStorageUpdate as EventListener);
-
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      window.removeEventListener('storage', handleStorageUpdate);
-      window.removeEventListener('rg_mock_sessions_updated', handleStorageUpdate as EventListener);
     };
   }, [refresh]);
 
@@ -774,6 +822,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [isLoggedIn, refresh, loadMasterData, refreshDynamic]);
 
+  // Fallback sinkronisasi berkala (setiap 10 detik) untuk memastikan pesanan QR mandiri & status meja selalu terpantau
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const pollTimer = setInterval(() => {
+      if (!document.hidden) {
+        refreshDynamic();
+      }
+    }, 10000);
+    return () => clearInterval(pollTimer);
+  }, [isLoggedIn, refreshDynamic]);
+
   // Interval pembaruan menit diubah ke 30 detik (bukan setiap 1 detik) untuk efisiensi CPU & render
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 30000);
@@ -782,12 +841,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ---------- turunan: menu ----------
   const productCategory = useMemo(() => new Map(products.map((p) => [p.product_id, p.categories?.name as string])), [products]);
-  const menuItems: MenuItem[] = useMemo(() => products.map((p) => ({
-    id: String(p.product_id), dbId: p.product_id, code: p.product_code, name: p.name,
-    category: p.categories?.name ?? '-', price: Number(p.price), description: p.description || '',
-    image: p.image_url || placeholderImage(p.name), isAvailable: p.is_available,
-    isFavorite: p.is_favorite, isSignature: p.is_signature, portionsSold: 0,
-  })), [products]);
+  const menuItems: MenuItem[] = useMemo(() => products.map((p) => {
+    const isFav = Boolean(p.is_favorite || p.is_recommended);
+    return {
+      id: String(p.product_id), dbId: p.product_id, code: p.product_code, name: p.name,
+      category: p.categories?.name ?? '-', price: Number(p.price), description: p.description || '',
+      image: p.image_url || placeholderImage(p.name), isAvailable: p.is_available,
+      isFavorite: isFav, isRecommended: isFav, isSignature: p.is_signature, portionsSold: 0,
+    };
+  }), [products]);
   const menuCategories = useMemo(() => categories.map((c) => c.name as string), [categories]);
 
   // ---------- turunan: meja, tagihan, tiket dapur ----------
@@ -809,7 +871,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         qrCodeId: `RG-M${pad(t.table_number)}`, qrUrl: tableUrl(t.qr_token),
       };
       if (!s) return base;
-      const live = (s.orders || []).filter((o: any) => o.order_status !== 'draft');
+      const live = (s.orders || []).filter((o: any) => o.order_status !== 'draft' && o.order_status !== 'cancelled');
       const drafts = (s.orders || []).filter((o: any) => o.order_status === 'draft');
       const shown = live.length ? live : drafts;
       const req = requests.find((r) => r.table_id === t.table_id && r.kind === 'checkout');
@@ -826,18 +888,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         name: i.product_name, quantity: i.quantity, price: i.unit_price * i.quantity, notes: i.note || undefined })));
       const totalRaw = shown.reduce((a: number, o: any) => a + Number(o.total || 0), 0);
 
-      // Sesi kosong tanpa rincian item & total 0 dianggap kosong/tersedia
-      if (items.length === 0 && totalRaw === 0) {
-        return base;
-      }
+      const statusLabel =
+        status === 'checkout'
+          ? 'Minta Bill'
+          : status === 'diproses'
+          ? 'Diproses'
+          : status === 'terkirim'
+          ? 'Terkirim'
+          : status === 'siap_diantar'
+          ? 'Siap Antar'
+          : 'Terisi';
 
-      return { ...base, status, statusLabel: 'Terisi', name: s.customer_name || undefined, guestCount: s.guest_count,
+      return { ...base, status, statusLabel, name: s.customer_name || undefined, guestCount: s.guest_count,
         totalRaw, totalFormatted: rp(totalRaw), billId: `${status === 'draf' ? 'D' : 'B'}-${s.session_id}`, infoSubtitle: info, sessionId: s.session_id, items };
     });
   }, [rawTables, sessions, requests, now]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const bills: BillItem[] = useMemo(() => sessions.flatMap((s) => {
-    const live = (s.orders || []).filter((o: any) => o.order_status !== 'draft');
+    const live = (s.orders || []).filter((o: any) =>
+      o.order_status !== 'draft' &&
+      o.order_status !== 'cancelled' &&
+      o.order_status !== 'pending' &&
+      o.order_status !== 'pending_confirmation'
+    );
     if (!live.length) return [];
     const t = rawTables.find((x) => x.table_id === s.table_id);
     const subtotal = live.map((o: any) => itemsSubtotal(o.order_items)).reduce((acc: number, val: number) => acc + val, 0);
@@ -873,19 +946,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ? (s.takeaway_queue || 'Antrean 01')
       : pad(t?.table_number ?? '?');
 
-    // Format ID unik permintaan user:
-    // Contoh takeaway: BUNGKUS_161126_01, contoh dine-in: MEJA_01_161126
+    // Format ID unik standar POS:
+    // Contoh takeaway: TA-261120-001, contoh dine-in: DIN-261120-001
     const orderDate = new Date(s.opened_at || Date.now());
-    const dd = String(orderDate.getDate()).padStart(2, '0');
-    const mm = String(orderDate.getMonth() + 1).padStart(2, '0');
     const yy = String(orderDate.getFullYear()).slice(-2);
-    const dateCode = `${dd}${mm}${yy}`;
-    const numPart = isTakeaway
-      ? String(displayTableNumber).replace(/[^0-9]/g, '').padStart(2, '0') || '01'
-      : pad(t?.table_number ?? '01');
-    const uniqueBillNumber = isTakeaway
-      ? `BUNGKUS_${dateCode}_${numPart}`
-      : `MEJA_${numPart}_${dateCode}`;
+    const mm = String(orderDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(orderDate.getDate()).padStart(2, '0');
+    const dateCode = `${yy}${mm}${dd}`;
+
+    const existingOrderNum = live[0]?.order_number;
+    let uniqueBillNumber = '';
+    if (existingOrderNum && (existingOrderNum.startsWith('TA-') || existingOrderNum.startsWith('DIN-'))) {
+      uniqueBillNumber = existingOrderNum;
+    } else {
+      const rawSeq = s.session_id ? String(s.session_id) : '1';
+      const seq = (rawSeq.length > 3 ? rawSeq.slice(-3) : rawSeq).padStart(3, '0');
+      uniqueBillNumber = isTakeaway
+        ? `TA-${dateCode}-${seq}`
+        : `DIN-${dateCode}-${seq}`;
+    }
 
     const rawCustName = (s.customer_name || '').trim();
     const isGenericName = !rawCustName ||
@@ -893,7 +972,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       rawCustName.toLowerCase() === 'pelanggan bungkus' ||
       rawCustName.toLowerCase().includes('tamu (bawa pulang)') ||
       rawCustName.toLowerCase().includes('pelanggan');
-    const finalCustomerName = isGenericName ? uniqueBillNumber : rawCustName;
+    const finalCustomerName = isGenericName
+      ? (isTakeaway ? 'Pesanan Bawa Pulang' : `Tamu Meja ${displayTableNumber}`)
+      : rawCustName;
 
     return [{
       id: `bill-${s.session_id}`, sessionId: s.session_id, billNumber: uniqueBillNumber, tableNumber: displayTableNumber,
@@ -927,13 +1008,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const t = rawTables.find((x) => x.table_id === s.table_id);
     const tableNumberStr = `Meja ${pad(t?.table_number ?? '?')}`;
 
-    // Hanya tampilkan pesanan yang sudah dikonfirmasi ke dapur.
-    // Dapur tidak boleh melihat 'draft' (belum dikirim staf) maupun 'pending'
-    // (pesanan QR menunggu konfirmasi kasir) — ditegakkan juga oleh RLS DB.
+    // Hanya tampilkan pesanan yang sudah resmi diverifikasi & dikonfirmasi ke dapur.
+    // Dapur HANYA boleh memproses pesanan dengan status 'submitted', 'preparing', 'ready', atau 'served'.
+    // Pesanan 'pending_confirmation' atau 'pending' (QR mandiri belum diverifikasi) WAJIB ditahan sampai kasir klik 'Terima'.
     const validOrders = (s.orders || []).filter((o: any) =>
-      o.order_status !== 'draft' &&
-      o.order_status !== 'pending' &&
-      o.order_status !== 'cancelled'
+      ['submitted', 'preparing', 'ready', 'served'].includes(o.order_status)
     );
 
     return validOrders.flatMap((o: any): KitchenTicket[] => {
@@ -1013,14 +1092,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const transactions: TransactionRecord[] = useMemo(() => payments.map((p) => {
     const total = Number(p.amount);
-    const subtotal = Math.round(total / 1.155);
-    const tax = total - subtotal;
     const orderItems: OrderItemSummary[] = (p.orders?.order_items || []).map((i: any) => ({
       name: i.product_name,
       quantity: i.quantity,
       price: Number(i.unit_price),
       notes: i.note || undefined,
     }));
+    const calcSubtotal = orderItems.reduce((acc, i) => acc + (i.price * i.quantity), 0);
+    const subtotal = calcSubtotal > 0 ? calcSubtotal : Math.round(total / 1.155);
+    const diff = Math.max(0, total - subtotal);
+    let serviceFee = 0;
+    let tax = 0;
+    if (diff > 0) {
+      // Jika diff mendekati 15% atau lebih dari subtotal, berarti mencakup service fee (5%) dan PB1 (10%)
+      if (diff >= Math.round(subtotal * 0.12)) {
+        serviceFee = Math.round(subtotal * 0.05);
+        tax = diff - serviceFee;
+      } else {
+        tax = diff;
+        serviceFee = 0;
+      }
+    }
     const tableNum = pad(p.orders?.table_sessions?.tables?.table_number ?? '?');
     const custName = p.orders?.table_sessions?.customer_name || 'Pelanggan';
     const guestCount = p.orders?.table_sessions?.guest_count || 1;
@@ -1037,8 +1129,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       guestCount,
       itemCount: orderItems.reduce((a, i) => a + i.quantity, 0) || 1,
       items: orderItems.length > 0 ? orderItems : [{ name: 'Menu Pesanan Restoran', quantity: 1, price: subtotal }],
-      subtotal: orderItems.length > 0 ? orderItems.reduce((a, i) => a + (i.price * i.quantity), 0) : subtotal,
-      serviceFee: Math.round(subtotal * 0.05),
+      subtotal,
+      serviceFee,
       tax,
       total,
       requestedAt: hhmmColon(p.paid_at),
@@ -1070,31 +1162,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } as TransactionRecord;
   }), [payments]);
 
-  // Sync payments from DB into recent receipts with deduplication
-  useEffect(() => {
-    if (!payments.length) return;
+  // recentReceipts murni 100% diturunkan dari transaksi pembayaran Supabase
+  const recentReceipts: BillItem[] = useMemo(() => {
+    const map = new Map<string, BillItem>();
     const dbReceipts: BillItem[] = transactions.map((t) => t.billData).filter(Boolean) as BillItem[];
-    setRecentReceipts((local) => {
-      const map = new Map<string, BillItem>();
-      local.forEach((r) => {
-        const key = r.sessionId ? `sess-${r.sessionId}` : `bill-${r.billNumber}`;
-        map.set(key, r);
-      });
-      dbReceipts.forEach((r) => {
-        const key = r.sessionId ? `sess-${r.sessionId}` : `bill-${r.billNumber}`;
-        if (!map.has(key)) {
-          map.set(key, r);
-        }
-      });
-      const combined = Array.from(map.values()).slice(0, 50);
-      try {
-        localStorage.setItem('rg_recent_receipts', JSON.stringify(combined));
-      } catch {
-        // ignore
-      }
-      return combined;
+    dbReceipts.forEach((r) => {
+      const key = r.sessionId ? `sess-${r.sessionId}` : `bill-${r.billNumber}`;
+      map.set(key, r);
     });
-  }, [payments, transactions]);
+    // Utamakan inMemoryReceipts yang dicatat langsung saat kasir menyelesaikan checkout sesi aktif
+    inMemoryReceipts.forEach((r) => {
+      const key = r.sessionId ? `sess-${r.sessionId}` : `bill-${r.billNumber}`;
+      map.set(key, r);
+    });
+    return Array.from(map.values()).slice(0, 50);
+  }, [transactions, inMemoryReceipts]);
 
   const lowStockIngredients = rawIngredients.filter((i) => i.currentStock <= i.minimumStock);
 
@@ -1113,11 +1195,63 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await refresh();
     return true;
   };
-  const updateTable = async (t: TableItem) => {
-    await run(
-      supabase.from('tables').update({ table_number: parseInt(t.number, 10) }).eq('table_id', t.dbId),
-      `Pengaturan Meja ${t.number} berhasil diperbarui`
-    );
+  const updateTable = async (t: TableItem, newStatus?: TableStatus): Promise<boolean> => {
+    try {
+      const num = parseInt(t.number, 10);
+      if (t.dbId && !isNaN(num)) {
+        const { error: tErr } = await supabase.from('tables').update({ table_number: num }).eq('table_id', t.dbId);
+        if (tErr) {
+          showToast('Gagal update nomor meja: ' + tErr.message, 'warning');
+          return false;
+        }
+      }
+
+      const targetStatus = newStatus || t.status;
+      if (t.dbId) {
+        if (targetStatus === 'kosong') {
+          // Tutup sesi aktif jika ada
+          const { error: sErr } = await supabase
+            .from('table_sessions')
+            .update({ closed_at: new Date().toISOString() })
+            .eq('table_id', t.dbId)
+            .is('closed_at', null);
+          if (sErr) {
+            showToast('Gagal mengubah status meja: ' + sErr.message, 'warning');
+            return false;
+          }
+        } else if (targetStatus === 'terisi') {
+          // Cek apakah sudah ada sesi aktif
+          const { data: existing } = await supabase
+            .from('table_sessions')
+            .select('session_id')
+            .eq('table_id', t.dbId)
+            .is('closed_at', null)
+            .maybeSingle();
+
+          if (!existing) {
+            const { error: insErr } = await supabase
+              .from('table_sessions')
+              .insert({
+                table_id: t.dbId,
+                guest_count: 1,
+                customer_name: 'Pelanggan',
+                is_takeaway: false,
+              });
+            if (insErr) {
+              showToast('Gagal membuat sesi aktif: ' + insErr.message, 'warning');
+              return false;
+            }
+          }
+        }
+      }
+
+      await refresh();
+      showToast(`Pengaturan Meja ${t.number} berhasil diperbarui`, 'success');
+      return true;
+    } catch (err: any) {
+      showToast('Error update meja: ' + (err?.message || 'Unknown error'), 'warning');
+      return false;
+    }
   };
   const addTable = async (tableNumber: number, _capacity?: number, _area?: string) => {
     return await run(
@@ -1147,18 +1281,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return null;
     }
 
-    await loadMasterData();
-    showToast('QR Code Meja berhasil di-generate ulang!', 'success');
+    const newUrl = tableUrl(newToken);
 
-    const updated = tables.find((t) => t.dbId === tableId);
-    if (updated) {
-      return {
-        ...updated,
-        qrToken: newToken,
-        qrUrl: tableUrl(newToken),
-      };
-    }
-    return null;
+    // 1. Update rawTables seketika agar seluruh komponen UI & tabel langsung render token baru
+    setRawTables((prev) =>
+      prev.map((t) => (t.table_id === tableId ? { ...t, qr_token: newToken } : t))
+    );
+
+    // 2. Buat objek data meja yang sudah diperbarui
+    const existing = tables.find((t) => t.dbId === tableId);
+    const updatedItem: TableItem = existing
+      ? {
+          ...existing,
+          qrToken: newToken,
+          qrCodeId: `RG-M${existing.number}`,
+          qrUrl: newUrl,
+        }
+      : {
+          id: `tbl-${tableId}`,
+          dbId: tableId,
+          number: String(tableId),
+          capacity: 4,
+          status: 'kosong',
+          statusLabel: 'Tersedia',
+          area: 'Ruang Restoran',
+          qrCodeId: `RG-M${tableId}`,
+          qrToken: newToken,
+          qrUrl: newUrl,
+        };
+
+    // 3. Jika modal QR sedang aktif menampilkan meja ini, update secara reaktif
+    setQrModalTable((current) => (current && current.dbId === tableId ? updatedItem : current));
+
+    // 4. Refresh master data di database
+    loadMasterData();
+
+    showToast(`QR Code Meja ${updatedItem.number} berhasil diperbarui!`, 'success');
+    return updatedItem;
   };
   const clearTableSession = async (tableNumberOrSessionId: string | number) => {
     const target = tables.find((t) => t.number === String(tableNumberOrSessionId) || t.sessionId === Number(tableNumberOrSessionId));
@@ -1168,14 +1327,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await supabase.from('table_sessions').update({ closed_at: new Date().toISOString() }).eq('session_id', targetSessionId);
       } catch {}
       setSessions((prev) => prev.filter((s) => s.session_id !== targetSessionId));
-      try {
-        const stored = localStorage.getItem('rg_mock_sessions_v2');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          const updated = parsed.filter((s: any) => s.session_id !== targetSessionId);
-          localStorage.setItem('rg_mock_sessions_v2', JSON.stringify(updated));
-        }
-      } catch {}
     }
     showToast(`Meja ${target?.number || tableNumberOrSessionId} berhasil dikosongkan`, 'success');
   };
@@ -1189,15 +1340,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await supabase.from('table_sessions').update({ closed_at: new Date().toISOString() }).eq('session_id', targetSessionId);
       } catch {}
       setSessions((prev) => prev.filter((s) => s.session_id !== targetSessionId));
-
-      try {
-        const stored = localStorage.getItem('rg_mock_sessions_v2');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          const updated = parsed.filter((s: any) => s.session_id !== targetSessionId);
-          localStorage.setItem('rg_mock_sessions_v2', JSON.stringify(updated));
-        }
-      } catch {}
     }
 
     showToast(`Pesanan Meja ${target?.number || tableNumberOrSessionId} berhasil dibatalkan`, 'success');
@@ -1250,37 +1392,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }).filter((s) => (s.orders || []).length > 0);
     });
 
-    // 2. Sinkronisasi localStorage rg_mock_sessions_v2
-    try {
-      const stored = localStorage.getItem('rg_mock_sessions_v2');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        const updated = parsed.map((s: any) => {
-          if (s.session_id !== targetSessionId) return s;
-          let itemHandled = false;
-          const updatedOrders = (s.orders || []).map((o: any) => {
-            if (itemHandled) return o;
-            const items = o.order_items || [];
-            const matchIndex = items.findIndex((it: any) => it.product_name === item.name);
-            if (matchIndex === -1) return o;
-            itemHandled = true;
-            const targetIt = items[matchIndex];
-            const remainingQty = targetIt.quantity - cancelQty;
-            if (remainingQty > 0) {
-              const newItems = [...items];
-              newItems[matchIndex] = { ...targetIt, quantity: remainingQty };
-              return { ...o, order_items: newItems };
-            } else {
-              return { ...o, order_items: items.filter((_: any, idx: number) => idx !== matchIndex) };
-            }
-          }).filter((o: any) => (o.order_items || []).length > 0);
-          return { ...s, orders: updatedOrders };
-        }).filter((s: any) => (s.orders || []).length > 0);
-        localStorage.setItem('rg_mock_sessions_v2', JSON.stringify(updated));
-      }
-    } catch {}
-
-    // 3. Supabase async sync jika ada item_id
+    // 2. Supabase sync jika ada item_id
     try {
       if (item.orderItemId) {
         const remainingQty = item.quantity - cancelQty;
@@ -1290,6 +1402,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           await supabase.from('order_items').delete().eq('order_item_id', item.orderItemId);
         }
       }
+      await refreshDynamic();
     } catch {}
 
     const actionDesc = cancelQty >= item.quantity ? `Semua (${item.quantity}×) ${item.name} berhasil dibatalkan` : `${cancelQty}× ${item.name} berhasil dihapus`;
@@ -1346,154 +1459,137 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const finalKitchenNote = kitchenGeneralNote.trim();
 
-    let success = false;
+    // 1. Dapatkan atau buat sesi aktif di database Supabase
+    let activeSessionId: number | null = null;
 
-    // 1. Coba RPC jika pesanan santap di tempat dengan meja fisik terdaftar di Supabase
-    if (!isTakeaway && tbl?.dbId) {
-      try {
-        const { data, error } = await supabase.rpc('staff_place_order', {
-          p_table_id: tbl.dbId,
-          p_guests: orderGuestCount || 1,
-          p_customer: targetCustomerName,
-          p_note: finalKitchenNote,
-          p_draft: draft,
-          p_items: cartItems.map((c) => ({ id: c.menuItem.dbId, qty: c.quantity, note: c.notes })),
-        });
-        if (!error && !data?.error) {
-          success = true;
-        }
-      } catch {
-        // lanjut ke direct insert fallback
+    if (isTakeaway) {
+      // Meja Takeaway di Supabase adalah table_id 14 (table_number 0)
+      const takeawayTable = rawTables.find((t) => t.table_number === 0 || t.area?.toLowerCase().includes('takeaway'));
+      const takeawayTableId = takeawayTable ? takeawayTable.table_id : 14;
+
+      const { data: newSess, error: sessErr } = await supabase
+        .from('table_sessions')
+        .insert({
+          table_id: takeawayTableId,
+          guest_count: 1,
+          customer_name: targetCustomerName,
+          is_takeaway: true,
+          takeaway_queue: queueLabel,
+        })
+        .select('session_id')
+        .single();
+
+      if (sessErr || !newSess) {
+        showToast('Gagal membuat sesi pesanan di Supabase: ' + (sessErr?.message || 'Error'), 'warning');
+        return false;
       }
+      activeSessionId = newSess.session_id;
+    } else if (tbl?.dbId) {
+      // Cari sesi terbuka di meja ini
+      const { data: openSess } = await supabase
+        .from('table_sessions')
+        .select('session_id')
+        .eq('table_id', tbl.dbId)
+        .is('closed_at', null)
+        .maybeSingle();
 
-      // 2. Fallback direct insert jika RPC belum ada di remote Supabase
-      if (!success) {
-        try {
-          let activeSessionId = tbl.sessionId;
-          if (!activeSessionId) {
-            const { data: openSess } = await supabase
-              .from('table_sessions')
-              .select('session_id')
-              .eq('table_id', tbl.dbId)
-              .is('closed_at', null)
-              .maybeSingle();
-
-            if (openSess) {
-              activeSessionId = openSess.session_id;
-            } else {
-              const { data: newSess } = await supabase
-                .from('table_sessions')
-                .insert({
-                  table_id: tbl.dbId,
-                  guest_count: orderGuestCount || 1,
-                  customer_name: targetCustomerName,
-                })
-                .select('session_id')
-                .single();
-              if (newSess) {
-                activeSessionId = newSess.session_id;
-              }
-            }
-          }
-
-          if (activeSessionId) {
-            const orderNumber = `P${Date.now().toString().slice(-4)}`;
-            const { data: createdOrder, error: ordErr } = await supabase
-              .from('orders')
-              .insert({
-                order_number: orderNumber,
-                session_id: activeSessionId,
-                order_source: 'staff',
-                order_status: draft ? 'draft' : 'submitted',
-                total,
-                customer_name: targetCustomerName,
-                note: finalKitchenNote || '',
-              })
-              .select('order_id, order_number')
-              .single();
-
-            if (!ordErr && createdOrder) {
-              success = true;
-              const itemsPayload = cartItems
-                .filter((c) => c.menuItem.dbId)
-                .map((c) => ({
-                  order_id: createdOrder.order_id,
-                  product_id: c.menuItem.dbId,
-                  product_name: c.menuItem.name,
-                  unit_price: c.menuItem.price,
-                  quantity: c.quantity,
-                  subtotal: c.menuItem.price * c.quantity,
-                  note: c.notes || null,
-                }));
-              if (itemsPayload.length > 0) {
-                await supabase.from('order_items').insert(itemsPayload);
-              }
-            }
-          }
-        } catch (e) {
-          console.warn('Direct order insert fallback encountered issue, fallback to reactive local order state', e);
+      if (openSess) {
+        activeSessionId = openSess.session_id;
+        if (targetCustomerName) {
+          await supabase.from('table_sessions').update({ customer_name: targetCustomerName }).eq('session_id', openSess.session_id);
         }
+      } else {
+        const { data: newSess, error: sessErr } = await supabase
+          .from('table_sessions')
+          .insert({
+            table_id: tbl.dbId,
+            guest_count: orderGuestCount || 1,
+            customer_name: targetCustomerName,
+            is_takeaway: false,
+          })
+          .select('session_id')
+          .single();
+
+        if (sessErr || !newSess) {
+          showToast('Gagal membuat sesi meja di Supabase: ' + (sessErr?.message || 'Error'), 'warning');
+          return false;
+        }
+        activeSessionId = newSess.session_id;
       }
     }
 
-    // 3. Update reactive local sessions state agar UI langsung update seketika tanpa error
-    const newOrderId = Date.now();
-    const newOrderNumber = `P${String(newOrderId).slice(-5)}`;
-    const newOrderItems = cartItems.map((c, idx) => ({
-      order_item_id: newOrderId + idx,
-      product_id: c.menuItem.dbId || idx + 1,
+    if (!activeSessionId) {
+      showToast('Gagal memvalidasi sesi meja di database', 'warning');
+      return false;
+    }
+
+    // 2. Buat Order di tabel `orders` Supabase (order_source: 'staff')
+    const now = new Date();
+    const yy = String(now.getFullYear()).slice(-2);
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const dateCode = `${yy}${mm}${dd}`;
+    const seq = String(activeSessionId).slice(-3).padStart(3, '0');
+    const baseOrderNumber = isTakeaway ? `TA-${dateCode}-${seq}` : `DIN-${dateCode}-${seq}`;
+
+    // Cek jumlah pesanan yang sudah ada di sesi ini untuk penomoran pesan tambahan unik
+    const { count: existingOrdersCount } = await supabase
+      .from('orders')
+      .select('order_id', { count: 'exact', head: true })
+      .eq('session_id', activeSessionId);
+
+    let orderNumber = baseOrderNumber;
+    if (existingOrdersCount && existingOrdersCount > 0) {
+      orderNumber = `${baseOrderNumber}-${existingOrdersCount + 1}`;
+    }
+
+    const { data: duplicateCheck } = await supabase
+      .from('orders')
+      .select('order_id')
+      .eq('order_number', orderNumber)
+      .maybeSingle();
+
+    if (duplicateCheck) {
+      const randSuffix = Math.floor(10 + Math.random() * 90);
+      orderNumber = `${orderNumber}-${randSuffix}`;
+    }
+
+    const { data: createdOrder, error: ordErr } = await supabase
+      .from('orders')
+      .insert({
+        session_id: activeSessionId,
+        order_number: orderNumber,
+        order_source: 'staff',
+        order_status: draft ? 'draft' : 'submitted',
+        total,
+        note: finalKitchenNote || (isTakeaway ? '[BAWA PULANG]' : null),
+        created_by: currentUser?.id && currentUser.id.length === 36 ? currentUser.id : null,
+      })
+      .select('order_id, order_number')
+      .single();
+
+    if (ordErr || !createdOrder) {
+      showToast('Gagal menyimpan pesanan di Supabase: ' + (ordErr?.message || 'Error'), 'warning');
+      return false;
+    }
+
+    // 3. Masukkan item pesanan ke tabel `order_items` Supabase
+    const itemsPayload = cartItems.map((c) => ({
+      order_id: createdOrder.order_id,
+      product_id: c.menuItem.dbId || Number(c.menuItem.id),
       product_name: c.menuItem.name,
       unit_price: c.menuItem.price,
       quantity: c.quantity,
-      note: c.notes || '',
+      note: c.notes || null,
     }));
 
-    const newOrderObj = {
-      order_id: newOrderId,
-      order_number: newOrderNumber,
-      order_status: draft ? 'draft' : 'submitted',
-      order_source: 'staff',
-      total,
-      note: finalKitchenNote,
-      created_at: new Date().toISOString(),
-      profiles: { full_name: currentUser.name || 'Kasir' },
-      order_items: newOrderItems,
-    };
-
-    setSessions((prev) => {
-      if (isTakeaway) {
-        return [...prev, {
-          session_id: newOrderId,
-          table_id: 0,
-          is_takeaway: true,
-          takeaway_queue: queueLabel,
-          customer_name: targetCustomerName,
-          guest_count: 1,
-          opened_at: new Date().toISOString(),
-          orders: [newOrderObj],
-        }];
+    if (itemsPayload.length > 0) {
+      const { error: itemsErr } = await supabase.from('order_items').insert(itemsPayload);
+      if (itemsErr) {
+        showToast('Gagal menyimpan rincian menu: ' + itemsErr.message, 'warning');
+        return false;
       }
-
-      if (!tbl) return prev;
-      const existing = prev.find((s) => s.table_id === tbl.dbId);
-      if (existing) {
-        return prev.map((s) => (s.table_id === tbl.dbId ? {
-          ...s,
-          customer_name: targetCustomerName,
-          guest_count: orderGuestCount,
-          orders: [...(s.orders || []), newOrderObj],
-        } : s));
-      } else {
-        return [...prev, {
-          session_id: newOrderId,
-          table_id: tbl.dbId,
-          customer_name: targetCustomerName,
-          guest_count: orderGuestCount,
-          opened_at: new Date().toISOString(),
-          orders: [newOrderObj],
-        }];
-      }
-    });
+    }
 
     if (!draft) {
       setCartItems([]);
@@ -1505,20 +1601,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     showToast(
       draft
-        ? `Draf pesanan ${isTakeaway ? queueLabel : `Meja ${formattedTableLabel}`} disimpan`
-        : `Pesanan ${isTakeaway ? queueLabel : `Meja ${formattedTableLabel}`} sukses dikirim ke Kitchen!`,
+        ? `Draf pesanan ${isTakeaway ? queueLabel : `Meja ${formattedTableLabel}`} disimpan ke database`
+        : `Pesanan ${isTakeaway ? queueLabel : `Meja ${formattedTableLabel}`} sukses tersimpan di database & terkirim ke Kitchen!`,
       draft ? 'info' : 'success'
     );
 
-    refresh().catch(() => {});
+    await refreshDynamic();
     return true;
   };
   const sendOrderToKitchen = async () => submitStaffOrder(false);
   const saveDraftOrder = async () => submitStaffOrder(true);
 
   // ---------- aksi: pembayaran ----------
-  // DESIGN.md §6.1: Toast sukses, struk, perubahan state hanya setelah RPC berhasil.
-  // DESIGN.md §6.2: Tidak ada pembaruan optimistik untuk uang atau status order.
   const settlePayment = async (
     billId: string,
     method: PayMethod | 'Split Payment',
@@ -1531,27 +1625,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const tendered = amountTendered || target.total;
     const change = Math.max(0, tendered - target.total);
 
-    // 1. Eksekusi pembayaran ke database TERLEBIH DAHULU (jika terdaftar di DB session)
-    if (typeof target.sessionId === 'number' && target.sessionId < 1000000000) {
-      try {
-        if (method !== 'Split Payment') {
-          const { data, error } = await supabase.rpc('pay_session', {
-            p_session: target.sessionId,
-            p_method: METHOD_TO_DB[method as PayMethod] || 'cash',
-            p_received: tendered,
-          });
-          if (error || data?.error) {
-            showToast(error?.message || data?.error || 'Gagal memproses pembayaran', 'warning');
-            return;
-          }
-        }
-      } catch (e) {
-        showToast('Koneksi bermasalah, pembayaran gagal. Coba lagi.', 'warning');
+    // Cari order_id yang valid dari database untuk sesi ini
+    const sessObj = sessions.find((s) => s.session_id === target.sessionId);
+    const validOrder = sessObj?.orders?.find((o: any) => o.order_status !== 'draft') || sessObj?.orders?.[0];
+
+    // 1. Simpan Pembayaran Langsung ke Tabel `payments` Supabase
+    if (validOrder) {
+      const nowIso = new Date().toISOString();
+      const dbMethod = METHOD_TO_DB[method as PayMethod] || 'cash';
+      const yy = String(new Date().getFullYear()).slice(-2);
+      const mm = String(new Date().getMonth() + 1).padStart(2, '0');
+      const dd = String(new Date().getDate()).padStart(2, '0');
+      const seq = String(validOrder.order_id).slice(-4).padStart(4, '0');
+      const trxCode = `TRX-${yy}${mm}${dd}-${seq}`;
+
+      const { error: payErr } = await supabase.from('payments').insert({
+        transaction_code: trxCode,
+        order_id: validOrder.order_id,
+        method: dbMethod,
+        amount: target.total,
+        cash_received: tendered,
+        change_amount: change,
+        status: 'paid',
+        paid_at: nowIso,
+        confirmed_by: currentUser?.id && currentUser.id.length === 36 ? currentUser.id : null,
+      });
+      if (payErr) {
+        showToast('Gagal mencatat pembayaran di database: ' + payErr.message, 'warning');
         return;
       }
     }
 
-    // 2. SETELAH DB confirm berhasil, baru update state lokal
+    // 2. Tandai pesanan sebagai served dan tutup sesi di database
+    if (target.sessionId) {
+      await Promise.all([
+        supabase
+          .from('orders')
+          .update({ order_status: 'served', served_at: new Date().toISOString() })
+          .eq('session_id', target.sessionId),
+        supabase
+          .from('table_sessions')
+          .update({ closed_at: new Date().toISOString() })
+          .eq('session_id', target.sessionId),
+      ]);
+    }
 
     // Hitung porsi tunai untuk update laci kasir
     let cashAdded = 0;
@@ -1593,8 +1710,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setReceiptModalData(paidBill);
     setSelectedBillId('');
 
-    // Hapus session dari active sessions lokal
-    setSessions((prev) => prev.filter((s) => s.session_id !== target.sessionId));
+    // Segarkan data dari Supabase
+    await refreshDynamic();
 
     showToast(`Pembayaran ${target.isTakeaway ? target.tableNumber : `Meja ${target.tableNumber}`} LUNAS via ${method}!`, 'success');
   };
@@ -1602,165 +1719,107 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ---------- aksi: dapur ----------
 
   const advanceTicketStatus = async (ticketId: string) => {
-    const rawOrderId = ticketId.replace('-food', '').replace('-drink', '');
-
-    // Optimistic update pakai status DB yang valid: submitted → preparing → ready → served
-    setSessions((prev) => prev.map((s) => ({
-      ...s,
-      orders: (s.orders || []).map((o: any) => {
-        if (String(o.order_id) !== String(rawOrderId)) return o;
-        const cur = o.order_status;
-        const nextStatus =
-          cur === 'submitted' ? 'preparing' :
-          cur === 'preparing' ? 'ready' :
-          'served';
-        return { ...o, order_status: nextStatus, ready_at: nextStatus === 'ready' ? new Date().toISOString() : o.ready_at };
-      }),
-    })));
+    const rawOrderId = Number(ticketId.replace('-food', '').replace('-drink', ''));
+    if (!rawOrderId) return;
 
     try {
-      const { data, error } = await supabase.rpc('advance_order', { p_order: Number(rawOrderId) });
-      if (error || data?.error) {
-        // Balik optimistic update jika RPC gagal — trigger refresh untuk sinkronisasi DB
-        showToast(error?.message || data?.error || 'Gagal memperbarui status pesanan', 'warning');
-        await refresh();
+      const { data: curOrd } = await supabase
+        .from('orders')
+        .select('order_status')
+        .eq('order_id', rawOrderId)
+        .single();
+
+      const cur = curOrd?.order_status || 'submitted';
+      const nextStatus =
+        cur === 'submitted' ? 'preparing' :
+        cur === 'preparing' ? 'ready' :
+        'served';
+
+      const { error } = await supabase
+        .from('orders')
+        .update({
+          order_status: nextStatus,
+          ready_at: nextStatus === 'ready' ? new Date().toISOString() : undefined,
+          served_at: nextStatus === 'served' ? new Date().toISOString() : undefined,
+        })
+        .eq('order_id', rawOrderId);
+
+      if (error) {
+        showToast('Gagal update status di database: ' + error.message, 'warning');
         return;
       }
+      await refreshDynamic();
+      showToast('Status pesanan diperbarui');
     } catch (e) {
       showToast('Koneksi bermasalah, coba lagi', 'warning');
-      await refresh();
-      return;
     }
-    showToast('Status pesanan diperbarui');
   };
 
   const completeKitchenTicket = async (ticketId: string) => {
-    const rawOrderId = ticketId.replace('-food', '').replace('-drink', '');
-
-    // Optimistic update langsung ke 'served' agar tiket tuntas seketika
-    setSessions((prev) => prev.map((s) => ({
-      ...s,
-      orders: (s.orders || []).map((o: any) => {
-        if (String(o.order_id) !== String(rawOrderId)) return o;
-        return {
-          ...o,
-          order_status: 'served',
-          ready_at: o.ready_at || new Date().toISOString(),
-          served_at: new Date().toISOString(),
-        };
-      }),
-    })));
+    const rawOrderId = Number(ticketId.replace('-food', '').replace('-drink', ''));
+    if (!rawOrderId) return;
 
     try {
-      // Loop advance_order hingga status mencapai 'served' (submitted -> preparing -> ready -> served)
-      for (let i = 0; i < 3; i++) {
-        const { data, error } = await supabase.rpc('advance_order', { p_order: Number(rawOrderId) });
-        if (error || data?.error) break;
-        if (data?.ok === 'served') break;
+      const { error } = await supabase
+        .from('orders')
+        .update({
+          order_status: 'served',
+          ready_at: new Date().toISOString(),
+          served_at: new Date().toISOString(),
+        })
+        .eq('order_id', rawOrderId);
+
+      if (error) {
+        showToast('Gagal update status di database: ' + error.message, 'warning');
+        return;
       }
+      await refreshDynamic();
+      showToast('Pesanan selesai disiapkan', 'success');
     } catch (e) {
-      console.warn('completeKitchenTicket error:', e);
-      await refresh();
-      return;
+      showToast('Koneksi bermasalah, coba lagi', 'warning');
     }
-    showToast('Pesanan selesai disiapkan', 'success');
   };
 
   const confirmCustomerOrder = async (ticketId: string) => {
-    const rawOrderId = ticketId.replace('-food', '').replace('-drink', '');
-
-    // Optimistic update ke 'submitted' (status DB yang valid setelah konfirmasi)
-    setSessions((prev) => prev.map((s) => ({
-      ...s,
-      orders: (s.orders || []).map((o: any) => {
-        if (String(o.order_id) === String(rawOrderId)) {
-          return { ...o, order_status: 'submitted' };
-        }
-        return o;
-      }),
-    })));
+    const rawOrderId = Number(ticketId.replace('-food', '').replace('-drink', ''));
+    if (!rawOrderId) return;
 
     try {
-      const stored = localStorage.getItem('rg_mock_sessions_v2');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        const updated = parsed.map((s: any) => ({
-          ...s,
-          orders: (s.orders || []).map((o: any) => (
-            String(o.order_id) === String(rawOrderId) ? { ...o, order_status: 'submitted' } : o
-          )),
-        }));
-        localStorage.setItem('rg_mock_sessions_v2', JSON.stringify(updated));
-      }
-    } catch {
-      /* ignore storage sync */
-    }
+      const { error } = await supabase
+        .from('orders')
+        .update({ order_status: 'submitted' })
+        .eq('order_id', rawOrderId);
 
-    try {
-      // Gunakan advance_order: pending → submitted adalah transisi yang didukung DB
-      const { data, error } = await supabase.rpc('advance_order', { p_order: Number(rawOrderId) });
-      if (error || data?.error) {
-        // Jangan reset error jika fallback session lokal aktif
-        if (Number(rawOrderId) < 1000000000) {
-          showToast(error?.message || data?.error || 'Gagal mengkonfirmasi pesanan', 'warning');
-          await refresh();
-          return;
-        }
-      }
-    } catch (e) {
-      if (Number(rawOrderId) < 1000000000) {
-        showToast('Koneksi bermasalah, coba lagi', 'warning');
-        await refresh();
+      if (error) {
+        showToast('Gagal konfirmasi pesanan di database: ' + error.message, 'warning');
         return;
       }
+      await refreshDynamic();
+      showToast('Pesanan pelanggan berhasil dikonfirmasi dan dikirim ke dapur!', 'success');
+    } catch (e) {
+      showToast('Koneksi bermasalah, coba lagi', 'warning');
     }
-    showToast('Pesanan pelanggan berhasil dikonfirmasi dan dikirim ke dapur!', 'success');
   };
 
   const rejectCustomerOrder = async (orderId: string) => {
-    const rawOrderId = orderId.replace('-food', '').replace('-drink', '');
-
-    // Optimistic: sembunyikan dari UI dulu
-    setSessions((prev) => prev.map((s) => ({
-      ...s,
-      orders: (s.orders || []).filter((o: any) => String(o.order_id) !== String(rawOrderId)),
-    })));
+    const rawOrderId = Number(orderId.replace('-food', '').replace('-drink', ''));
+    if (!rawOrderId) return;
 
     try {
-      const stored = localStorage.getItem('rg_mock_sessions_v2');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        const updated = parsed.map((s: any) => ({
-          ...s,
-          orders: (s.orders || []).filter((o: any) => String(o.order_id) !== String(rawOrderId)),
-        }));
-        localStorage.setItem('rg_mock_sessions_v2', JSON.stringify(updated));
-      }
-    } catch {
-      /* ignore storage sync */
-    }
-
-    try {
-      // Status 'cancelled' belum ada di DB schema; gunakan direct update sebagai fallback
-      // sampai RPC reject_order tersedia (DESIGN.md PU-02 / ARCHITECTURE.md D12)
       const { error } = await supabase
         .from('orders')
-        .update({ order_status: 'draft' })
-        .eq('order_id', Number(rawOrderId))
-        .eq('order_status', 'pending'); // Guard: hanya tolak jika masih pending
-      if (error && Number(rawOrderId) < 1000000000) {
-        showToast(error.message || 'Gagal menolak pesanan', 'warning');
-        await refresh();
+        .update({ order_status: 'cancelled' })
+        .eq('order_id', rawOrderId);
+
+      if (error) {
+        showToast('Gagal tolak pesanan di database: ' + error.message, 'warning');
         return;
       }
+      await refreshDynamic();
+      showToast('Pesanan self-order berhasil dibatalkan', 'info');
     } catch (e) {
-      if (Number(rawOrderId) < 1000000000) {
-        showToast('Koneksi bermasalah, coba lagi', 'warning');
-        await refresh();
-        return;
-      }
+      showToast('Koneksi bermasalah, coba lagi', 'warning');
     }
-    showToast('Pesanan self-order ditolak', 'info');
   };
 
   // ---------- aksi: menu ----------
@@ -1770,14 +1829,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const { data } = await supabase.from('categories').insert({ name }).select('category_id').single();
     return data?.category_id as number;
   };
-  const productPayload = async (i: MenuItem) => ({
-    name: i.name,
-    price: i.price,
-    is_available: i.isAvailable,
-    is_recommended: !!(i.isRecommended || i.isFavorite),
-    category_id: await categoryId(i.category),
-    image_url: i.image && !isPlaceholder(i.image) ? i.image : null,
-  });
+  const productPayload = async (i: MenuItem) => {
+    const isFav = Boolean(i.isFavorite || i.isRecommended);
+    return {
+      name: i.name,
+      price: i.price,
+      description: i.description || null,
+      is_available: i.isAvailable,
+      is_favorite: isFav,
+      is_recommended: isFav,
+      category_id: await categoryId(i.category),
+      image_url: i.image && !isPlaceholder(i.image) ? i.image : null,
+    };
+  };
   const updateMenuItem = async (item: MenuItem) => {
     await run(supabase.from('products').update({ ...(await productPayload(item)), updated_at: new Date().toISOString() }).eq('product_id', item.dbId),
       `Menu ${item.name} diperbarui`);

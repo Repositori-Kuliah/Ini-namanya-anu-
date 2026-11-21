@@ -7,6 +7,7 @@ export interface CustomDatePickerProps {
   max?: string;
   onChange: (dateIso: string) => void;
   className?: string;
+  align?: 'left' | 'right';
 }
 
 const MONTH_NAMES = [
@@ -31,6 +32,7 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
   max,
   onChange,
   className = '',
+  align = 'left',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'days' | 'months' | 'years'>('days');
@@ -154,14 +156,19 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
       {isOpen && (
         <>
           <div
-            className="fixed inset-0 z-40 bg-black/10 sm:hidden"
-            onClick={() => setIsOpen(false)}
+            className="fixed inset-0 z-40 bg-black/30 backdrop-blur-2xs sm:hidden"
+            onClick={() => {
+              setIsOpen(false);
+              setViewMode('days');
+            }}
           />
           <div
             role="dialog"
             aria-modal="true"
             aria-label="Kalender Pemilih Tanggal"
-            className="fixed inset-x-3 top-24 mx-auto sm:static sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 z-50 bg-white rounded-2xl p-4 shadow-xl border border-[#ebe8e3] w-full max-w-[320px] sm:w-76 animate-in fade-in zoom-in-95 duration-150"
+            className={`fixed inset-x-4 top-1/2 -translate-y-1/2 sm:translate-y-0 sm:inset-auto sm:top-full ${
+              align === 'right' ? 'sm:right-0 sm:left-auto' : 'sm:left-0 sm:right-auto'
+            } sm:mt-2 z-50 bg-white rounded-2xl p-4 shadow-2xl sm:shadow-xl border border-[#ebe8e3] w-auto max-w-[320px] mx-auto sm:mx-0 sm:w-76 animate-in fade-in zoom-in-95 duration-150 sm:absolute`}
           >
           {/* Header Kalender */}
           <div className="flex items-center justify-between pb-3 mb-2 border-b border-[#f0ede9]">

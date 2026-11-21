@@ -18,6 +18,7 @@ export const CheckoutView: React.FC = () => {
     confirmCustomerOrder,
     rejectCustomerOrder,
     pendingQrOrders,
+    storeSettings,
   } = useApp();
 
   const [queueTab, setQueueTab] = useState<'unpaid' | 'history'>('unpaid');
@@ -33,12 +34,27 @@ export const CheckoutView: React.FC = () => {
   const [showQrisCode, setShowQrisCode] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Buka detail tagihan di mobile jika ada bill yang dipilih secara eksplisit
+  // Fungsi tutup modal dan reset pilihan bill di mobile
+  const handleCloseMobileDetail = () => {
+    setMobileDetailOpen(false);
+    setSelectedBillId('');
+    setSelectedHistoryBill(null);
+  };
+
+  // Buka detail tagihan di mobile hanya saat pertama kali dibuka dari halaman lain (seperti tombol Bayar di Meja)
   useEffect(() => {
     if (selectedBillId && bills.some((b) => b.id === selectedBillId)) {
       setMobileDetailOpen(true);
     }
-  }, [selectedBillId, bills]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Bersihkan selectedBillId saat unmount agar saat kembali ke Checkout tidak otomatis membuka modal lama
+  useEffect(() => {
+    return () => {
+      setSelectedBillId('');
+    };
+  }, [setSelectedBillId]);
 
   const filteredBills = bills.filter(
     (b) =>
@@ -128,7 +144,7 @@ export const CheckoutView: React.FC = () => {
     setIsProcessing(true);
     setTimeout(() => {
       setIsProcessing(false);
-      setMobileDetailOpen(false);
+      handleCloseMobileDetail();
       settlePayment(currentBill.id, paymentMethod, cashTendered);
     }, 250);
   };
@@ -153,77 +169,6 @@ export const CheckoutView: React.FC = () => {
         </button>
       </div>
 
-      {/* ================= BANNER KONFIRMASI PESANAN QR (ANTI-ORDER FIKTIF) ================= */}
-      {pendingQrOrders && pendingQrOrders.length > 0 && (
-        <div className="p-4 rounded-2xl bg-amber-50/90 border-2 border-amber-300 shadow-xs space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-amber-600 text-white flex items-center justify-center shadow-xs">
-                <span className="material-symbols-outlined text-[18px]">notifications_active</span>
-              </div>
-              <div>
-                <h3 className="font-bold text-sm text-[#1c1c19]">
-                  Konfirmasi Pesanan QR Meja (Anti-Order Fiktif)
-                </h3>
-                <p className="text-[11px] text-[#524344]">
-                  Tamu memesan via HP. Periksa kehadiran tamu meja sebelum mengirim tiket ke Dapur &amp; Bar.
-                </p>
-              </div>
-            </div>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-200 text-amber-900 border border-amber-300">
-              {pendingQrOrders.length} Pesanan Baru
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {pendingQrOrders.map((ord) => (
-              <div key={ord.orderId} className="bg-white p-3.5 rounded-xl border border-amber-200 shadow-2xs flex flex-col justify-between space-y-2.5">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-[#3d1018] bg-[#fcf9f4] px-2 py-0.5 rounded border border-[#ebe8e3]">
-                      Meja {ord.tableNumber}
-                    </span>
-                    <span className="font-mono font-bold text-xs text-[#1c1c19]">
-                      Rp {ord.total.toLocaleString('id-ID')}
-                    </span>
-                  </div>
-                  <div className="text-xs text-[#524344] mt-1.5">
-                    <strong>{ord.customerName}</strong> <span className="text-[#847374] text-[10px]">({ord.orderNumber})</span>
-                  </div>
-                  <div className="text-[11px] text-[#847374] mt-1 line-clamp-2">
-                    {ord.items.map((i: any) => `${i.quantity}x ${i.product_name}`).join(', ')}
-                  </div>
-                  {ord.note && (
-                    <div className="text-[10px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded mt-1 italic">
-                      *{ord.note}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-2 pt-2 border-t border-[#ebe8e3]">
-                  <button
-                    type="button"
-                    onClick={() => confirmCustomerOrder(ord.orderId)}
-                    className="flex-1 py-1.5 px-3 bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
-                  >
-                    <span className="material-symbols-outlined text-[14px]">check</span>
-                    <span>Terima &amp; Masak</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => rejectCustomerOrder(ord.orderId)}
-                    className="py-1.5 px-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
-                    title="Tolak pesanan jika tamu fiktif/iseng"
-                  >
-                    <span>Tolak</span>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Grid Dua Kolom: KIRI (Antrean Tagihan) & KANAN (Detail Pembayaran) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* =========================================================================
@@ -237,7 +182,10 @@ export const CheckoutView: React.FC = () => {
           <div className="flex items-center bg-[#f0ede9] p-1 rounded-xl">
             <button
               type="button"
-              onClick={() => setQueueTab('unpaid')}
+              onClick={() => {
+                setQueueTab('unpaid');
+                handleCloseMobileDetail();
+              }}
               className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                 queueTab === 'unpaid'
                   ? 'bg-[#3d1018] text-white shadow-xs'
@@ -255,7 +203,10 @@ export const CheckoutView: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => setQueueTab('history')}
+              onClick={() => {
+                setQueueTab('history');
+                handleCloseMobileDetail();
+              }}
               className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                 queueTab === 'history'
                   ? 'bg-[#3d1018] text-white shadow-xs'
@@ -348,13 +299,11 @@ export const CheckoutView: React.FC = () => {
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="font-bold text-xs sm:text-sm text-[#1c1c19] truncate">
-                              {bill.customerName && bill.customerName !== 'Tamu' && bill.customerName !== 'Pelanggan Bungkus'
-                                ? bill.customerName
-                                : bill.billNumber}
+                              {bill.customerName || (bill.isTakeaway ? 'Pesanan Bawa Pulang' : `Tamu Meja ${bill.tableNumber}`)}
                             </span>
                           </div>
                           <p className="text-[11px] text-[#524344] mt-0.5 truncate">
-                            <span className="font-mono text-[#847374]">ID: {bill.billNumber}</span> · {bill.itemCount} menu
+                            <span className="font-mono text-[#847374]">ID: #{bill.billNumber}</span> · {bill.itemCount} menu
                           </p>
                         </div>
                       </div>
@@ -430,7 +379,7 @@ export const CheckoutView: React.FC = () => {
                             : bill.paymentMethod || 'Tunai').toUpperCase()}
                         </span>
                         <p className="text-[11px] text-[#847374] mt-0.5 font-mono">
-                          ID: {bill.billNumber}
+                          ID: #{bill.billNumber}
                         </p>
                       </div>
                     </div>
@@ -506,18 +455,22 @@ export const CheckoutView: React.FC = () => {
                   Rp {currentBill.subtotal.toLocaleString('id-ID')}
                 </span>
               </div>
-              <div className="flex justify-between text-[#524344]">
-                <span>Biaya Layanan (5%)</span>
-                <span className="font-medium text-[#1c1c19] tabular-nums">
-                  Rp {currentBill.serviceFee.toLocaleString('id-ID')}
-                </span>
-              </div>
-              <div className="flex justify-between text-[#524344]">
-                <span>Pajak Restoran PB1 (10%)</span>
-                <span className="font-medium text-[#1c1c19] tabular-nums">
-                  Rp {currentBill.tax.toLocaleString('id-ID')}
-                </span>
-              </div>
+              {currentBill.serviceFee > 0 && (
+                <div className="flex justify-between text-[#524344]">
+                  <span>{storeSettings?.serviceChargeName || 'Biaya Layanan'} ({storeSettings?.serviceChargeRate ?? 5}%)</span>
+                  <span className="font-medium text-[#1c1c19] tabular-nums">
+                    Rp {currentBill.serviceFee.toLocaleString('id-ID')}
+                  </span>
+                </div>
+              )}
+              {currentBill.tax > 0 && (
+                <div className="flex justify-between text-[#524344]">
+                  <span>{storeSettings?.taxName || 'Pajak Restoran PB1'} ({storeSettings?.taxRate ?? 10}%)</span>
+                  <span className="font-medium text-[#1c1c19] tabular-nums">
+                    Rp {currentBill.tax.toLocaleString('id-ID')}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between pt-2 border-t border-[#ebe8e3] items-baseline">
                 <span className="text-sm font-bold text-[#1c1c19]">TOTAL PEMBAYARAN</span>
                 <span className="text-2xl font-bold text-[#3d1018] tabular-nums">
@@ -718,7 +671,7 @@ export const CheckoutView: React.FC = () => {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setMobileDetailOpen(false)}
+                  onClick={handleCloseMobileDetail}
                   className="w-8 h-8 rounded-full bg-[#f0ede9] hover:bg-[#ebe8e3] flex items-center justify-center text-[#524344] cursor-pointer transition-colors"
                   aria-label="Tutup pembayaran"
                 >
@@ -765,18 +718,22 @@ export const CheckoutView: React.FC = () => {
                     Rp {currentBill.subtotal.toLocaleString('id-ID')}
                   </span>
                 </div>
-                <div className="flex justify-between text-[#524344]">
-                  <span>Biaya Layanan (5%)</span>
-                  <span className="font-medium text-[#1c1c19] tabular-nums">
-                    Rp {currentBill.serviceFee.toLocaleString('id-ID')}
-                  </span>
-                </div>
-                <div className="flex justify-between text-[#524344]">
-                  <span>Pajak Restoran PB1 (10%)</span>
-                  <span className="font-medium text-[#1c1c19] tabular-nums">
-                    Rp {currentBill.tax.toLocaleString('id-ID')}
-                  </span>
-                </div>
+                {currentBill.serviceFee > 0 && (
+                  <div className="flex justify-between text-[#524344]">
+                    <span>{storeSettings?.serviceChargeName || 'Biaya Layanan'} ({storeSettings?.serviceChargeRate ?? 5}%)</span>
+                    <span className="font-medium text-[#1c1c19] tabular-nums">
+                      Rp {currentBill.serviceFee.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                )}
+                {currentBill.tax > 0 && (
+                  <div className="flex justify-between text-[#524344]">
+                    <span>{storeSettings?.taxName || 'Pajak Restoran PB1'} ({storeSettings?.taxRate ?? 10}%)</span>
+                    <span className="font-medium text-[#1c1c19] tabular-nums">
+                      Rp {currentBill.tax.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between pt-2 border-t border-[#ebe8e3] items-baseline">
                   <span className="text-sm font-bold text-[#1c1c19]">TOTAL PEMBAYARAN</span>
                   <span className="text-2xl font-bold text-[#3d1018] tabular-nums">
@@ -822,14 +779,6 @@ export const CheckoutView: React.FC = () => {
                   >
                     <span className="material-symbols-outlined text-[16px]">print</span>
                     <span>Cetak Ulang Struk</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setMobileDetailOpen(false)}
-                    className="w-full py-2.5 rounded-xl bg-[#f0ede9] hover:bg-[#ebe8e3] text-[#1c1c19] text-xs font-semibold cursor-pointer transition-colors"
-                  >
-                    Kembali ke Daftar Riwayat
                   </button>
                 </div>
               ) : (
@@ -958,14 +907,6 @@ export const CheckoutView: React.FC = () => {
                           </span>
                         </>
                       )}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setMobileDetailOpen(false)}
-                      className="w-full py-2 rounded-lg text-xs font-semibold text-[#847374] hover:bg-[#f6f3ee] cursor-pointer transition-colors"
-                    >
-                      Batal &amp; Kembali ke Antrean
                     </button>
                   </div>
                 </div>

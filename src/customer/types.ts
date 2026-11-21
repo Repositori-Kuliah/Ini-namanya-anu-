@@ -66,7 +66,8 @@ export interface ActiveOrder {
   paymentMethod: 'qris' | 'cashier';
   paymentStatus: 'LUNAS' | 'MENUNGGU DI KASIR';
   orderNumbers?: string[];
-  statusStage: 1 | 2 | 3 | 4; // 1: Diterima, 2: Dimasak, 3: Siap Diantar, 4: Terhidang
+  statusStage: 0 | 1 | 2 | 3 | 4; // 0: Menunggu Konfirmasi, 1: Diterima Dapur, 2: Dimasak, 3: Siap Diantar, 4: Terhidang
+  rawStatus?: string;
   estimatedMinutes: string;
   subtotal: number;
   serviceFee: number;

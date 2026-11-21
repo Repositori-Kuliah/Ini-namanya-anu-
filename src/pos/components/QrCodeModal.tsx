@@ -18,9 +18,12 @@ export const QrCodeModal: React.FC = () => {
   }, [qrModalTable, closeQrModal]);
 
   useEffect(() => {
-    if (qrModalTable) QRCode.toDataURL(qrModalTable.qrUrl, { margin: 1, width: 320, color: { dark: '#3d1018', light: '#0000' } }).then(setQrSrc);
-    else setQrSrc('');
-  }, [qrModalTable]);
+    if (qrModalTable?.qrUrl) {
+      QRCode.toDataURL(qrModalTable.qrUrl, { margin: 1, width: 320, color: { dark: '#3d1018', light: '#0000' } }).then(setQrSrc);
+    } else {
+      setQrSrc('');
+    }
+  }, [qrModalTable?.qrUrl]);
 
   if (!qrModalTable) return null;
 

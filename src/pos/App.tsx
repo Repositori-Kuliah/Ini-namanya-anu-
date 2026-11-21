@@ -88,20 +88,29 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#fcf9f4] text-[#1c1c19] flex flex-col font-sans selection:bg-[#3d1018] selection:text-white">
-      {/* Mobile Shell (Hidden on md and larger) */}
-      <div className="block md:hidden min-h-screen flex flex-col">
+      {/* Mobile Shell Navigation (Hanya tampil di layar kecil/ponsel) */}
+      <div className="block md:hidden">
         <MobileHeader />
-        <main className="flex-1 pt-16 sm:pt-20 pb-20 bg-[#fcf9f4]">{renderCurrentView()}</main>
-        <MobileBottomNav />
       </div>
 
-      {/* Desktop Shell (Hidden on small mobile screens) */}
-      <div className="hidden md:flex min-h-screen">
+      {/* Desktop Shell Navigation (Hanya tampil di layar tablet/desktop) */}
+      <div className="hidden md:block">
         <DesktopSidebar />
-        <div className={`flex-1 ${desktopSidebarOpen ? 'pl-64' : 'pl-0'} flex flex-col min-w-0 transition-all duration-300`}>
-          <DesktopHeader />
-          <main className="flex-1 pt-16 bg-[#fcf9f4]">{renderCurrentView()}</main>
-        </div>
+        <DesktopHeader />
+      </div>
+
+      {/* SINGLE Main View Content: Hanya di-mount 1 kali agar tidak ada duplikasi efek, render ganda, atau audio bel bertumpuk */}
+      <main
+        className={`flex-1 bg-[#fcf9f4] transition-all duration-300 pt-16 sm:pt-20 pb-20 md:pb-6 ${
+          desktopSidebarOpen ? 'md:pl-64' : 'md:pl-0'
+        }`}
+      >
+        {renderCurrentView()}
+      </main>
+
+      {/* Mobile Bottom Navigation */}
+      <div className="block md:hidden">
+        <MobileBottomNav />
       </div>
 
       {/* Global Toast Notification (Top Center) */}
