@@ -264,7 +264,7 @@ export const KitchenDisplayView: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col w-full h-[calc(100vh-5rem)] md:h-[calc(100vh-4rem)] max-w-[1720px] mx-auto px-4 sm:px-6 pt-3 overflow-hidden">
+    <div className="flex flex-col w-full h-[calc(100dvh-7.5rem)] md:h-[calc(100vh-4.5rem)] max-w-[1720px] mx-auto px-4 sm:px-6 pt-3 overflow-hidden">
       {/* Top Bar: Pemilih Stasiun Dapur (Tetap di atas, tidak ikut ter-scroll) */}
       <div className="flex items-center justify-between pb-3 border-b border-[#ebe8e3] gap-3 shrink-0">
         {/* Tombol Toggle Audio Chime Dapur Independen Per-Perangkat */}
@@ -308,7 +308,7 @@ export const KitchenDisplayView: React.FC = () => {
       </div>
 
       {/* Grid Antrean Kartu Terpisah Per Stasiun - Area mandiri yang di-scroll */}
-      <div className="flex-1 min-h-0 overflow-y-auto pt-3 pb-8 custom-scrollbar">
+      <div className="flex-1 min-h-0 overflow-y-auto pt-3 pb-28 sm:pb-12 custom-scrollbar">
         {activeSubTickets.length === 0 ? (
           <div className="py-16 text-center rounded-2xl border border-dashed border-[#ebe8e3] bg-white/60 p-8 space-y-2">
             <h3 className="font-serif font-bold text-base text-[#1c1c19]">Tidak ada antrean pesanan</h3>

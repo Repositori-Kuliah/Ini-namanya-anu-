@@ -473,5 +473,24 @@ Berdasarkan audit komprehensif kaidah `antigravity-skills` (Clean Code, Aestheti
 
 ---
 
+## 21. Pembersihan Permanen Fitur Drawer & Optimalisasi Ergonomi Mobile (22 November 2026)
+
+- **Penghapusan Total Fitur Laci Kasir (*Cash Drawer*)**:
+  - Menghapus widget banner modal awal laci kasir (`Laci Kasir (Drawer): Modal • Tunai • Total Drawer`) secara menyeluruh dari `LaporanView.tsx`.
+  - Menghapus variabel dan opsi modular `enableDrawerCash` dan `drawerInitialCash` dari `storeSettings`, `AppContext.tsx`, dan `src/pos/types/index.ts` agar fitur ini tidak lagi diaktifkan atau dibuat ulang.
+- **Pelebaran Ruang Bawah (*Bottom Clearance*) Pantau Pesanan KDS (`KitchenDisplayView.tsx`)**:
+  - Menyesuaikan tinggi kontainer utama KDS pada layar ponsel (`h-[calc(100dvh-7.5rem)]`) dan memperlebar *bottom padding* area gulir dari `pb-8` menjadi `pb-28 sm:pb-12`.
+  - Tiket antrean terakhir dan tombol aksi *"Selesai Masak"* kini memiliki jarak pandang yang lapang dan tidak lagi tertutup atau terpotong oleh bilah navigasi bawah ponsel.
+- **Penerapan Sticky Search Bar & Eliminasi Wadah Gulir Kaku Menu POS (`PesananBaruView.tsx`)**:
+  - Mengubah baris Pencarian & Kategori menu menjadi **Sticky Header** (`sticky top-16 lg:top-20 z-20 bg-white/95 backdrop-blur-md`) yang menempel elegan tepat di bawah bilah atas saat layar digeser ke bawah.
+  - Menghapus pembungkus kaku `max-h-[calc(100vh-270px)] overflow-y-auto` pada daftar menu. Daftar menu kini mengalir bebas (*natural scrolling*) tanpa menimbulkan *double scrollbar* dan tanpa menyisakan ruang kosong (*empty void*) berlebih di bagian bawah layar.
+  - Jarak bawah katalog menu menyesuaikan secara adaptif (`pb-28` saat ada item di keranjang dan `pb-6` saat keranjang kosong).
+- **Simetri & Anti-Clipping Bilah Navigasi Bawah Ponsel (`Navigation.tsx` & `globals.css`)**:
+  - Mengubah distribusi tab navigasi bawah menjadi sistem proporsional (`w-full max-w-md mx-auto px-2 flex justify-around` dengan `flex-1 max-w-[64px]` dan label teks `truncate tracking-tight px-0.5`).
+  - Menghilangkan kesan terpotong (*clipped*) pada tab paling kanan ("Manajemen") di mode inspect element peramban, menghasilkan jarak tepi kiri dan kanan yang 100% seimbang dan simetris.
+  - Menerapkan `overflow-x: hidden; max-width: 100vw;` pada `html, body` di `globals.css` untuk mencegah pergeseran *subpixel* horizontal pada simulasi perangkat bergerak.
+
+---
+
 *Terakhir diperbarui: 22 November 2026*
 

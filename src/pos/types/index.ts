@@ -102,8 +102,6 @@ export interface StoreSettings {
   enableKitchenDisplay?: boolean;  // Alias kdsEnabled
   autoInventoryDeduction?: boolean;// Fitur stok bahan baku (on: sesuai stok, off: manual)
   enableInventoryTracking?: boolean; // Alias autoInventoryDeduction
-  enableDrawerCash?: boolean;      // Modular on/off modal awal laci kasir (default true)
-  drawerInitialCash?: number;      // Modal awal laci kasir (default Rp 200.000)
   enableTax?: boolean;             // Modular on/off Pajak Restoran PB1 (default true)
   taxName?: string;                // Nama label pajak (default "PB1 (Pajak Restoran)")
   taxRate?: number;                // Tarif pajak dalam persen (default 10)

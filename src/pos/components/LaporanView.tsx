@@ -18,8 +18,6 @@ export const LaporanView: React.FC = () => {
   const { transactions, showToast, openReceiptModal, storeSettings } = useApp();
   const todayStr = today();
 
-  const drawerModal = storeSettings.drawerInitialCash ?? 200000;
-
   const [startDate, setStartDate] = useState(todayStr);
   const [endDate, setEndDate] = useState(todayStr);
   const [methodFilter, setMethodFilter] = useState('Semua metode');
@@ -595,25 +593,6 @@ export const LaporanView: React.FC = () => {
               {startDate === endDate ? formatIDDate(startDate) : `${formatIDDate(startDate)} s/d ${formatIDDate(endDate)}`}
             </span>
           </div>
-
-          {/* Saldo Kas di Drawer Laci (Modular: disembunyikan jika enableDrawerCash false) */}
-          {storeSettings.enableDrawerCash !== false && (
-            <div className="flex items-center gap-3 bg-[#fcf9f4] px-3 py-1.5 rounded-xl border border-[#ebe8e3] text-xs">
-              <div className="flex items-center gap-1.5 text-[#524344]">
-                <span className="material-symbols-outlined text-[17px] text-[#994703]">point_of_sale</span>
-                <span className="font-semibold">Laci Kasir (Drawer):</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[#847374]">Modal: <strong className="text-[#1c1c19]">Rp {drawerModal.toLocaleString('id-ID')}</strong></span>
-                <span className="text-[#c5bcb5]">•</span>
-                <span className="text-[#847374]">Tunai: <strong className="text-[#994703]">+Rp {tunaiTotal.toLocaleString('id-ID')}</strong></span>
-                <span className="text-[#c5bcb5]">•</span>
-                <span className="bg-white px-2 py-0.5 rounded-md border border-[#ebe8e3] font-bold text-[#3d1018] tabular-nums">
-                  Total Drawer: Rp {(drawerModal + tunaiTotal).toLocaleString('id-ID')}
-                </span>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Desktop Table View (Tampil pada layar >= md) */}

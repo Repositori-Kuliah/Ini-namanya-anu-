@@ -229,7 +229,7 @@ export const MobileBottomNav: React.FC = () => {
         aria-label="Navigasi Bawah Ponsel"
         className="fixed bottom-0 inset-x-0 z-40 pb-safe bg-[#3d1018] border-t border-white/10 shadow-lg"
       >
-        <div className="flex justify-around items-center h-16 max-w-lg mx-auto px-1">
+        <div className="flex items-center justify-around h-16 w-full max-w-md mx-auto px-2">
           {navItems.map((item) => {
             const isDrawer = item.view === 'admin-drawer';
             const isActive =
@@ -251,7 +251,7 @@ export const MobileBottomNav: React.FC = () => {
                     setActiveView(item.view as AppView);
                   }
                 }}
-                className={`flex flex-col items-center justify-center gap-0.5 w-16 h-12 rounded-xl transition-all cursor-pointer ${
+                className={`flex-1 max-w-[64px] flex flex-col items-center justify-center gap-0.5 h-12 rounded-xl transition-all cursor-pointer ${
                   isActive
                     ? 'bg-[#58252c] text-white font-bold shadow-xs'
                     : 'text-[#ffdadc]/70 hover:text-white'
@@ -265,7 +265,9 @@ export const MobileBottomNav: React.FC = () => {
                 >
                   {item.icon}
                 </span>
-                <span className="text-[10px] leading-tight text-center">{item.label}</span>
+                <span className="text-[10px] leading-tight text-center tracking-tight truncate max-w-full px-0.5">
+                  {item.label}
+                </span>
               </button>
             );
           })}
