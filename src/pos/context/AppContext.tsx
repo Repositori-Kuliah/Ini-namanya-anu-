@@ -19,6 +19,7 @@ interface AppContextType {
   currentUser: StaffUser;
   currentRole: UserRole;
   setCurrentRole: (role: UserRole) => void;
+  updateCurrentUserName: (name: string) => void;
   isLoggedIn: boolean;
   authLoading: boolean;
   /** true setelah data pertama selesai dimuat dari database. */
@@ -630,6 +631,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentRoleState(u.role);
     setIsLoggedIn(true);
 
+    // Simpan timestamp sesi masuk jika belum ada (durasi maks. 24 jam)
+    if (typeof window !== 'undefined') {
+      try {
+        if (!localStorage.getItem('pos.session_login_time')) {
+          localStorage.setItem('pos.session_login_time', Date.now().toString());
+        }
+      } catch {}
+    }
+
     if (redirect) {
       setActiveView(homeView(u.role));
     } else {
@@ -646,6 +656,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let alive = true;
     supabase.auth.getSession().then(async ({ data }) => {
       const s = data.session;
+
+      // Evaluasi batas masa aktif sesi: 24 jam (86.400.000 ms)
+      const MAX_SESSION_DURATION_MS = 24 * 60 * 60 * 1000;
+      let isExpired = false;
+      if (typeof window !== 'undefined') {
+        try {
+          const sessionLoginTime = localStorage.getItem('pos.session_login_time');
+          if (sessionLoginTime && Date.now() - Number(sessionLoginTime) > MAX_SESSION_DURATION_MS) {
+            isExpired = true;
+            localStorage.removeItem('pos.session_login_time');
+          }
+        } catch {}
+      }
+
+      if (isExpired && s) {
+        await supabase.auth.signOut();
+        if (alive) {
+          setIsLoggedIn(false);
+          setCurrentUser(GUEST_USER);
+          setAuthLoading(false);
+        }
+        return;
+      }
+
       const u = s ? await loadProfile(s.user.id, s.user.email || '', s.user) : null;
       if (!alive) return;
       if (u) {
@@ -691,6 +725,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const quickMap: Record<string, string> = {
         admin: 'admin@rawongusti.test',
         'budi admin': 'admin@rawongusti.test',
+        'budi (admin)': 'admin@rawongusti.test',
         budi: 'admin@rawongusti.test',
         kasir: 'kasir@rawongusti.test',
         'dewi sartika': 'kasir@rawongusti.test',
@@ -757,6 +792,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (typeof window !== 'undefined') {
       try {
         sessionStorage.removeItem('rg_pos_active_view');
+        localStorage.removeItem('pos.session_login_time');
       } catch {}
     }
     seenRequests.current = null;
@@ -767,6 +803,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   // hanya admin & owner yang boleh "melihat sebagai" peran lain (pratinjau tampilan)
   const setCurrentRole = (r: UserRole) => { if (currentUser.role === 'admin' || currentUser.role === 'owner') setCurrentRoleState(r); };
+  const updateCurrentUserName = (name: string) => {
+    setCurrentUser((prev) => ({ ...prev, name }));
+  };
 
   // Status koneksi jaringan
   useEffect(() => {
@@ -888,16 +927,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         name: i.product_name, quantity: i.quantity, price: i.unit_price * i.quantity, notes: i.note || undefined })));
       const totalRaw = shown.reduce((a: number, o: any) => a + Number(o.total || 0), 0);
 
-      const statusLabel =
-        status === 'checkout'
-          ? 'Minta Bill'
-          : status === 'diproses'
-          ? 'Diproses'
-          : status === 'terkirim'
-          ? 'Terkirim'
-          : status === 'siap_diantar'
-          ? 'Siap Antar'
-          : 'Terisi';
+      const statusLabel = 'Terisi';
 
       return { ...base, status, statusLabel, name: s.customer_name || undefined, guestCount: s.guest_count,
         totalRaw, totalFormatted: rp(totalRaw), billId: `${status === 'draf' ? 'D' : 'B'}-${s.session_id}`, infoSubtitle: info, sessionId: s.session_id, items };
@@ -1890,7 +1920,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider value={{
-      currentUser, currentRole, setCurrentRole, isLoggedIn, authLoading, dataReady, login, logout,
+      currentUser, currentRole, setCurrentRole, updateCurrentUserName, isLoggedIn, authLoading, dataReady, login, logout,
       activeView, setActiveView, viewportMode, setViewportMode, outletName, setOutletName,
       tables, selectedTableId, setSelectedTableId, updateTable, addTable, deleteTable, rotateTableQr, clearTableSession, voidOrderItem, voidTableOrder,
       cartItems, orderType, setOrderType, takeawayNextQueue, orderTableNumber, setOrderTableNumber, orderSecondaryTables, setOrderSecondaryTables,

@@ -220,9 +220,8 @@ const KelolaMejaViewInner: React.FC = () => {
           <button
             type="button"
             onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+            className="inline-flex items-center px-3.5 py-2 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[16px]">add</span>
             <span>Tambah Meja</span>
           </button>
         </div>
@@ -298,16 +297,8 @@ const KelolaMejaViewInner: React.FC = () => {
                         {tbl.number}
                       </td>
                       <td className="py-2.5 px-4">
-                        <span
-                          className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                            isCheckout
-                              ? 'bg-[#ffdbc9] text-[#753400]'
-                              : isOccupied
-                              ? 'bg-[#58252c] text-white'
-                              : 'bg-[#f0ede9] text-[#524344]'
-                          }`}
-                        >
-                          {tbl.statusLabel || (isOccupied ? 'Terisi' : 'Tersedia')}
+                        <span className={`font-semibold text-xs ${isOccupied ? 'text-[#3d1018]' : 'text-[#847374]'}`}>
+                          {isOccupied ? 'Terisi' : 'Tersedia'}
                         </span>
                       </td>
                       <td className="py-2.5 px-4">
@@ -347,16 +338,8 @@ const KelolaMejaViewInner: React.FC = () => {
                           {tbl.number}
                         </span>
                       </div>
-                      <span
-                        className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                          isCheckout
-                            ? 'bg-[#ffdbc9] text-[#753400]'
-                            : isOccupied
-                            ? 'bg-[#58252c] text-white'
-                            : 'bg-[#f0ede9] text-[#524344]'
-                        }`}
-                      >
-                        {tbl.statusLabel || (isOccupied ? 'Terisi' : 'Tersedia')}
+                      <span className={`font-semibold text-xs ${isOccupied ? 'text-[#3d1018]' : 'text-[#847374]'}`}>
+                        {isOccupied ? 'Terisi' : 'Tersedia'}
                       </span>
                     </div>
                     <div className="text-xs text-[#524344] break-all pt-0.5">
@@ -423,19 +406,11 @@ const KelolaMejaViewInner: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex gap-2 pt-2 border-t border-[#ebe8e3]">
-              <button
-                type="button"
-                onClick={closeAddModal}
-                disabled={isAddingTables}
-                className="flex-1 py-2 rounded-lg bg-[#f0ede9] text-[#1c1c19] text-xs font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Batal
-              </button>
+            <div className="pt-2 border-t border-[#ebe8e3]">
               <button
                 type="submit"
                 disabled={isAddingTables}
-                className="flex-1 py-2 rounded-lg bg-[#3d1018] text-white text-xs font-bold hover:bg-[#58252c] cursor-pointer shadow-xs disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full py-2.5 rounded-xl bg-[#3d1018] text-white text-xs font-bold hover:bg-[#58252c] cursor-pointer shadow-xs disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {isAddingTables ? 'Menyimpan…' : 'Simpan Meja'}
               </button>

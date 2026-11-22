@@ -322,9 +322,8 @@ export const LaporanView: React.FC = () => {
           <button
             type="button"
             onClick={handleExportCSV}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold text-white bg-[#3d1018] hover:bg-[#58252c] transition-colors cursor-pointer shadow-xs"
+            className="inline-flex items-center px-3.5 py-2.5 rounded-xl text-xs font-bold text-white bg-[#3d1018] hover:bg-[#58252c] transition-colors cursor-pointer shadow-xs"
           >
-            <span className="material-symbols-outlined text-[16px]">table_chart</span>
             <span>Ekspor CSV</span>
           </button>
         </div>
@@ -422,16 +421,9 @@ export const LaporanView: React.FC = () => {
               type="button"
               disabled={isLoading}
               onClick={handleApplyFilter}
-              className="w-full py-1.5 px-3 bg-[#3d1018] hover:bg-[#58252c] text-white font-semibold rounded-lg text-xs transition cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+              className="w-full h-[34px] px-3 bg-[#3d1018] hover:bg-[#58252c] text-white font-bold rounded-lg text-xs transition-colors cursor-pointer flex items-center justify-center disabled:opacity-60"
             >
-              {isLoading ? (
-                <span>Memuat...</span>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined text-[15px]">filter_alt</span>
-                  <span>Terapkan Filter</span>
-                </>
-              )}
+              <span>{isLoading ? 'Memuat...' : 'Terapkan Filter'}</span>
             </button>
           </div>
         </div>
@@ -656,15 +648,7 @@ export const LaporanView: React.FC = () => {
                     <td className="py-2.5 px-3.5 font-medium text-[#1c1c19]">{trx.typeMeja}</td>
                     <td className="py-2.5 px-3 text-[#847374] text-[11px]">{trx.source}</td>
                     <td className="py-2.5 px-3">
-                      <span
-                        className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
-                          trx.method === 'Tunai'
-                            ? 'bg-amber-50 text-amber-900 border-amber-200'
-                            : trx.method === 'QRIS'
-                            ? 'bg-orange-50 text-orange-900 border-orange-200'
-                            : 'bg-blue-50 text-blue-900 border-blue-200'
-                        }`}
-                      >
+                      <span className="text-xs font-medium text-[#524344]">
                         {trx.method}
                       </span>
                     </td>
@@ -720,15 +704,7 @@ export const LaporanView: React.FC = () => {
                       <span className="font-semibold text-xs text-[#1c1c19]">{trx.code}</span>
                       <span className="text-[#847374] text-[11px] font-mono">• {trx.time} WIB</span>
                     </div>
-                    <span
-                      className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
-                        trx.method === 'Tunai'
-                          ? 'bg-amber-50 text-amber-900 border-amber-200'
-                          : trx.method === 'QRIS'
-                          ? 'bg-orange-50 text-orange-900 border-orange-200'
-                          : 'bg-blue-50 text-blue-900 border-blue-200'
-                      }`}
-                    >
+                    <span className="text-xs font-medium text-[#524344]">
                       {trx.method}
                     </span>
                   </div>

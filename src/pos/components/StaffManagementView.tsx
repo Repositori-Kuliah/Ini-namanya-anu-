@@ -4,29 +4,6 @@ import { StaffUser, UserRole } from '../types';
 import { supabase } from '../../lib/supabase';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) || 'http://localhost:3001';
-
-const callStaffApi = async (method: string, query: string, body?: unknown): Promise<{ data?: any; error?: string }> => {
-  const { data: sessionData } = await supabase.auth.getSession();
-  const token = sessionData.session?.access_token;
-  if (!token) return { error: 'Sesi berakhir, silakan login ulang.' };
-  try {
-    const res = await fetch(`${API_BASE}/api/admin/staff${query}`, {
-      method,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
-      },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) return { error: json.error ?? `Permintaan gagal (${res.status})` };
-    return { data: json };
-  } catch {
-    return { error: 'Tidak dapat terhubung ke server.' };
-  }
-};
-
 const formatLastLogin = (iso: string) =>
   `${new Date(iso).toLocaleString('id-ID', {
     day: '2-digit',
@@ -38,7 +15,7 @@ const formatLastLogin = (iso: string) =>
   })} WIB`;
 
 export const StaffManagementView: React.FC = () => {
-  const { showToast, currentUser } = useApp();
+  const { showToast, currentUser, updateCurrentUserName } = useApp();
   type Row = StaffUser & { active: boolean; lastLogin?: string };
   const [staffList, setStaffList] = useState<Row[]>([]);
   const [saving, setSaving] = useState(false);
@@ -81,27 +58,7 @@ export const StaffManagementView: React.FC = () => {
       }
     } catch { }
 
-    // 2. Fallback baca dari API Backend jika aktif
-    try {
-      const res = await callStaffApi('GET', '');
-      if (!res.error && res.data?.staff) {
-        const mapped: Row[] = res.data.staff.map((s: any) => ({
-          id: s.id,
-          name: s.full_name || 'Tanpa Nama',
-          email: s.username || s.email || '-',
-          role: (s.role === 'staff' ? 'cashier' : s.role) as UserRole,
-          avatar: '',
-          shift: '',
-          terminal: '',
-          active: s.is_active ?? true,
-          lastLogin: s.last_login ? formatLastLogin(s.last_login) : 'Belum pernah login',
-        }));
-        setStaffList(mapped);
-        return;
-      }
-    } catch { }
-
-    // 3. Jika database kosong, set daftar kosong (tanpa mock fallback)
+    // 2. Jika database kosong atau terjadi error, inisialisasi daftar kosong
     setStaffList([]);
   }, []);
 
@@ -190,15 +147,7 @@ export const StaffManagementView: React.FC = () => {
       return;
     }
 
-    // 2. Coba simpan via API backend jika ada
-    callStaffApi('POST', '', {
-      full_name: newName.trim(),
-      email: newEmail.trim().toLowerCase(),
-      password: newPassword,
-      role: newRole,
-    }).catch(() => { });
-
-    // 3. Update state lokal (Optimistic)
+    // 2. Update state lokal (Optimistic)
     setStaffList((prev) => [newStaffItem, ...prev]);
 
     setSaving(false);
@@ -223,10 +172,7 @@ export const StaffManagementView: React.FC = () => {
       await supabase.from('profiles').update({ is_active: nextActive }).eq('id', staf.id);
     } catch { }
 
-    // 2. Sync API
-    callStaffApi('PATCH', `?id=${encodeURIComponent(staf.id)}`, { is_active: nextActive }).catch(() => { });
-
-    // 3. Update state
+    // 2. Update state
     setStaffList((prev) => prev.map((s) => (s.id === staf.id ? { ...s, active: nextActive } : s)));
 
     showToast(`${staf.name} berhasil ${nextActive ? 'diaktifkan kembali' : 'dinonaktifkan'}`, 'info');
@@ -251,14 +197,7 @@ export const StaffManagementView: React.FC = () => {
       console.warn('Supabase delete error:', e);
     }
 
-    // 2. Sync API Backend
-    try {
-      await callStaffApi('DELETE', `?id=${encodeURIComponent(staf.id)}`);
-    } catch (e) {
-      console.warn('API delete error:', e);
-    }
-
-    // 3. Update state
+    // 2. Update state
     setStaffList((prev) => prev.filter((s) => s.id !== staf.id));
 
     setSaving(false);
@@ -298,7 +237,7 @@ export const StaffManagementView: React.FC = () => {
 
     setSaving(true);
 
-    // 1. Sync Supabase
+    // 1. Sync Supabase profiles table
     try {
       await supabase
         .from('profiles')
@@ -309,16 +248,28 @@ export const StaffManagementView: React.FC = () => {
           is_active: finalActive,
         })
         .eq('id', editingStaff.id);
-    } catch { }
+    } catch (e) {
+      console.warn('Update profiles error:', e);
+    }
 
-    // 2. Sync API
-    callStaffApi('PATCH', `?id=${encodeURIComponent(editingStaff.id)}`, {
-      full_name: editName.trim(),
-      email: editEmail.trim(),
-      role: finalRole,
-      is_active: finalActive,
-      ...(password ? { password } : {}),
-    }).catch(() => { });
+    // 2. Sync Auth User Metadata jika yang diedit adalah akun yang sedang aktif login
+    // Ini krusial agar saat relog (login ulang), metadata auth tidak menimpa kembali nama baru
+    if (
+      editingStaff.id === currentUser?.id ||
+      editingStaff.email?.toLowerCase() === currentUser?.email?.toLowerCase()
+    ) {
+      try {
+        await supabase.auth.updateUser({
+          data: {
+            full_name: editName.trim(),
+            role: finalRole,
+          },
+        });
+        updateCurrentUserName(editName.trim());
+      } catch (err) {
+        console.warn('Update auth user metadata error:', err);
+      }
+    }
 
     // 3. Update state
     setStaffList((prev) =>
@@ -348,9 +299,8 @@ export const StaffManagementView: React.FC = () => {
           <button
             type="button"
             onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer"
+            className="inline-flex items-center px-3.5 py-2 bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[16px]">person_add</span>
             <span>Tambah Akun Staf</span>
           </button>
         </div>
@@ -436,16 +386,7 @@ export const StaffManagementView: React.FC = () => {
                         <span className="font-bold text-[#1c1c19] block">{staf.name}</span>
                       </td>
                       <td className="py-3 px-4">
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${staf.role === 'owner'
-                            ? 'bg-amber-100 text-amber-900 border-amber-300'
-                            : staf.role === 'admin'
-                              ? 'bg-neutral-100 text-neutral-800 border-neutral-300'
-                              : staf.role === 'kitchen'
-                                ? 'bg-orange-50 text-orange-900 border-orange-200'
-                                : 'bg-[#ffdadc]/40 text-[#3d1018] border-[#ba1a1a]/25'
-                            }`}
-                        >
+                        <span className="text-xs font-semibold text-[#1c1c19]">
                           {staf.role === 'owner' ? 'Owner' : staf.role === 'admin' ? 'Admin' : staf.role === 'kitchen' ? 'Dapur' : 'Kasir'}
                         </span>
                       </td>
@@ -490,25 +431,12 @@ export const StaffManagementView: React.FC = () => {
                     <span className="font-bold text-sm text-[#1c1c19]">
                       {staf.name}
                     </span>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border ${
-                          staf.role === 'owner'
-                            ? 'bg-amber-100 text-amber-900 border-amber-300'
-                            : staf.role === 'admin'
-                            ? 'bg-neutral-100 text-neutral-800 border-neutral-300'
-                            : staf.role === 'kitchen'
-                            ? 'bg-orange-50 text-orange-900 border-orange-200'
-                            : 'bg-[#ffdadc]/40 text-[#3d1018] border-[#ba1a1a]/25'
-                        }`}
-                      >
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs font-semibold text-[#1c1c19]">
                         {staf.role === 'owner' ? 'Owner' : staf.role === 'admin' ? 'Admin' : staf.role === 'kitchen' ? 'Dapur' : 'Kasir'}
                       </span>
-                      <span
-                        className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                          staf.active ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-500'
-                        }`}
-                      >
+                      <span className="text-[#d7c2c2]">·</span>
+                      <span className={`text-xs font-medium ${staf.active ? 'text-emerald-700' : 'text-[#847374]'}`}>
                         {staf.active ? 'Aktif' : 'Nonaktif'}
                       </span>
                     </div>
@@ -614,13 +542,6 @@ export const StaffManagementView: React.FC = () => {
                   <option value="admin">Admin</option>
                   <option value="owner">Owner</option>
                 </select>
-              </div>
-
-              <div className="p-2.5 rounded-lg bg-[#fcf9f4] border border-[#ebe8e3] text-[11px] text-[#524344] flex items-start gap-2">
-                <span className="material-symbols-outlined text-[16px] text-[#994703] shrink-0 mt-0.5">info</span>
-                <p className="leading-relaxed text-[10px]">
-                  Staf baru akan tersimpan di database <strong>profiles</strong>. Untuk mengizinkan staf login langsung, pastikan email &amp; kata sandi staf juga terdaftar di <em>Supabase Dashboard &gt; Authentication &gt; Users</em>.
-                </p>
               </div>
             </div>
 

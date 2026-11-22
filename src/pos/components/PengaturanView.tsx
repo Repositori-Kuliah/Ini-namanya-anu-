@@ -90,16 +90,11 @@ export const PengaturanView: React.FC = () => {
       {/* ================= BARIS 2: PAJAK & BIAYA LAYANAN ================= */}
       <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs space-y-4">
         {/* Header Modul Finansial */}
-        <div className="flex items-center gap-2.5 pb-3 border-b border-[#ebe8e3]">
-          <div className="w-8 h-8 rounded-lg bg-[#3d1018] text-white flex items-center justify-center shadow-xs shrink-0">
-            <span className="material-symbols-outlined text-[18px]">receipt_long</span>
-          </div>
-          <div className="min-w-0">
-            <h2 className="font-bold text-sm text-[#1c1c19]">Pajak &amp; Biaya Layanan</h2>
-            <p className="text-[11px] text-[#524344]">
-              Atur persentase PB1/PPN dan biaya layanan restoran.
-            </p>
-          </div>
+        <div className="pb-3 border-b border-[#ebe8e3]">
+          <h2 className="font-bold text-sm text-[#1c1c19]">Pajak &amp; Biaya Layanan</h2>
+          <p className="text-[11px] text-[#524344]">
+            Atur persentase PB1/PPN dan biaya layanan restoran.
+          </p>
         </div>
 
         <form onSubmit={handleSaveFinancials} className="space-y-4">
@@ -244,18 +239,13 @@ export const PengaturanView: React.FC = () => {
         <div className="grid grid-cols-1 gap-4">
           {/* Modul: Pemesanan Mandiri Tamu */}
           <div className="bg-white p-4 sm:p-5 rounded-2xl border border-[#ebe8e3] shadow-xs flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="w-9 h-9 rounded-xl bg-[#3d1018] text-white flex items-center justify-center shadow-xs shrink-0">
-                <span className="material-symbols-outlined text-[20px]">qr_code_scanner</span>
-              </div>
-              <div className="min-w-0">
-                <h3 className="font-bold text-sm text-[#1c1c19] leading-snug">
-                  Pemesanan Mandiri Tamu (QR Meja)
-                </h3>
-                <p className="text-[11px] sm:text-xs text-[#524344] mt-0.5">
-                  Akses menu dan order mandiri dari meja tamu
-                </p>
-              </div>
+            <div className="min-w-0 flex-1">
+              <h3 className="font-bold text-sm text-[#1c1c19] leading-snug">
+                Pemesanan Mandiri Tamu (QR Meja)
+              </h3>
+              <p className="text-[11px] sm:text-xs text-[#524344] mt-0.5">
+                Akses menu dan order mandiri dari meja tamu
+              </p>
             </div>
 
             <button
@@ -284,14 +274,9 @@ export const PengaturanView: React.FC = () => {
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-[#ebe8e3] shadow-xs">
           <form onSubmit={handleSaveWifi} className="space-y-3 lg:space-y-0 lg:flex lg:items-center lg:justify-between lg:gap-4">
             <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-[#3d1018] text-white flex items-center justify-center shadow-xs shrink-0">
-                  <span className="material-symbols-outlined text-[20px]">wifi</span>
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm text-[#1c1c19]">WiFi Tamu Restoran</h3>
-                  <p className="text-[11px] text-[#524344]">Koneksi internet untuk pelanggan di meja</p>
-                </div>
+              <div>
+                <h3 className="font-bold text-sm text-[#1c1c19]">WiFi Tamu Restoran</h3>
+                <p className="text-[11px] text-[#524344]">Koneksi internet untuk pelanggan di meja</p>
               </div>
 
               {/* Toggle di mobile (berdampingan di sebelah kanan header) */}

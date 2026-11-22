@@ -161,10 +161,9 @@ export const CheckoutView: React.FC = () => {
         <button
           type="button"
           onClick={handleManualRefresh}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-[#ebe8e3] text-[#1c1c19] text-xs font-semibold hover:bg-[#f6f3ee] transition-colors cursor-pointer shadow-2xs self-start sm:self-auto"
+          className="flex items-center px-3.5 py-2 rounded-xl bg-white border border-[#ebe8e3] text-[#1c1c19] text-xs font-semibold hover:bg-[#f6f3ee] transition-colors cursor-pointer shadow-2xs self-start sm:self-auto"
           aria-label="Segarkan antrean tagihan"
         >
-          <span className="material-symbols-outlined text-[16px] text-[#3d1018]">sync</span>
           <span>Segarkan Antrean</span>
         </button>
       </div>
@@ -226,7 +225,6 @@ export const CheckoutView: React.FC = () => {
 
           {/* Kotak Pencarian */}
           <div className="relative flex items-center bg-white px-3 py-2 rounded-xl border border-[#ebe8e3]">
-            <span className="material-symbols-outlined text-[18px] text-[#847374] mr-2">search</span>
             <input
               type="text"
               value={searchQuery}
@@ -239,10 +237,10 @@ export const CheckoutView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="text-[#847374] hover:text-[#1c1c19] text-xs"
+                className="text-[#847374] hover:text-[#1c1c19] text-xs font-bold px-1"
                 aria-label="Hapus pencarian"
               >
-                <span className="material-symbols-outlined text-[16px]">close</span>
+                ✕
               </button>
             )}
           </div>
@@ -327,9 +325,6 @@ export const CheckoutView: React.FC = () => {
               )
             ) : filteredHistory.length === 0 ? (
               <div className="bg-white rounded-xl p-8 text-center border border-[#ebe8e3]">
-                <span className="material-symbols-outlined text-3xl text-[#847374] mb-1">
-                  history
-                </span>
                 <p className="font-bold text-sm text-[#1c1c19]">Belum Ada Riwayat</p>
                 <p className="text-xs text-[#524344] mt-0.5">
                   Transaksi yang telah lunas akan tersimpan di sini.
@@ -512,9 +507,8 @@ export const CheckoutView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => openReceiptModal(currentBill)}
-                  className="w-full py-2.5 rounded-lg bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  className="w-full py-2.5 rounded-lg bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold flex items-center justify-center transition-colors cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[16px]">print</span>
                   <span>Cetak Ulang Struk</span>
                 </button>
               </div>
@@ -536,20 +530,13 @@ export const CheckoutView: React.FC = () => {
                             setPaymentMethod(method);
                             setShowQrisCode(method === 'QRIS');
                           }}
-                          className={`py-2 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                          className={`py-2 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center ${
                             active
                               ? 'bg-[#3d1018] text-white shadow-xs'
                               : 'bg-[#f0ede9] text-[#1c1c19] hover:bg-[#e0dcd8]'
                           }`}
                           aria-pressed={active}
                         >
-                          <span className="material-symbols-outlined text-[16px]">
-                            {method === 'Tunai'
-                              ? 'payments'
-                              : method === 'QRIS'
-                              ? 'qr_code_2'
-                              : 'credit_card'}
-                          </span>
                           <span className="truncate">{method}</span>
                         </button>
                       );
@@ -624,26 +611,18 @@ export const CheckoutView: React.FC = () => {
                       bills.length === 0 ||
                       (paymentMethod === 'Tunai' && isChangeNegative)
                     }
-                    className={`w-full py-3 px-4 rounded-xl text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer ${
+                    className={`w-full py-3 px-4 rounded-xl text-white text-xs sm:text-sm font-bold flex items-center justify-center transition-all shadow-xs cursor-pointer ${
                       paymentMethod === 'Tunai' && isChangeNegative
                         ? 'bg-[#847374] opacity-60 cursor-not-allowed'
                         : 'bg-[#3d1018] hover:bg-[#58252c] active:scale-[0.99]'
                     }`}
                   >
                     {isProcessing ? (
-                      <>
-                        <span className="material-symbols-outlined text-[18px] animate-spin">
-                          sync
-                        </span>
-                        <span>Memproses Pembayaran...</span>
-                      </>
+                      <span>Memproses Pembayaran...</span>
                     ) : (
-                      <>
-                        <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                        <span>
-                          Konfirmasi Pembayaran (Rp {currentBill.total.toLocaleString('id-ID')})
-                        </span>
-                      </>
+                      <span>
+                        Konfirmasi Pembayaran (Rp {currentBill.total.toLocaleString('id-ID')})
+                      </span>
                     )}
                   </button>
                 </div>
@@ -672,10 +651,10 @@ export const CheckoutView: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleCloseMobileDetail}
-                  className="w-8 h-8 rounded-full bg-[#f0ede9] hover:bg-[#ebe8e3] flex items-center justify-center text-[#524344] cursor-pointer transition-colors"
+                  className="w-8 h-8 rounded-full bg-[#f0ede9] hover:bg-[#ebe8e3] flex items-center justify-center text-[#524344] font-bold text-xs cursor-pointer transition-colors"
                   aria-label="Tutup pembayaran"
                 >
-                  <span className="material-symbols-outlined text-[18px]">close</span>
+                  ✕
                 </button>
               </div>
 
@@ -775,9 +754,8 @@ export const CheckoutView: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => openReceiptModal(currentBill)}
-                    className="w-full py-2.5 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                    className="w-full py-2.5 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold flex items-center justify-center transition-colors cursor-pointer shadow-xs"
                   >
-                    <span className="material-symbols-outlined text-[16px]">print</span>
                     <span>Cetak Ulang Struk</span>
                   </button>
                 </div>
@@ -799,20 +777,13 @@ export const CheckoutView: React.FC = () => {
                               setPaymentMethod(method);
                               setShowQrisCode(method === 'QRIS');
                             }}
-                            className={`py-2 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                            className={`py-2 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center ${
                               active
                                 ? 'bg-[#3d1018] text-white shadow-xs'
                                 : 'bg-[#f0ede9] text-[#1c1c19] hover:bg-[#e0dcd8]'
                             }`}
                             aria-pressed={active}
                           >
-                            <span className="material-symbols-outlined text-[16px]">
-                              {method === 'Tunai'
-                                ? 'payments'
-                                : method === 'QRIS'
-                                ? 'qr_code_2'
-                                : 'credit_card'}
-                            </span>
                             <span className="truncate">{method}</span>
                           </button>
                         );
@@ -886,26 +857,18 @@ export const CheckoutView: React.FC = () => {
                         bills.length === 0 ||
                         (paymentMethod === 'Tunai' && isChangeNegative)
                       }
-                      className={`w-full py-3 px-4 rounded-xl text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer ${
+                      className={`w-full py-3 px-4 rounded-xl text-white text-xs sm:text-sm font-bold flex items-center justify-center transition-all shadow-xs cursor-pointer ${
                         paymentMethod === 'Tunai' && isChangeNegative
                           ? 'bg-[#847374] opacity-60 cursor-not-allowed'
                           : 'bg-[#3d1018] hover:bg-[#58252c] active:scale-[0.99]'
                       }`}
                     >
                       {isProcessing ? (
-                        <>
-                          <span className="material-symbols-outlined text-[18px] animate-spin">
-                            sync
-                          </span>
-                          <span>Memproses Pembayaran...</span>
-                        </>
+                        <span>Memproses Pembayaran...</span>
                       ) : (
-                        <>
-                          <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                          <span>
-                            Konfirmasi Pembayaran (Rp {currentBill.total.toLocaleString('id-ID')})
-                          </span>
-                        </>
+                        <span>
+                          Konfirmasi Pembayaran (Rp {currentBill.total.toLocaleString('id-ID')})
+                        </span>
                       )}
                     </button>
                   </div>

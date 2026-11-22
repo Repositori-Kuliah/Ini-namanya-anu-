@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { publicAsset } from '../../lib/publicAsset';
 import heroRawonImg from '../../assets/images/hero_rawon_daging_1794405798124.jpg';
 
@@ -114,14 +114,6 @@ export const LoginScreen: React.FC = () => {
             </p>
           </div>
 
-          {/* Error Banner */}
-          {errorMsg && (
-            <div className="flex items-center gap-2.5 rounded-xl bg-[#ffdadc]/40 border border-[#ba1a1a]/25 px-3.5 py-2.5 text-xs text-[#ba1a1a] animate-in fade-in">
-              <AlertCircle className="w-4 h-4 text-[#ba1a1a] shrink-0" />
-              <span className="font-semibold">{errorMsg}</span>
-            </div>
-          )}
-
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Input Email atau Username */}
             <div>
@@ -134,7 +126,10 @@ export const LoginScreen: React.FC = () => {
                 type="text"
                 autoComplete="username"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (errorMsg) setErrorMsg('');
+                }}
                 placeholder="Masukkan email atau username"
                 required
                 className="h-11 w-full rounded-xl border border-[#ebe8e3] bg-white px-3.5 text-xs sm:text-sm text-[#1c1c19] outline-none transition placeholder:text-[#847374] focus:border-[#3d1018] shadow-2xs"
@@ -153,7 +148,10 @@ export const LoginScreen: React.FC = () => {
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (errorMsg) setErrorMsg('');
+                  }}
                   placeholder="Masukkan kata sandi"
                   required
                   className="h-11 w-full rounded-xl border border-[#ebe8e3] bg-white px-3.5 pr-11 text-xs sm:text-sm text-[#1c1c19] outline-none transition placeholder:text-[#847374] focus:border-[#3d1018] shadow-2xs"
@@ -167,6 +165,11 @@ export const LoginScreen: React.FC = () => {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {errorMsg && (
+                <p className="text-xs text-[#ba1a1a] mt-1.5 font-medium animate-in fade-in">
+                  {errorMsg}
+                </p>
+              )}
             </div>
 
             {/* Ingat Saya Checkbox */}

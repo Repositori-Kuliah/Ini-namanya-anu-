@@ -123,6 +123,11 @@ Aplikasi langsung aktif pada satu port tunggal:
 npm run build
 ```
 
+### Menjalankan Pengujian Keamanan & Integrasi
+```bash
+npm test
+```
+
 ---
 
 ## 5. Kredensial Akun Demo Bawaan
@@ -140,6 +145,7 @@ npm run build
 Untuk rincian desain, evaluasi interaksi manusia-komputer, dan arsitektur kode lengkap, silakan merujuk ke dokumen di folder `docs/`:
 1. [Panduan Pengguna (User Manual)](docs/USER_MANUAL.md) — Prosedur operasional langkah-demi-langkah tiap peran.
 2. [Matriks Perubahan Desain](docs/MATRIX_PERUBAHAN.md) — Komparasi desain sebelum vs sesudah dan justifikasi kaidah IUM/HCI.
-3. [Panduan Desain & Antarmuka](docs/DESIGN.md) — Filosofi warna Nusantara, tipografi, dan sistem layout.
-4. [Arsitektur Sistem & Alur Data](docs/ARCHITECTURE.md) — Diagram relasi data, mitigasi celah keamanan, dan sinkronisasi realtime.
-5. [Dokumentasi Kode Sumber (TSDoc)](docs/CODE_DOCUMENTATION.md) — Kamus tipe data dan spesifikasi fungsi inti.
+3. [Rekapitulasi Pembaruan Sistem](docs/REKAP_PERUBAHAN.md) — Log kronologis seluruh pembaruan, perbaikan bug, dan optimasi UX.
+4. [Panduan Desain & Antarmuka](docs/DESIGN.md) — Filosofi warna Nusantara, tipografi, dan sistem layout.
+5. [Arsitektur Sistem & Alur Data](docs/ARCHITECTURE.md) — Diagram relasi data, mitigasi celah keamanan, dan sinkronisasi realtime.
+6. [Dokumentasi Kode Sumber (TSDoc)](docs/CODE_DOCUMENTATION.md) — Kamus tipe data dan spesifikasi fungsi inti.

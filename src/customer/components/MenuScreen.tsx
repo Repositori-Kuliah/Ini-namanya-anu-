@@ -503,32 +503,35 @@ export const MenuScreen: React.FC = () => {
          ========================================================================= */}
       {cartCount > 0 && (
         <div className="lg:hidden fixed bottom-16 inset-x-0 z-30 px-3 sm:px-4 pointer-events-none animate-in slide-in-from-bottom-3 duration-200">
-          <div className="max-w-md mx-auto pointer-events-auto bg-[#3d1018] text-white p-2.5 sm:p-3 rounded-2xl shadow-xl flex items-center justify-between border border-white/10">
+          <button
+            type="button"
+            onClick={() => setIsCartSheetOpen(true)}
+            className="w-full max-w-md mx-auto bg-[#3d1018] hover:bg-[#58252c] text-white p-3 sm:p-3.5 rounded-2xl shadow-xl flex items-center justify-between pointer-events-auto transition-transform active:scale-[0.99] border border-[#58252c] cursor-pointer"
+          >
             {/* Sisi Kiri: Badge Total Item & Harga */}
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="w-7 h-7 rounded-full bg-white text-[#3d1018] font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
-                {cartCount}
-              </span>
-              <div className="min-w-0">
-                <div className="text-xs sm:text-sm font-bold font-serif tabular-nums text-white truncate">
+            <div className="flex items-center gap-3.5">
+              <div className="relative shrink-0 flex items-center justify-center">
+                <span className="material-symbols-outlined text-[24px]">shopping_cart</span>
+                <span className="absolute -top-1.5 -right-2 bg-white text-[#3d1018] text-[10px] font-extrabold w-4.5 h-4.5 rounded-full flex items-center justify-center shadow-xs">
+                  {cartCount}
+                </span>
+              </div>
+              <div className="text-left ml-1">
+                <span className="text-xs text-white/90 font-semibold block leading-tight">
+                  Meja {selectedTable || '01'}{customerName ? ` • ${customerName}` : ''}
+                </span>
+                <span className="text-sm font-bold text-white tabular-nums">
                   {formatRupiah(cartTotal)}
-                </div>
-                <div className="text-[10px] text-white/80 font-sans truncate">
-                  Meja {selectedTable || '01'} {customerName ? `• ${customerName}` : ''}
-                </div>
+                </span>
               </div>
             </div>
 
             {/* Sisi Kanan: Tombol Buka Sheet Pesanan */}
-            <button
-              type="button"
-              onClick={() => setIsCartSheetOpen(true)}
-              className="flex items-center gap-1 text-xs font-bold bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-xl transition-all cursor-pointer shrink-0 active:scale-95 shadow-2xs font-sans"
-            >
+            <div className="flex items-center gap-1 text-xs font-bold bg-white/15 px-3 py-1.5 rounded-xl text-white shrink-0">
               <span>Lihat Pesanan</span>
               <span className="material-symbols-outlined text-[16px]">expand_less</span>
-            </button>
-          </div>
+            </div>
+          </button>
         </div>
       )}
 

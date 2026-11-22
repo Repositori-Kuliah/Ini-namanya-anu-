@@ -179,17 +179,12 @@ const KelolaMenuViewInner: React.FC = () => {
   return (
     <div className="flex flex-col w-full pb-4 md:pb-8 max-w-[1600px] mx-auto px-4 sm:px-6 pt-3 space-y-4">
       {/* Header Halaman & Tombol Aksi */}
-      <div className="flex items-center justify-between pb-3 border-b border-[#ebe8e3]">
-        <div>
-          <h2 className="font-serif text-lg font-bold text-[#1c1c19]">Katalog Menu Restoran</h2>
-          <p className="text-xs text-[#847374]">Kelola daftar makanan, minuman, dan ketersediaan menu</p>
-        </div>
+      <div className="flex items-center justify-end pb-3 border-b border-[#ebe8e3]">
         <button
           type="button"
           onClick={() => setShowAddMenuModal(true)}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+          className="inline-flex items-center px-3.5 py-2 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
         >
-          <span className="material-symbols-outlined text-[16px]">add</span>
           <span>Tambah Menu</span>
         </button>
       </div>
@@ -529,17 +524,10 @@ const KelolaMenuViewInner: React.FC = () => {
               </label>
             </div>
 
-            <div className="flex gap-2 pt-2 border-t border-[#ebe8e3]">
-              <button
-                type="button"
-                onClick={() => setShowAddMenuModal(false)}
-                className="flex-1 py-2 rounded-lg bg-[#f0ede9] text-[#1c1c19] text-xs font-semibold cursor-pointer"
-              >
-                Batal
-              </button>
+            <div className="pt-2 border-t border-[#ebe8e3]">
               <button
                 type="submit"
-                className="flex-1 py-2 rounded-lg bg-[#3d1018] text-white text-xs font-bold hover:bg-[#58252c] cursor-pointer shadow-xs"
+                className="w-full py-2.5 rounded-xl bg-[#3d1018] text-white text-xs font-bold hover:bg-[#58252c] cursor-pointer shadow-xs"
               >
                 Simpan Menu
               </button>

@@ -439,5 +439,39 @@ Berdasarkan audit komprehensif mengacu pada panduan `antigravity-skills` (Clean 
 
 ---
 
-*Terakhir diperbarui: 20 November 2026*
+## 20. Pembersihan Ikon Berlebih, Penyelarasan UI Mobile, & Penguatan Otentikasi Sesi
+
+Berdasarkan audit komprehensif kaidah `antigravity-skills` (Clean Code, Aesthetic & Minimalist Design, dan Security Integrity):
+
+- **Pembersihan Ikon Dekoratif pada Tombol Utama (*Visual Decluttering*)**:
+  - Menghapus ikon dekoratif yang tidak esensial dari tombol-tombol operasional utama:
+    - **Laporan & Analitik**: Menghapus ikon corong pada tombol *"Terapkan Filter"* dan ikon tabel pada tombol *"Ekspor CSV"*.
+    - **Manajemen Staf**: Menghapus ikon `person_add` pada tombol *"Tambah Akun Staf"*.
+    - **Kelola Meja & Menu**: Menghapus ikon `+` pada tombol *"Tambah Meja"* dan *"Tambah Menu"*.
+    - **Pengaturan Outlet**: Menghapus kotak kubus ikon maroon (QR, WiFi, dan struk) pada kartu layanan, menggantikannya dengan struktur teks judul dan deskripsi yang bersih dan elegan.
+  - Mengembalikan ikon kalender (`calendar_month`) dan indikator panah dropdown pada komponen pemilih tanggal (`CustomDatePicker`) di Dashboard dan Laporan agar fungsi popover kalender tetap jelas dan komunikatif.
+- **Penyelarasan Floating Cart Bar Mobile (`MenuScreen.tsx`)**:
+  - Menyamakan format bilah keranjang melayang di halaman pemesanan mandiri pelanggan (`/pesan`) agar identik dengan POS Kasir (`PesananBaruView.tsx`):
+    - Menggunakan ikon troli belanja dengan lencana bulat jumlah item di pojok kanan atas.
+    - Struktur teks vertikal: Informasi nomor meja di atas (`text-xs text-white/90`) dan nominal total di bawah (`text-sm font-bold text-white tabular-nums`).
+    - Tombol *"Lihat Pesanan"* dengan panah chevron atas dan efek sentuh aktif pada seluruh kartu.
+- **Pembersihan Latar Belakang Tabel & Penyederhanaan Form Input**:
+  - Menghapus background badge pill warna-warni pada kolom **Metode Pembayaran** (Tunai, QRIS, Kartu Debit) di tabel Laporan (desktop & mobile), menjadikannya teks bersih netral (`text-[#524344] font-medium`).
+  - Menghapus background badge peran (role) pada tabel Akun Staf dan status Aktif di versi mobile.
+  - Menghapus teks instruksi Supabase Authentication yang redundan pada modal Tambah Staf.
+  - Menghapus tombol *"Batal"* pada modal Tambah Meja dan Tambah Menu, menjadikan tombol *"Simpan"* berukuran penuh (*full width*) yang ergonomis.
+- **Integritas Otentikasi Dua Arah & Batas Kedaluwarsa Sesi (24 Jam)**:
+  - Memperbaiki bug pergantian nama staf (misal: "Budi Admin" menjadi "Budi (Admin)") yang sebelumnya tertimpa kembali saat login ulang (*relog*).
+  - Mengimplementasikan sinkronisasi dua arah: pembaruan tabel `public.profiles` sekaligus pembaruan metadata autentikasi `supabase.auth.updateUser({ data: { full_name } })`, serta pembaruan nama staf secara instan pada sidebar POS.
+  - Menegakkan batas kedaluwarsa sesi login kasir/staf maksimum 24 jam dengan validasi timestamp `pos.session_login_time` di `AppContext.tsx`.
+  - Mengganti banner kotak merah besar pada form login (`LoginScreen.tsx`) menjadi pesan kesalahan satu kalimat merah minimalis di bawah kotak kata sandi tanpa mengubah warna garis tepi input.
+- **Pembersihan Kode Mati (*Dead Code Elimination*) & Dependensi**:
+  - Menghapus file sisa migrasi `src/vite-env.d.ts`.
+  - Menghapus fungsi panggilan API eksternal yang tidak aktif (`callStaffApi` / `http://localhost:3001`) pada `StaffManagementView.tsx`, beralih penuh ke query Supabase Client yang telah teruji.
+  - Menghapus dependensi sisa Vite yang tidak digunakan (`@tailwindcss/vite`, `@vitejs/plugin-react`, `vite`) dari `package.json`.
+  - Menambahkan konfigurasi native `--env-file=.env` pada skrip pengujian npm test dan menyelaraskan URL pengujian di `supabase/tests/security_and_lifecycle.test.js`.
+
+---
+
+*Terakhir diperbarui: 22 November 2026*
 
