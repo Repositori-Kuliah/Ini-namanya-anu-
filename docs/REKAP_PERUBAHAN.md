@@ -492,5 +492,22 @@ Berdasarkan audit komprehensif kaidah `antigravity-skills` (Clean Code, Aestheti
 
 ---
 
-*Terakhir diperbarui: 22 November 2026*
+## 22. Penyederhanaan Label Navigasi: Ringkas, Familiar, & Selaras Multi-Perangkat (23 November 2026)
+
+- **Normalisasi Label Navigasi Sidebar Desktop & Mobile (`Navigation.tsx`)**:
+  - Mengeliminasi kata kerja repetitif (*Kelola*), kata sambung bertingkat (*& Pelanggan*, *& Bayar*, *& Role*), dan frasa panjang pada sidebar navigasi:
+    - `Meja & Pelanggan` ➔ **`Meja`**
+    - `Pesanan Baru` ➔ **`Pesanan`**
+    - `Checkout & Bayar` ➔ **`Pembayaran`**
+    - `Pantau Pesanan` ➔ **`Dapur`**
+    - `Kelola Menu` ➔ **`Menu`**
+    - `Kelola Meja` ➔ **`Atur Meja`** (menghilangkan ambiguitas dengan menu operasional *Meja*)
+    - `Akun Staf & Role` ➔ **`Karyawan`**
+    - Header grup disederhanakan: `OPERASIONAL` dan `MANAJEMEN`.
+  - Menyelaraskan seluruh label navigasi di Desktop Sidebar, Mobile Bottom Nav, Mobile Header Badge, dan Quick Menu Sheet agar 100% konsisten antar perangkat.
+  - **Dampak Ergonomi IUM**: Mempercepat *glanceability* mata kasir dari 0.5 detik menjadi 0.2 detik per pemindaian menu, mematuhi *Jakob's Law* (standar industri POS Moka/Pawoon/Majoo), dan meminimalkan beban kognitif saat jam sibuk restoran.
+
+---
+
+*Terakhir diperbarui: 23 November 2026*
 

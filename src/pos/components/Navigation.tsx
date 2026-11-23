@@ -52,7 +52,7 @@ export const HelpModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
               <span>1. Peran Kasir POS</span>
             </h4>
             <p>
-              Kasir mengelola layanan santap di tempat pada <strong>Meja &amp; Pelanggan</strong>, pembuatan <strong>Pesanan Baru</strong>, pencatatan pembayaran (Tunai, QRIS, Kartu Debit), cetak struk termal, serta rekonsiliasi kas pada <strong>Tutup Kasir</strong>.
+              Kasir mengelola layanan santap di tempat pada <strong>Meja</strong>, pembuatan <strong>Pesanan</strong>, pencatatan <strong>Pembayaran</strong> (Tunai, QRIS, Kartu Debit), dan cetak struk termal.
             </p>
           </div>
 
@@ -62,7 +62,7 @@ export const HelpModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
               <span>2. Peran Dapur &amp; Bar</span>
             </h4>
             <p>
-              Dapur dan bar memantau tiket pesanan pelanggan pada stasiun <strong>Dapur Utama (Makanan)</strong> dan <strong>Bar Minuman</strong> melalui alur penyajian <strong>Baru ➔ Dimasak ➔ Siap Diantar</strong>.
+              Dapur dan bar memantau antrean masak pada stasiun <strong>Dapur</strong> melalui alur penyajian <strong>Baru ➔ Dimasak ➔ Selesai</strong>.
             </p>
           </div>
 
@@ -72,7 +72,7 @@ export const HelpModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
               <span>3. Peran Admin Outlet</span>
             </h4>
             <p>
-              Admin memiliki otorisasi penuh: grafik analisis <strong>Dashboard Penjualan</strong>, manajemen <strong>Kelola Menu Restoran</strong>, pendaftaran <strong>Kelola Meja &amp; Kode QR</strong>, pengoperasian <strong>Akun Staf</strong>, serta audit <strong>Laporan Transaksi &amp; Rekap Kasir</strong>.
+              Admin memiliki otorisasi penuh: ringkasan <strong>Dashboard</strong>, penyusunan <strong>Menu</strong>, registrasi <strong>Atur Meja &amp; Kode QR</strong>, pengoperasian <strong>Karyawan</strong>, serta audit <strong>Laporan</strong>.
             </p>
           </div>
         </div>
@@ -100,22 +100,24 @@ export const MobileHeader: React.FC = () => {
       case 'dashboard':
         return 'Dashboard';
       case 'meja-dan-pelanggan':
-        return 'Meja & Pelanggan';
+        return 'Meja';
       case 'pesanan-baru':
-        return 'Pesanan Baru';
+        return 'Pesanan';
       case 'checkout':
       case 'pembayaran':
-        return 'Checkout & Bayar';
+        return 'Pembayaran';
       case 'pantau-pesanan':
-        return 'Pantau Pesanan';
+        return 'Dapur';
       case 'kelola-menu':
-        return 'Kelola Menu';
+        return 'Menu';
       case 'kelola-meja':
-        return 'Kelola Meja';
+        return 'Atur Meja';
       case 'akun-staf-dan-role':
-        return 'Akun Staf & Role';
+        return 'Karyawan';
       case 'laporan':
-        return 'Laporan Transaksi';
+        return 'Laporan';
+      case 'pengaturan':
+        return 'Pengaturan';
       default:
         return 'Operasional';
     }
@@ -198,24 +200,24 @@ export const MobileBottomNav: React.FC = () => {
     }
     if (currentRole === 'kitchen') {
       return storeSettings.enableKitchenDisplay
-        ? [{ label: 'Pantau Pesanan', icon: 'skillet', view: 'pantau-pesanan' }]
+        ? [{ label: 'Dapur', icon: 'skillet', view: 'pantau-pesanan' }]
         : [];
     }
     if (currentRole === 'kasir') {
       return [
         { label: 'Meja', icon: 'table_restaurant', view: 'meja-dan-pelanggan' },
         { label: 'Pesanan', icon: 'add_shopping_cart', view: 'pesanan-baru' },
-        { label: 'Checkout', icon: 'point_of_sale', view: 'checkout' },
+        { label: 'Pembayaran', icon: 'point_of_sale', view: 'checkout' },
       ];
     }
     // Admin
     const items: { label: string; icon: string; view: AppView | 'admin-drawer' }[] = [
       { label: 'Meja', icon: 'table_restaurant', view: 'meja-dan-pelanggan' },
       { label: 'Pesanan', icon: 'add_shopping_cart', view: 'pesanan-baru' },
-      { label: 'Checkout', icon: 'point_of_sale', view: 'checkout' },
+      { label: 'Pembayaran', icon: 'point_of_sale', view: 'checkout' },
     ];
     if (storeSettings.enableKitchenDisplay) {
-      items.push({ label: 'Pantau', icon: 'skillet', view: 'pantau-pesanan' });
+      items.push({ label: 'Dapur', icon: 'skillet', view: 'pantau-pesanan' });
     }
     items.push({ label: 'Manajemen', icon: 'apps', view: 'admin-drawer' });
     return items;
@@ -304,10 +306,10 @@ export const MobileBottomNav: React.FC = () => {
             <div className="grid grid-cols-2 gap-2">
               {[
                 { label: 'Dashboard', icon: 'grid_view', view: 'dashboard' as AppView },
-                { label: 'Kelola Menu', icon: 'restaurant_menu', view: 'kelola-menu' as AppView },
-                { label: 'Kelola Meja', icon: 'deck', view: 'kelola-meja' as AppView },
-                { label: 'Akun Staf & Role', icon: 'badge', view: 'akun-staf-dan-role' as AppView },
-                { label: 'Laporan Transaksi', icon: 'query_stats', view: 'laporan' as AppView },
+                { label: 'Menu', icon: 'restaurant_menu', view: 'kelola-menu' as AppView },
+                { label: 'Atur Meja', icon: 'deck', view: 'kelola-meja' as AppView },
+                { label: 'Karyawan', icon: 'badge', view: 'akun-staf-dan-role' as AppView },
+                { label: 'Laporan', icon: 'query_stats', view: 'laporan' as AppView },
                 { label: 'Pengaturan', icon: 'settings', view: 'pengaturan' as AppView },
               ].map((m) => (
                 <button
@@ -351,34 +353,34 @@ export const DesktopSidebar: React.FC = () => {
     }
     if (currentRole === 'kitchen') {
       return storeSettings.enableKitchenDisplay
-        ? [{ label: 'Pantau Pesanan', icon: 'skillet', view: 'pantau-pesanan' as AppView }]
+        ? [{ label: 'Dapur', icon: 'skillet', view: 'pantau-pesanan' as AppView }]
         : [];
     }
     if (currentRole === 'kasir') {
       return [
-        { label: 'Meja & Pelanggan', icon: 'table_restaurant', view: 'meja-dan-pelanggan' as AppView },
-        { label: 'Pesanan Baru', icon: 'add_shopping_cart', view: 'pesanan-baru' as AppView },
-        { label: 'Checkout & Bayar', icon: 'point_of_sale', view: 'checkout' as AppView },
+        { label: 'Meja', icon: 'table_restaurant', view: 'meja-dan-pelanggan' as AppView },
+        { label: 'Pesanan', icon: 'add_shopping_cart', view: 'pesanan-baru' as AppView },
+        { label: 'Pembayaran', icon: 'point_of_sale', view: 'checkout' as AppView },
       ];
     }
     // Admin
     const items = [
-      { label: 'Meja & Pelanggan', icon: 'table_restaurant', view: 'meja-dan-pelanggan' as AppView },
-      { label: 'Pesanan Baru', icon: 'add_shopping_cart', view: 'pesanan-baru' as AppView },
-      { label: 'Checkout & Bayar', icon: 'point_of_sale', view: 'checkout' as AppView },
+      { label: 'Meja', icon: 'table_restaurant', view: 'meja-dan-pelanggan' as AppView },
+      { label: 'Pesanan', icon: 'add_shopping_cart', view: 'pesanan-baru' as AppView },
+      { label: 'Pembayaran', icon: 'point_of_sale', view: 'checkout' as AppView },
     ];
     if (storeSettings.enableKitchenDisplay) {
-      items.push({ label: 'Pantau Pesanan', icon: 'skillet', view: 'pantau-pesanan' as AppView });
+      items.push({ label: 'Dapur', icon: 'skillet', view: 'pantau-pesanan' as AppView });
     }
     return items;
   };
 
-  // Kelompok B: Navigasi Manajemen & Laporan (Khusus Admin & Owner)
+  // Kelompok B: Navigasi Manajemen (Khusus Admin & Owner)
   const managementNav = [
     { label: 'Dashboard', icon: 'grid_view', view: 'dashboard' as AppView },
-    { label: 'Kelola Menu', icon: 'restaurant_menu', view: 'kelola-menu' as AppView },
-    { label: 'Kelola Meja', icon: 'deck', view: 'kelola-meja' as AppView },
-    { label: 'Akun Staf & Role', icon: 'badge', view: 'akun-staf-dan-role' as AppView },
+    { label: 'Menu', icon: 'restaurant_menu', view: 'kelola-menu' as AppView },
+    { label: 'Atur Meja', icon: 'deck', view: 'kelola-meja' as AppView },
+    { label: 'Karyawan', icon: 'badge', view: 'akun-staf-dan-role' as AppView },
     { label: 'Laporan', icon: 'query_stats', view: 'laporan' as AppView },
     { label: 'Pengaturan', icon: 'settings', view: 'pengaturan' as AppView },
   ];
@@ -444,11 +446,11 @@ export const DesktopSidebar: React.FC = () => {
             </div>
           )}
 
-          {/* Kelompok B: MANAJEMEN & LAPORAN (Khusus Admin & Owner) */}
+          {/* Kelompok B: MANAJEMEN (Khusus Admin & Owner) */}
           {(currentRole === 'admin' || currentRole === 'owner') && (
             <div className={operationalNav.length > 0 ? "pt-2 border-t border-white/10" : ""}>
               <span className="text-[10px] font-bold text-[#ffdadc]/70 uppercase tracking-wider block px-2 mb-1.5">
-                Manajemen &amp; Laporan
+                Manajemen
               </span>
               <div className="space-y-0.5">
                 {managementNav.map((item) => {
@@ -509,24 +511,26 @@ export const DesktopHeader: React.FC = () => {
   const getViewTitle = () => {
     switch (activeView) {
       case 'dashboard':
-        return 'Dashboard Operasional';
+        return 'Dashboard';
       case 'meja-dan-pelanggan':
-        return 'Meja & Pelanggan';
+        return 'Meja';
       case 'pesanan-baru':
-        return 'Pesanan Baru';
+        return 'Pesanan';
       case 'checkout':
       case 'pembayaran':
-        return 'Checkout & Pembayaran';
+        return 'Pembayaran';
       case 'pantau-pesanan':
-        return 'Pantau Pesanan';
+        return 'Dapur';
       case 'kelola-menu':
-        return 'Kelola Menu';
+        return 'Menu';
       case 'kelola-meja':
-        return 'Kelola Meja';
+        return 'Atur Meja';
       case 'akun-staf-dan-role':
-        return 'Akun Staf & Role';
+        return 'Karyawan';
       case 'laporan':
-        return 'Laporan Transaksi';
+        return 'Laporan';
+      case 'pengaturan':
+        return 'Pengaturan';
       default:
         return 'Operasional';
     }
