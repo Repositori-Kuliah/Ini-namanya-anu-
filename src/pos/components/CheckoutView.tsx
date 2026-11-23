@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { BillItem, SplitPaymentDetail } from '../types';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
+import { useScrollDirection } from '../../lib/useScrollDirection';
 
 export const CheckoutView: React.FC = () => {
+  const isHeaderVisible = useScrollDirection();
   const {
     bills,
     selectedBillId,
@@ -177,72 +179,77 @@ export const CheckoutView: React.FC = () => {
           aria-label="Daftar Antrean Tagihan"
           className="lg:col-span-5 flex flex-col gap-3"
         >
-          {/* Tab Filter: Belum Dibayar vs Riwayat Transaksi */}
-          <div className="flex items-center bg-[#f0ede9] p-1 rounded-xl">
-            <button
-              type="button"
-              onClick={() => {
-                setQueueTab('unpaid');
-                handleCloseMobileDetail();
-              }}
-              className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                queueTab === 'unpaid'
-                  ? 'bg-[#3d1018] text-white shadow-xs'
-                  : 'text-[#524344] hover:text-[#1c1c19]'
-              }`}
-            >
-              <span>Belum Dibayar</span>
-              <span
-                className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                  queueTab === 'unpaid' ? 'bg-white/20 text-white' : 'bg-[#e0dcd8] text-[#524344]'
-                }`}
-              >
-                {bills.length}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setQueueTab('history');
-                handleCloseMobileDetail();
-              }}
-              className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                queueTab === 'history'
-                  ? 'bg-[#3d1018] text-white shadow-xs'
-                  : 'text-[#524344] hover:text-[#1c1c19]'
-              }`}
-            >
-              <span>Riwayat Transaksi</span>
-              <span
-                className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                  queueTab === 'history' ? 'bg-white/20 text-white' : 'bg-[#e0dcd8] text-[#524344]'
-                }`}
-              >
-                {recentReceipts.length}
-              </span>
-            </button>
-          </div>
-
-          {/* Kotak Pencarian */}
-          <div className="relative flex items-center bg-white px-3 py-2 rounded-xl border border-[#ebe8e3]">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari meja, tamu, atau nomor bill..."
-              className="bg-transparent w-full text-xs text-[#1c1c19] placeholder-[#847374] outline-none"
-              aria-label="Cari tagihan"
-            />
-            {searchQuery && (
+          {/* Smart Collapsible Filter & Search Header di Mobile */}
+          <div className={`flex flex-col gap-2.5 bg-white/95 backdrop-blur-md p-2.5 rounded-xl border border-[#ebe8e3] sticky top-16 lg:static z-20 shadow-xs transition-all duration-300 ease-in-out ${
+            isHeaderVisible ? 'translate-y-0 opacity-100' : 'max-lg:-translate-y-36 max-lg:opacity-0 max-lg:pointer-events-none'
+          }`}>
+            {/* Tab Filter: Belum Dibayar vs Riwayat Transaksi */}
+            <div className="flex items-center bg-[#f0ede9] p-1 rounded-xl">
               <button
                 type="button"
-                onClick={() => setSearchQuery('')}
-                className="text-[#847374] hover:text-[#1c1c19] text-xs font-bold px-1"
-                aria-label="Hapus pencarian"
+                onClick={() => {
+                  setQueueTab('unpaid');
+                  handleCloseMobileDetail();
+                }}
+                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  queueTab === 'unpaid'
+                    ? 'bg-[#3d1018] text-white shadow-xs'
+                    : 'text-[#524344] hover:text-[#1c1c19]'
+                }`}
               >
-                ✕
+                <span>Belum Dibayar</span>
+                <span
+                  className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                    queueTab === 'unpaid' ? 'bg-white/20 text-white' : 'bg-[#e0dcd8] text-[#524344]'
+                  }`}
+                >
+                  {bills.length}
+                </span>
               </button>
-            )}
+              <button
+                type="button"
+                onClick={() => {
+                  setQueueTab('history');
+                  handleCloseMobileDetail();
+                }}
+                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  queueTab === 'history'
+                    ? 'bg-[#3d1018] text-white shadow-xs'
+                    : 'text-[#524344] hover:text-[#1c1c19]'
+                }`}
+              >
+                <span>Riwayat Transaksi</span>
+                <span
+                  className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                    queueTab === 'history' ? 'bg-white/20 text-white' : 'bg-[#e0dcd8] text-[#524344]'
+                  }`}
+                >
+                  {recentReceipts.length}
+                </span>
+              </button>
+            </div>
+
+            {/* Kotak Pencarian */}
+            <div className="relative flex items-center bg-[#fcf9f4] px-3 py-2 rounded-xl border border-[#ebe8e3]">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Cari meja, tamu, atau nomor bill..."
+                className="bg-transparent w-full text-xs text-[#1c1c19] placeholder-[#847374] outline-none"
+                aria-label="Cari tagihan"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="text-[#847374] hover:text-[#1c1c19] text-xs font-bold px-1"
+                  aria-label="Hapus pencarian"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Daftar Tagihan Ringkas (Compact Horizontal List dengan Scroll Mandiri) */}

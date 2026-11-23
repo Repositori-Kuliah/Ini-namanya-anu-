@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { MenuItem } from '../types';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import { publicAsset } from '../../lib/publicAsset';
+import { useScrollDirection } from '../../lib/useScrollDirection';
 
 const KelolaMenuViewInner: React.FC = () => {
   const {
@@ -13,6 +14,8 @@ const KelolaMenuViewInner: React.FC = () => {
     deleteMenuItem,
     showToast,
   } = useApp();
+
+  const isHeaderVisible = useScrollDirection();
 
   // --- State Katalog Menu ---
   const [searchMenuQuery, setSearchMenuQuery] = useState('');
@@ -193,8 +196,10 @@ const KelolaMenuViewInner: React.FC = () => {
           KATALOG MENU RESTORAN (Tersedia / Habis On-Off Toggle Cepat)
          ========================================================================= */}
       <section aria-label="Katalog Menu" className="space-y-3">
-        {/* Baris Filter & Search Menu */}
-        <div className="bg-white p-3 rounded-xl border border-[#ebe8e3] flex flex-col md:flex-row md:items-center justify-between gap-3">
+        {/* Baris Filter & Search Menu (Smart Collapsible Header di Mobile) */}
+        <div className={`bg-white/95 backdrop-blur-md p-3 rounded-xl border border-[#ebe8e3] flex flex-col md:flex-row md:items-center justify-between gap-3 sticky top-16 md:static z-20 shadow-xs transition-all duration-300 ease-in-out ${
+          isHeaderVisible ? 'translate-y-0 opacity-100' : 'max-md:-translate-y-28 max-md:opacity-0 max-md:pointer-events-none'
+        }`}>
           <div className="relative flex-1 max-w-md">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#847374] text-[18px]">
               search
@@ -209,14 +214,14 @@ const KelolaMenuViewInner: React.FC = () => {
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 text-xs w-full md:w-auto">
             {/* Filter Kategori */}
-            <div className="flex items-center gap-1.5 text-xs text-[#524344]">
-              <span>Kategori:</span>
+            <div className="flex-1 md:flex-initial flex items-center gap-1.5">
+              <span className="text-[#847374] text-[11px] font-medium hidden sm:inline">Kategori:</span>
               <select
                 value={filterMenuCategory}
                 onChange={(e) => setFilterMenuCategory(e.target.value)}
-                className="bg-[#fcf9f4] border border-[#ebe8e3] rounded-lg px-2.5 py-1 text-xs font-semibold text-[#1c1c19] outline-none cursor-pointer focus:border-[#3d1018]"
+                className="w-full md:w-auto bg-[#fcf9f4] border border-[#ebe8e3] rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#1c1c19] outline-none cursor-pointer focus:border-[#3d1018]"
               >
                 <option value="Semua">Semua Kategori</option>
                 <option value="Favorit">Favorit</option>
@@ -229,12 +234,12 @@ const KelolaMenuViewInner: React.FC = () => {
             </div>
 
             {/* Filter Ketersediaan */}
-            <div className="flex items-center gap-1.5 text-xs text-[#524344]">
-              <span>Status:</span>
+            <div className="flex-1 md:flex-initial flex items-center gap-1.5">
+              <span className="text-[#847374] text-[11px] font-medium hidden sm:inline">Status:</span>
               <select
                 value={filterMenuAvailability}
                 onChange={(e) => setFilterMenuAvailability(e.target.value as any)}
-                className="bg-[#fcf9f4] border border-[#ebe8e3] rounded-lg px-2.5 py-1 text-xs font-semibold text-[#1c1c19] outline-none cursor-pointer focus:border-[#3d1018]"
+                className="w-full md:w-auto bg-[#fcf9f4] border border-[#ebe8e3] rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#1c1c19] outline-none cursor-pointer focus:border-[#3d1018]"
               >
                 <option value="semua">Semua Status</option>
                 <option value="tersedia">Tersedia</option>

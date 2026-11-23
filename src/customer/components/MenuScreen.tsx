@@ -1,8 +1,10 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import confetti from 'canvas-confetti';
+import { useScrollDirection } from '../../lib/useScrollDirection';
 
 export const MenuScreen: React.FC = () => {
+  const isHeaderVisible = useScrollDirection();
   const {
     selectedTable,
     customerName,
@@ -353,8 +355,10 @@ export const MenuScreen: React.FC = () => {
           aria-label="Katalog Menu Restoran"
           className="lg:col-span-7 flex flex-col gap-3 w-full"
         >
-          {/* Baris Pencarian & Kategori */}
-          <div className="flex flex-col gap-2.5 bg-white p-3.5 rounded-xl border border-[#ebe8e3] lg:sticky lg:top-18 lg:z-10 shadow-xs">
+          {/* Baris Pencarian & Kategori (Smart Collapsible Header di Mobile) */}
+          <div className={`flex flex-col gap-2.5 bg-white/95 backdrop-blur-md p-3.5 rounded-xl border border-[#ebe8e3] sticky top-16 lg:top-18 z-20 shadow-xs transition-all duration-300 ease-in-out ${
+            isHeaderVisible ? 'translate-y-0 opacity-100' : 'max-lg:-translate-y-36 max-lg:opacity-0 max-lg:pointer-events-none'
+          }`}>
             {/* Input Pencarian */}
             <div className="relative flex items-center bg-[#fcf9f4] px-3 py-2 rounded-lg border border-[#ebe8e3] focus-within:border-[#3d1018]">
               <span className="material-symbols-outlined text-[18px] text-[#847374] mr-2">search</span>

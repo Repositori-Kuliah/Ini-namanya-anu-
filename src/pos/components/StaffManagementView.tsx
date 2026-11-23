@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { StaffUser, UserRole } from '../types';
 import { supabase } from '../../lib/supabase';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
+import { useScrollDirection } from '../../lib/useScrollDirection';
 
 const formatLastLogin = (iso: string) =>
   `${new Date(iso).toLocaleString('id-ID', {
@@ -15,6 +16,7 @@ const formatLastLogin = (iso: string) =>
   })} WIB`;
 
 export const StaffManagementView: React.FC = () => {
+  const isHeaderVisible = useScrollDirection();
   const { showToast, currentUser, updateCurrentUserName } = useApp();
   type Row = StaffUser & { active: boolean; lastLogin?: string };
   const [staffList, setStaffList] = useState<Row[]>([]);
@@ -306,8 +308,10 @@ export const StaffManagementView: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter Bar */}
-      <div className="bg-white p-3 rounded-xl border border-[#ebe8e3] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+      {/* Filter Bar (Smart Collapsible Header di Mobile) */}
+      <div className={`bg-white/95 backdrop-blur-md p-3 rounded-xl border border-[#ebe8e3] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sticky top-16 sm:static z-20 shadow-xs transition-all duration-300 ease-in-out ${
+        isHeaderVisible ? 'translate-y-0 opacity-100' : 'max-sm:-translate-y-28 max-sm:opacity-0 max-sm:pointer-events-none'
+      }`}>
         <div className="relative flex-1 max-w-md">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#847374] text-[18px]">
             search

@@ -3,10 +3,12 @@ import { useApp } from '../context/AppContext';
 import { TableItem, TableStatus } from '../types';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import { exportTableQrs, QrExportFormat } from '../lib/qrExport';
+import { useScrollDirection } from '../../lib/useScrollDirection';
 
 const MAX_BATCH_TABLES = 50;
 
 const KelolaMejaViewInner: React.FC = () => {
+  const isHeaderVisible = useScrollDirection();
   const { tables, updateTable, addTable, deleteTable, rotateTableQr, openQrModal, showToast } = useApp();
 
   const [filterMode, setFilterMode] = useState<'Semua' | 'Terisi' | 'Kosong'>('Semua');
@@ -227,8 +229,10 @@ const KelolaMejaViewInner: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter Bar */}
-      <div className="bg-white p-3 rounded-xl border border-[#ebe8e3] flex flex-col md:flex-row md:items-center justify-between gap-3">
+      {/* Filter Bar (Smart Collapsible Header di Mobile) */}
+      <div className={`bg-white/95 backdrop-blur-md p-3 rounded-xl border border-[#ebe8e3] flex flex-col md:flex-row md:items-center justify-between gap-3 sticky top-16 md:static z-20 shadow-xs transition-all duration-300 ease-in-out ${
+        isHeaderVisible ? 'translate-y-0 opacity-100' : 'max-md:-translate-y-28 max-md:opacity-0 max-md:pointer-events-none'
+      }`}>
         <div className="relative flex-1 max-w-sm">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#847374] text-[18px]">
             search

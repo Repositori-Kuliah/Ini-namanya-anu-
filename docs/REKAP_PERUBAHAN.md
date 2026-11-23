@@ -509,5 +509,25 @@ Berdasarkan audit komprehensif kaidah `antigravity-skills` (Clean Code, Aestheti
 
 ---
 
+## 23. Penerapan Smart Collapsible Header (Scroll-to-Hide & Scroll-Up-to-Reveal) & Perapian Filter Menu Mobile (23 November 2026)
+
+- **Pola Desain "Smart Header" / Collapsible Headroom (`useScrollDirection.ts`)**:
+  - Dibuat custom hook performan berbasis `requestAnimationFrame` untuk mendeteksi arah gulir kasir:
+    - Saat kasir menggulir ke bawah (*scroll down*): bilah pencarian & filter bergeser ke atas menyembunyikan diri (`-translate-y-28 opacity-0 pointer-events-none`) dengan animasi transisi halus (`transition-all duration-300 ease-in-out`). Area pandang konten bertambah lega hingga 25%.
+    - Saat kasir mengusap jari ke atas sedikit saja (*scroll up > 15px*) atau mencapai puncak layar: bilah pencarian & filter seketika turun kembali (`translate-y-0 opacity-100`) tepat di bawah bilah atas. Kasir tidak perlu repot menggulir berkali-kali ke puncak halaman.
+  - Diterapkan secara seragam di seluruh layar utama berfilter:
+    1. **`PesananBaruView.tsx`** (Katalog Pesanan Kasir)
+    2. **`MejaPelangganView.tsx`** (Denah Meja & Filter Status)
+    3. **`CheckoutView.tsx`** (Antrean Tagihan & Riwayat Transaksi)
+    4. **`KelolaMenuView.tsx`** (Manajemen Menu Restoran)
+    5. **`StaffManagementView.tsx`** (Daftar Karyawan)
+    6. **`KelolaMejaView.tsx`** (Pengaturan Denah Meja)
+    7. **`MenuScreen.tsx`** (Katalog Pemesanan Mandiri Tamu di Meja)
+- **Pembersihan Label Redundan Filter Menu Mobile (`KelolaMenuView.tsx`)**:
+  - Menghapus teks statis `Kategori:` dan `Status:` pada layar ponsel (`hidden sm:inline`).
+  - Menata dropdown *Semua Kategori* dan *Semua Status* menjadi berdampingan 1 baris (`flex-1` proporsional), selaras persis dengan tata letak menu Karyawan. Menghemat 50% ruang vertikal filter di ponsel.
+
+---
+
 *Terakhir diperbarui: 23 November 2026*
 
