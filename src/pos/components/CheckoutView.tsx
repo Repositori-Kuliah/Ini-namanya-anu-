@@ -180,8 +180,8 @@ export const CheckoutView: React.FC = () => {
           className="lg:col-span-5 flex flex-col gap-3"
         >
           {/* Smart Collapsible Filter & Search Header di Mobile */}
-          <div className={`flex flex-col gap-2.5 bg-white/95 backdrop-blur-md p-2.5 rounded-xl border border-[#ebe8e3] sticky top-16 lg:static z-20 shadow-xs transition-all duration-300 ease-in-out ${
-            isHeaderVisible ? 'translate-y-0 opacity-100' : 'max-lg:-translate-y-36 max-lg:opacity-0 max-lg:pointer-events-none'
+          <div className={`flex flex-col gap-2.5 bg-white/95 backdrop-blur-md p-2.5 rounded-xl border border-[#ebe8e3] sticky top-16 lg:static z-20 shadow-xs transition-all duration-200 ease-out ${
+            isHeaderVisible ? 'translate-y-0 opacity-100 pointer-events-auto' : 'max-lg:-translate-y-36 max-lg:opacity-0 max-lg:pointer-events-none'
           }`}>
             {/* Tab Filter: Belum Dibayar vs Riwayat Transaksi */}
             <div className="flex items-center bg-[#f0ede9] p-1 rounded-xl">

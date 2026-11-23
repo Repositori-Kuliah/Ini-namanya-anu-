@@ -527,6 +527,11 @@ Berdasarkan audit komprehensif kaidah `antigravity-skills` (Clean Code, Aestheti
   - Menghapus teks statis `Kategori:` dan `Status:` pada layar ponsel (`hidden sm:inline`).
   - Menata dropdown *Semua Kategori* dan *Semua Status* menjadi berdampingan 1 baris (`flex-1` proporsional), selaras persis dengan tata letak menu Karyawan. Menghemat 50% ruang vertikal filter di ponsel.
 
+- **Penyempurnaan Sensitivitas Asimetris & Deteksi Multi-Container (`useScrollDirection.ts`)**:
+  - **Toleransi Asimetris**: Threshold scroll ke bawah dinaikkan ke **30px** (mencegah search bar hilang karena getaran/sentuhan tak sengaja), sedangkan threshold scroll ke atas dibuat sangat responsif **10px** (cukup usap sedikit ke atas di mana pun posisinya, bar langsung muncul seketika tanpa harus menunggu sampai mentok di puncak halaman).
+  - **Dukungan Multi-Container & Capture Mode**: Menggunakan `WeakMap` dan `capture: true` sehingga mendeteksi pergerakan scroll baik pada level `window` maupun kontainer tabel/list `overflow-y-auto`.
+  - **Animasi Responsif**: Mengubah transisi dari `duration-300` menjadi `duration-200 ease-out` agar animasi geser turun terasa sigap dan instan (*zero lag*).
+
 ---
 
 ### 24. Pembersihan Garis Pembatas Redundan (*Border Elimination*) pada Bilah Atas Halaman

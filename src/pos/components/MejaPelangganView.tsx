@@ -105,8 +105,8 @@ const MejaPelangganViewInner: React.FC = () => {
   return (
     <div className="flex flex-col w-full p-4 sm:p-6 lg:p-8 space-y-5 max-w-[1540px] mx-auto pb-4 md:pb-8">
       {/* Search & Segmented Filter Bar (Smart Collapsible Header di Mobile) */}
-      <div className={`flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white/95 backdrop-blur-md p-2.5 rounded-xl border border-[#ebe8e3] sticky top-16 md:static z-20 shadow-xs transition-all duration-300 ease-in-out ${
-        isHeaderVisible ? 'translate-y-0 opacity-100' : 'max-md:-translate-y-28 max-md:opacity-0 max-md:pointer-events-none'
+      <div className={`flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white/95 backdrop-blur-md p-2.5 rounded-xl border border-[#ebe8e3] sticky top-16 md:static z-20 shadow-xs transition-all duration-200 ease-out ${
+        isHeaderVisible ? 'translate-y-0 opacity-100 pointer-events-auto' : 'max-md:-translate-y-28 max-md:opacity-0 max-md:pointer-events-none'
       }`}>
         {/* Search Input */}
         <div className="relative flex-1 max-w-md">

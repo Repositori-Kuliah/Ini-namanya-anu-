@@ -197,8 +197,8 @@ const KelolaMenuViewInner: React.FC = () => {
          ========================================================================= */}
       <section aria-label="Katalog Menu" className="space-y-3">
         {/* Baris Filter & Search Menu (Smart Collapsible Header di Mobile) */}
-        <div className={`bg-white/95 backdrop-blur-md p-3 rounded-xl border border-[#ebe8e3] flex flex-col md:flex-row md:items-center justify-between gap-3 sticky top-16 md:static z-20 shadow-xs transition-all duration-300 ease-in-out ${
-          isHeaderVisible ? 'translate-y-0 opacity-100' : 'max-md:-translate-y-28 max-md:opacity-0 max-md:pointer-events-none'
+        <div className={`bg-white/95 backdrop-blur-md p-3 rounded-xl border border-[#ebe8e3] flex flex-col md:flex-row md:items-center justify-between gap-3 sticky top-16 md:static z-20 shadow-xs transition-all duration-200 ease-out ${
+          isHeaderVisible ? 'translate-y-0 opacity-100 pointer-events-auto' : 'max-md:-translate-y-28 max-md:opacity-0 max-md:pointer-events-none'
         }`}>
           <div className="relative flex-1 max-w-md">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#847374] text-[18px]">

@@ -407,8 +407,8 @@ export const PesananBaruView: React.FC = () => {
           className={`lg:col-span-7 flex flex-col gap-3 ${totalItemCount > 0 ? 'pb-28 lg:pb-0' : 'pb-6 lg:pb-0'}`}
         >
           {/* Baris Pencarian & Kategori (Smart Collapsible Header di Mobile) */}
-          <div className={`flex flex-col gap-2.5 bg-white/95 backdrop-blur-md p-3.5 rounded-xl border border-[#ebe8e3] sticky top-16 lg:top-20 z-20 shadow-xs transition-all duration-300 ease-in-out ${
-            isHeaderVisible ? 'translate-y-0 opacity-100' : 'max-lg:-translate-y-36 max-lg:opacity-0 max-lg:pointer-events-none'
+          <div className={`flex flex-col gap-2.5 bg-white/95 backdrop-blur-md p-3.5 rounded-xl border border-[#ebe8e3] sticky top-16 lg:top-20 z-20 shadow-xs transition-all duration-200 ease-out ${
+            isHeaderVisible ? 'translate-y-0 opacity-100 pointer-events-auto' : 'max-lg:-translate-y-36 max-lg:opacity-0 max-lg:pointer-events-none'
           }`}>
             {/* Input Pencarian */}
             <div className="relative flex items-center bg-[#fcf9f4] px-3 py-2 rounded-lg border border-[#ebe8e3] focus-within:border-[#3d1018]">
