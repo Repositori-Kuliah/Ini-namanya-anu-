@@ -20,13 +20,15 @@ const getEnv = (key: string, fallback: string = ''): string => {
 };
 
 const url =
+  process.env.NEXT_PUBLIC_SUPABASE_URL ||
   getEnv('SUPABASE_URL') ||
-  'https://oktednhbuotgzmcvcner.supabase.co';
+  'https://fmwmvxqdnpbznnjtnnrx.supabase.co';
 
 const key =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   getEnv('SUPABASE_ANON_KEY') ||
   getEnv('SUPABASE_PUBLISHABLE_KEY') ||
-  'sb_publishable_LuXOP_YJDUDbsWcVIMhrTA_nG3Hw5gg';
+  'sb_publishable_uP60Of5g4Xw6MRsU3ni-Lg_3WKwdoOO';
 
 export const isRealSupabaseConfigured = Boolean(url && key);
 export const isDemoMode = false;
