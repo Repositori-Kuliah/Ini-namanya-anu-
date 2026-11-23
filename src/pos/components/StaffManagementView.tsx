@@ -296,7 +296,7 @@ export const StaffManagementView: React.FC = () => {
   return (
     <div className="flex flex-col w-full p-4 sm:p-6 lg:p-8 space-y-5 max-w-[1540px] mx-auto pb-4 md:pb-8">
       {/* Header */}
-      <div className="flex items-center justify-end gap-4 pb-1 border-b border-[#ebe8e3]">
+      <div className="flex items-center justify-end gap-4 pb-1">
         <div className="flex items-center gap-2">
           <button
             type="button"

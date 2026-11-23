@@ -217,7 +217,7 @@ const KelolaMejaViewInner: React.FC = () => {
   return (
     <div className="flex flex-col w-full pb-4 md:pb-8 max-w-[1600px] mx-auto px-4 sm:px-6 pt-3 space-y-4">
       {/* Header Halaman & Aksi Utama */}
-      <div className="flex items-center justify-end gap-3 pb-3 border-b border-[#ebe8e3]">
+      <div className="flex items-center justify-end gap-3 pb-1">
         <div className="flex items-center gap-2">
           <button
             type="button"

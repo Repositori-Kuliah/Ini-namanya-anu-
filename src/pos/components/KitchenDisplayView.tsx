@@ -266,7 +266,7 @@ export const KitchenDisplayView: React.FC = () => {
   return (
     <div className="flex flex-col w-full h-[calc(100dvh-7.5rem)] md:h-[calc(100vh-4.5rem)] max-w-[1720px] mx-auto px-4 sm:px-6 pt-3 overflow-hidden">
       {/* Top Bar: Pemilih Stasiun Dapur (Tetap di atas, tidak ikut ter-scroll) */}
-      <div className="flex items-center justify-between pb-3 border-b border-[#ebe8e3] gap-3 shrink-0">
+      <div className="flex items-center justify-between pb-2 gap-3 shrink-0">
         {/* Tombol Toggle Audio Chime Dapur Independen Per-Perangkat */}
         <button
           type="button"

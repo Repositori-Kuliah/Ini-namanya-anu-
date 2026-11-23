@@ -182,7 +182,7 @@ const KelolaMenuViewInner: React.FC = () => {
   return (
     <div className="flex flex-col w-full pb-4 md:pb-8 max-w-[1600px] mx-auto px-4 sm:px-6 pt-3 space-y-4">
       {/* Header Halaman & Tombol Aksi */}
-      <div className="flex items-center justify-end pb-3 border-b border-[#ebe8e3]">
+      <div className="flex items-center justify-end pb-1">
         <button
           type="button"
           onClick={() => setShowAddMenuModal(true)}

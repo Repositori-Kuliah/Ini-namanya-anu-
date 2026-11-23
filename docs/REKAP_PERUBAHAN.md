@@ -529,5 +529,23 @@ Berdasarkan audit komprehensif kaidah `antigravity-skills` (Clean Code, Aestheti
 
 ---
 
+### 24. Pembersihan Garis Pembatas Redundan (*Border Elimination*) pada Bilah Atas Halaman
+- **Masalah Antarmuka**:
+  - Terdapat garis horizontal tipis (`border-b border-[#ebe8e3]`) yang melintang membentang di bawah tombol-tombol aksi utama pada bilah atas (seperti tombol *Segarkan Antrean*, *Suara Bel: Aktif*, *Ekspor CSV*, *Tambah Akun Staf*, *Tambah Meja*, dan *Tambah Menu*).
+  - Garis pembatas horizontal ini tampak canggung dan mengotori kebersihan visual (*visual clutter*) karena tidak lagi membungkus judul teks halaman.
+- **Tindakan Perbaikan**:
+  - Menghapus kelas `border-b border-[#ebe8e3]` secara menyeluruh pada kontainer bilah atas di 6 halaman utama:
+    1. `CheckoutView.tsx` (Bilah Segarkan Antrean)
+    2. `KitchenDisplayView.tsx` (Bilah Suara Bel & Stasiun Dapur)
+    3. `LaporanView.tsx` (Bilah Ekspor CSV)
+    4. `StaffManagementView.tsx` (Bilah Tambah Akun Staf)
+    5. `KelolaMejaView.tsx` (Bilah Tambah Meja)
+    6. `KelolaMenuView.tsx` (Bilah Tambah Menu)
+  - Mengurangi padding vertikal berlebih (`pb-1` / `pb-2`) sehingga tombol aksi bertengger anggun dan menyatu mulus (*seamless background*) dengan warna latar kanvas aplikasi.
+- **Kaidah IUM / HCI**:
+  - **Aesthetic and Minimalist Design (Nielsen #8)**: Elemen antarmuka visual tidak boleh memuat garis atau pembatas dekoratif yang tidak menyampaikan makna atau hierarki esensial. Menghilangkan garis pembatas redundan memfokuskan perhatian pengguna langsung pada fungsi aksi utama.
+
+---
+
 *Terakhir diperbarui: 23 November 2026*
 
