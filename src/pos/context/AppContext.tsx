@@ -716,44 +716,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const login = async (emailOrUsername: string, password: string) => {
     let cleanInput = emailOrUsername.trim().toLowerCase();
 
-    // Resolusi cerdas: jika pengguna mengetik nama/username tanpa '@', cocokkan ke email resmi
+    // Resolusi cerdas: jika pengguna mengetik nama/username tanpa '@', cocokkan ke email resmi di database
     if (!cleanInput.includes('@')) {
-      const quickMap: Record<string, string> = {
-        admin: 'admin@rawongusti.test',
-        'budi admin': 'admin@rawongusti.test',
-        'budi (admin)': 'admin@rawongusti.test',
-        budi: 'admin@rawongusti.test',
-        kasir: 'kasir@rawongusti.test',
-        'dewi sartika': 'kasir@rawongusti.test',
-        'dewi sartika (kasir)': 'kasir@rawongusti.test',
-        dewi: 'kasir@rawongusti.test',
-        dapur: 'dapur@rawongusti.test',
-        kitchen: 'dapur@rawongusti.test',
-        'chef sam': 'dapur@rawongusti.test',
-        'chef sam (dapur)': 'dapur@rawongusti.test',
-        sam: 'dapur@rawongusti.test',
-        owner: 'owner@rawongusti.test',
-        'haji gusti': 'owner@rawongusti.test',
-        'haji gusti (owner)': 'owner@rawongusti.test',
-        gusti: 'owner@rawongusti.test',
-        rian: 'rian@rawongusti.test',
-        'rian pratama': 'rian@rawongusti.test',
-      };
+      // Bersihkan karakter simbol seperti kurung () dan tanda baca agar aman untuk query PostgREST
+      const sanitized = cleanInput.replace(/[()!@#$%^&*]/g, ' ').replace(/\s+/g, ' ').trim();
+      const firstWord = sanitized.split(' ')[0] || sanitized;
 
-      if (quickMap[cleanInput]) {
-        cleanInput = quickMap[cleanInput];
-      } else {
-        try {
-          const { data: matched } = await supabase
-            .from('profiles')
-            .select('email')
-            .ilike('full_name', `%${cleanInput}%`)
-            .limit(1)
-            .maybeSingle();
-          if (matched?.email) {
-            cleanInput = matched.email.toLowerCase();
+      try {
+        // 1. Cari profil aktif di database Supabase berdasarkan kecocokan nama
+        const { data: matched } = await supabase
+          .from('profiles')
+          .select('email, full_name, role')
+          .or(`full_name.ilike.%${sanitized}%,full_name.ilike.%${firstWord}%,role.ilike.%${firstWord}%`)
+          .eq('is_active', true)
+          .limit(1)
+          .maybeSingle();
+
+        if (matched?.email) {
+          cleanInput = matched.email.toLowerCase();
+        } else {
+          // 2. Fallback kamus cepat akun demo jika database belum memiliki data
+          const quickMap: Record<string, string> = {
+            admin: 'admin@rawongusti.test',
+            'budi admin': 'admin@rawongusti.test',
+            'budi (admin)': 'admin@rawongusti.test',
+            budi: 'admin@rawongusti.test',
+            kasir: 'kasir@rawongusti.test',
+            'dewi sartika': 'kasir@rawongusti.test',
+            'dewi sartika (kasir)': 'kasir@rawongusti.test',
+            dewi: 'kasir@rawongusti.test',
+            dapur: 'dapur@rawongusti.test',
+            kitchen: 'dapur@rawongusti.test',
+            'chef sam': 'dapur@rawongusti.test',
+            'chef sam (dapur)': 'dapur@rawongusti.test',
+            sam: 'dapur@rawongusti.test',
+            owner: 'owner@rawongusti.test',
+            'haji gusti': 'owner@rawongusti.test',
+            'haji gusti (owner)': 'owner@rawongusti.test',
+            gusti: 'owner@rawongusti.test',
+            rian: 'rian@rawongusti.test',
+            'rian pratama': 'rian@rawongusti.test',
+          };
+          if (quickMap[cleanInput] || quickMap[sanitized]) {
+            cleanInput = quickMap[cleanInput] || quickMap[sanitized];
           }
-        } catch {}
+        }
+      } catch (err) {
+        console.warn('[login username resolution]', err);
       }
     }
 

@@ -179,9 +179,11 @@ export const CheckoutView: React.FC = () => {
           aria-label="Daftar Antrean Tagihan"
           className="lg:col-span-5 flex flex-col gap-3"
         >
-          {/* Smart Collapsible Filter & Search Header di Mobile */}
+          {/* Filter & Search Header (Sticky di Mobile: Hide on Scroll Down, Show on Scroll Up; Normal Static di Desktop) */}
           <div className={`flex flex-col gap-2.5 bg-white/95 backdrop-blur-md p-2.5 rounded-xl border border-[#ebe8e3] sticky top-16 lg:static z-20 shadow-xs transition-all duration-200 ease-out ${
-            isHeaderVisible ? 'translate-y-0 opacity-100 pointer-events-auto' : 'max-lg:-translate-y-36 max-lg:opacity-0 max-lg:pointer-events-none'
+            isHeaderVisible
+              ? 'translate-y-0 opacity-100 pointer-events-auto'
+              : 'max-lg:-translate-y-40 max-lg:opacity-0 max-lg:pointer-events-none'
           }`}>
             {/* Tab Filter: Belum Dibayar vs Riwayat Transaksi */}
             <div className="flex items-center bg-[#f0ede9] p-1 rounded-xl">
@@ -252,8 +254,8 @@ export const CheckoutView: React.FC = () => {
             </div>
           </div>
 
-          {/* Daftar Tagihan Ringkas (Compact Horizontal List dengan Scroll Mandiri) */}
-          <div className="flex flex-col gap-2 max-h-[calc(100vh-220px)] overflow-y-auto p-1 pb-6 custom-scrollbar">
+          {/* Daftar Tagihan Ringkas */}
+          <div className="flex flex-col gap-2 max-h-none lg:max-h-[calc(100vh-220px)] overflow-y-auto p-1 pb-6 custom-scrollbar">
             {queueTab === 'unpaid' ? (
               filteredBills.length === 0 ? (
                 <div className="bg-white rounded-xl p-8 text-center border border-[#ebe8e3]">

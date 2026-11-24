@@ -141,9 +141,6 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
         className="flex items-center gap-2 px-3 py-1.5 bg-white border border-[#ebe8e3] hover:border-[#3d1018] rounded-xl text-xs font-bold text-[#1c1c19] transition-all cursor-pointer shadow-2xs focus-visible:outline-none focus:border-[#3d1018]"
         aria-label="Pilih tanggal laporan"
       >
-        <span className="material-symbols-outlined text-[17px] text-[#994703]">
-          calendar_month
-        </span>
         <span className="font-mono tracking-wider tabular-nums">
           {isoToDisplay(value)}
         </span>

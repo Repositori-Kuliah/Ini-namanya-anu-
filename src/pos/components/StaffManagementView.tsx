@@ -308,9 +308,11 @@ export const StaffManagementView: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter Bar (Smart Collapsible Header di Mobile) */}
+      {/* Filter Bar (Sticky di Mobile: Hide on Scroll Down, Show on Scroll Up; Normal Static di Desktop) */}
       <div className={`bg-white/95 backdrop-blur-md p-3 rounded-xl border border-[#ebe8e3] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sticky top-16 sm:static z-20 shadow-xs transition-all duration-200 ease-out ${
-        isHeaderVisible ? 'translate-y-0 opacity-100 pointer-events-auto' : 'max-sm:-translate-y-28 max-sm:opacity-0 max-sm:pointer-events-none'
+        isHeaderVisible
+          ? 'translate-y-0 opacity-100 pointer-events-auto'
+          : 'max-sm:-translate-y-36 max-sm:opacity-0 max-sm:pointer-events-none'
       }`}>
         <div className="relative flex-1 max-w-md">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#847374] text-[18px]">
@@ -358,7 +360,7 @@ export const StaffManagementView: React.FC = () => {
 
       {/* Staff Table dengan Scroll Mandiri */}
       <div className="bg-white rounded-xl border border-[#ebe8e3] overflow-hidden shadow-2xs">
-        <div className="max-h-[calc(100vh-320px)] overflow-y-auto custom-scrollbar">
+        <div className="max-h-none sm:max-h-[calc(100vh-320px)] overflow-y-auto custom-scrollbar">
           {/* Desktop View (Tampil pada layar >= md) */}
           <table className="hidden md:table w-full text-left text-xs">
             <thead className="bg-[#f6f3ee] border-b border-[#ebe8e3] text-[11px] font-bold text-[#847374] uppercase tracking-wider sticky top-0 z-10">

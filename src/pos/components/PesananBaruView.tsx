@@ -406,9 +406,11 @@ export const PesananBaruView: React.FC = () => {
           aria-label="Katalog Menu Restoran"
           className={`lg:col-span-7 flex flex-col gap-3 ${totalItemCount > 0 ? 'pb-28 lg:pb-0' : 'pb-6 lg:pb-0'}`}
         >
-          {/* Baris Pencarian & Kategori (Smart Collapsible Header di Mobile) */}
-          <div className={`flex flex-col gap-2.5 bg-white/95 backdrop-blur-md p-3.5 rounded-xl border border-[#ebe8e3] sticky top-16 lg:top-20 z-20 shadow-xs transition-all duration-200 ease-out ${
-            isHeaderVisible ? 'translate-y-0 opacity-100 pointer-events-auto' : 'max-lg:-translate-y-36 max-lg:opacity-0 max-lg:pointer-events-none'
+          {/* Baris Pencarian & Kategori (Sticky Search + Category Chips di Mobile: Hide on Scroll Down, Show on Scroll Up; Normal Static di Desktop) */}
+          <div className={`flex flex-col gap-2.5 bg-white/95 backdrop-blur-md p-3.5 rounded-xl border border-[#ebe8e3] sticky top-16 lg:static z-20 shadow-xs transition-all duration-200 ease-out ${
+            isHeaderVisible
+              ? 'translate-y-0 opacity-100 pointer-events-auto'
+              : 'max-lg:-translate-y-48 max-lg:opacity-0 max-lg:pointer-events-none'
           }`}>
             {/* Input Pencarian */}
             <div className="relative flex items-center bg-[#fcf9f4] px-3 py-2 rounded-lg border border-[#ebe8e3] focus-within:border-[#3d1018]">
@@ -483,8 +485,9 @@ export const PesananBaruView: React.FC = () => {
             </div>
           </div>
 
-          {/* Daftar Menu: Menyesuaikan konten secara alami tanpa batas wadah kaku */}
-          <div className="bg-white rounded-xl border border-[#ebe8e3] divide-y divide-[#ebe8e3] shadow-xs">
+          {/* Daftar Menu: Di PC ber-scroll mandiri di dalam kontainer seperti di Menu; di Mobile mengalir alami */}
+          <div className="bg-white rounded-xl border border-[#ebe8e3] shadow-xs overflow-hidden">
+            <div className="max-h-none lg:max-h-[calc(100vh-235px)] overflow-y-auto custom-scrollbar divide-y divide-[#ebe8e3]">
             {filteredMenu.length === 0 ? (
               <div className="p-8 text-center text-xs text-[#847374]">
                 Tidak ada menu yang sesuai dengan kata kunci &ldquo;{searchQuery}&rdquo;.
@@ -576,6 +579,7 @@ export const PesananBaruView: React.FC = () => {
                 );
               })
             )}
+            </div>
           </div>
         </section>
 

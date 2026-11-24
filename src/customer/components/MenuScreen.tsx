@@ -355,9 +355,11 @@ export const MenuScreen: React.FC = () => {
           aria-label="Katalog Menu Restoran"
           className="lg:col-span-7 flex flex-col gap-3 w-full"
         >
-          {/* Baris Pencarian & Kategori (Smart Collapsible Header di Mobile) */}
-          <div className={`flex flex-col gap-2.5 bg-white/95 backdrop-blur-md p-3.5 rounded-xl border border-[#ebe8e3] sticky top-16 lg:top-18 z-20 shadow-xs transition-all duration-200 ease-out ${
-            isHeaderVisible ? 'translate-y-0 opacity-100 pointer-events-auto' : 'max-lg:-translate-y-36 max-lg:opacity-0 max-lg:pointer-events-none'
+          {/* Baris Pencarian & Kategori (Sticky Search + Category Chips di Mobile: Hide on Scroll Down, Show on Scroll Up; Normal Static di Desktop) */}
+          <div className={`flex flex-col gap-2.5 bg-white/95 backdrop-blur-md p-3.5 rounded-xl border border-[#ebe8e3] sticky top-14 lg:static z-20 shadow-xs transition-all duration-200 ease-out ${
+            isHeaderVisible
+              ? 'translate-y-0 opacity-100 pointer-events-auto'
+              : 'max-lg:-translate-y-48 max-lg:opacity-0 max-lg:pointer-events-none'
           }`}>
             {/* Input Pencarian */}
             <div className="relative flex items-center bg-[#fcf9f4] px-3 py-2 rounded-lg border border-[#ebe8e3] focus-within:border-[#3d1018]">

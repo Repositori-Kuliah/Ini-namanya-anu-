@@ -26,9 +26,10 @@ const url =
 
 const key =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
   getEnv('SUPABASE_ANON_KEY') ||
   getEnv('SUPABASE_PUBLISHABLE_KEY') ||
-  'sb_publishable_uP60Of5g4Xw6MRsU3ni-Lg_3WKwdoOO';
+  'sb_publishable_LuXOP_YJDUDbsWcVIMhrTA_nG3Hw5gg';
 
 export const isRealSupabaseConfigured = Boolean(url && key);
 export const isDemoMode = false;

@@ -104,9 +104,11 @@ const MejaPelangganViewInner: React.FC = () => {
 
   return (
     <div className="flex flex-col w-full p-4 sm:p-6 lg:p-8 space-y-5 max-w-[1540px] mx-auto pb-4 md:pb-8">
-      {/* Search & Segmented Filter Bar (Smart Collapsible Header di Mobile) */}
+      {/* Search & Segmented Filter Bar (Sticky di Mobile: Hide on Scroll Down, Show on Scroll Up; Normal Static di Desktop) */}
       <div className={`flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white/95 backdrop-blur-md p-2.5 rounded-xl border border-[#ebe8e3] sticky top-16 md:static z-20 shadow-xs transition-all duration-200 ease-out ${
-        isHeaderVisible ? 'translate-y-0 opacity-100 pointer-events-auto' : 'max-md:-translate-y-28 max-md:opacity-0 max-md:pointer-events-none'
+        isHeaderVisible
+          ? 'translate-y-0 opacity-100 pointer-events-auto'
+          : 'max-md:-translate-y-36 max-md:opacity-0 max-md:pointer-events-none'
       }`}>
         {/* Search Input */}
         <div className="relative flex-1 max-w-md">
@@ -255,9 +257,8 @@ const MejaPelangganViewInner: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleBukaPesanan(selectedTable.number)}
-                className="w-full h-11 mt-2 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-xs active:scale-95 transition-all cursor-pointer"
+                className="w-full h-11 mt-2 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white font-semibold text-xs flex items-center justify-center shadow-xs active:scale-95 transition-all cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[18px]">add_circle</span>
                 <span>Buka Pesanan untuk Meja {selectedTable.number}</span>
               </button>
             </div>
@@ -318,17 +319,15 @@ const MejaPelangganViewInner: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleViewReceipt}
-                    className="h-11 rounded-xl bg-white border border-[#ebe8e3] hover:bg-[#f6f3ee] text-[#1c1c19] font-semibold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+                    className="h-11 rounded-xl bg-white border border-[#ebe8e3] hover:bg-[#f6f3ee] text-[#1c1c19] font-semibold text-xs flex items-center justify-center active:scale-95 transition-all cursor-pointer"
                   >
-                    <span className="material-symbols-outlined text-[18px]">receipt</span>
                     <span>Ringkasan Bill</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => handleBukaCheckout(selectedTable.number)}
-                    className="h-11 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-xs active:scale-95 transition-all cursor-pointer"
+                    className="h-11 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white font-semibold text-xs flex items-center justify-center shadow-xs active:scale-95 transition-all cursor-pointer"
                   >
-                    <span className="material-symbols-outlined text-[18px]">point_of_sale</span>
                     <span>Buka Checkout</span>
                   </button>
                 </div>
@@ -337,9 +336,8 @@ const MejaPelangganViewInner: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsCancelTableModalOpen(true)}
-                  className="w-full py-2.5 px-3 rounded-xl bg-[#ba1a1a] hover:bg-[#93000a] text-white font-bold text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5 mt-1 shadow-xs"
+                  className="w-full py-2.5 px-3 rounded-xl bg-[#ba1a1a] hover:bg-[#93000a] text-white font-bold text-xs transition-colors cursor-pointer flex items-center justify-center mt-1 shadow-xs"
                 >
-                  <span className="material-symbols-outlined text-[16px]">cancel</span>
                   <span>Batalkan Seluruh Pesanan Meja {selectedTable.number}</span>
                 </button>
               </div>
@@ -400,9 +398,8 @@ const MejaPelangganViewInner: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleBukaPesanan(selectedTable.number)}
-                  className="w-full h-11 mt-2 rounded-xl bg-[#3d1018] text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-xs active:scale-95 transition-all cursor-pointer"
+                  className="w-full h-11 mt-2 rounded-xl bg-[#3d1018] text-white font-semibold text-xs flex items-center justify-center shadow-xs active:scale-95 transition-all cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[18px]">add_circle</span>
                   <span>Buka Pesanan untuk Meja Ini</span>
                 </button>
               </div>
@@ -460,17 +457,15 @@ const MejaPelangganViewInner: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleViewReceipt}
-                    className="h-11 rounded-xl bg-white border border-[#ebe8e3] text-[#1c1c19] font-semibold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+                    className="h-11 rounded-xl bg-white border border-[#ebe8e3] text-[#1c1c19] font-semibold text-xs flex items-center justify-center active:scale-95 transition-all cursor-pointer"
                   >
-                    <span className="material-symbols-outlined text-[18px]">receipt</span>
                     <span>Ringkasan Bill</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => handleBukaCheckout(selectedTable.number)}
-                    className="h-11 rounded-xl bg-[#3d1018] text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-xs active:scale-95 transition-all cursor-pointer"
+                    className="h-11 rounded-xl bg-[#3d1018] text-white font-semibold text-xs flex items-center justify-center shadow-xs active:scale-95 transition-all cursor-pointer"
                   >
-                    <span className="material-symbols-outlined text-[18px]">point_of_sale</span>
                     <span>Buka Checkout</span>
                   </button>
                 </div>
@@ -479,9 +474,8 @@ const MejaPelangganViewInner: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsCancelTableModalOpen(true)}
-                  className="w-full py-2.5 px-3 rounded-xl bg-[#ba1a1a] hover:bg-[#93000a] text-white font-bold text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5 mt-1 shadow-xs"
+                  className="w-full py-2.5 px-3 rounded-xl bg-[#ba1a1a] hover:bg-[#93000a] text-white font-bold text-xs transition-colors cursor-pointer flex items-center justify-center mt-1 shadow-xs"
                 >
-                  <span className="material-symbols-outlined text-[16px]">cancel</span>
                   <span>Batalkan Seluruh Pesanan Meja {selectedTable.number}</span>
                 </button>
               </div>

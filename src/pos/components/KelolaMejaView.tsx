@@ -229,9 +229,11 @@ const KelolaMejaViewInner: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter Bar (Smart Collapsible Header di Mobile) */}
+      {/* Filter Bar (Sticky di Mobile: Hide on Scroll Down, Show on Scroll Up; Normal Static di Desktop) */}
       <div className={`bg-white/95 backdrop-blur-md p-3 rounded-xl border border-[#ebe8e3] flex flex-col md:flex-row md:items-center justify-between gap-3 sticky top-16 md:static z-20 shadow-xs transition-all duration-200 ease-out ${
-        isHeaderVisible ? 'translate-y-0 opacity-100 pointer-events-auto' : 'max-md:-translate-y-28 max-md:opacity-0 max-md:pointer-events-none'
+        isHeaderVisible
+          ? 'translate-y-0 opacity-100 pointer-events-auto'
+          : 'max-md:-translate-y-36 max-md:opacity-0 max-md:pointer-events-none'
       }`}>
         <div className="relative flex-1 max-w-sm">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#847374] text-[18px]">
@@ -268,7 +270,7 @@ const KelolaMejaViewInner: React.FC = () => {
 
       {/* Tabel Meja Compact dengan Scroll Mandiri */}
       <div className="bg-white rounded-xl border border-[#ebe8e3] shadow-xs overflow-hidden">
-        <div className="max-h-[calc(100vh-250px)] overflow-y-auto custom-scrollbar">
+        <div className="max-h-none md:max-h-[calc(100vh-250px)] overflow-y-auto custom-scrollbar">
           {/* Tampilan Desktop Table */}
           <table className="hidden md:table w-full text-left text-xs border-collapse">
             <thead className="bg-[#f6f3ee] text-[#524344] uppercase tracking-wider text-[10px] font-bold border-b border-[#ebe8e3] sticky top-0 z-10">

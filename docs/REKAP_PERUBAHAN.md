@@ -552,5 +552,38 @@ Berdasarkan audit komprehensif kaidah `antigravity-skills` (Clean Code, Aestheti
 
 ---
 
-*Terakhir diperbarui: 23 November 2026*
+### 25. Dekluter Ikon Tombol Aksi Meja & Logo Kalender Laporan
+- **Masalah Antarmuka**:
+  - Tombol-tombol aksi utama meja (*Buka Pesanan*, *Ringkasan Bill*, *Buka Checkout*, *Batalkan Seluruh Pesanan*) dan tombol input tanggal di Laporan dijejali oleh ikon-ikon dekoratif yang redundan (`add_circle`, `receipt`, `point_of_sale`, `cancel`, `calendar_month`).
+  - Keberadaan ikon-ikon ini memadati area tombol dan mengalihkan perhatian dari teks label aksi.
+- **Tindakan Perbaikan**:
+  - Menghapus seluruh ikon dekoratif dari tombol aksi di `MejaPelangganView.tsx` dan input tanggal di `CustomDatePicker.tsx`.
+  - Tombol kini mengadopsi gaya tipografi bersih (*content-first typography*) yang elegan, tenang, dan tegas.
+- **Kaidah IUM / HCI**:
+  - **Aesthetic and Minimalist Design (Nielsen #8) & Cognitive Clarity**: Menghilangkan polusi visual non-fungsional, mempercepat waktu reaksi pemrosesan teks oleh kasir.
+
+---
+
+### 26. Tata Letak Dual-Modality: Kontainer Menu PC & Sticky Filter Mobile
+- **Masalah Antarmuka**:
+  - Di layar PC, katalog menu sebelumnya menggulir seluruh halaman sehingga search bar mengapung dan konten menu sempat bocor di atasnya.
+- **Tindakan Perbaikan**:
+  - **Di PC / Desktop (`lg:`)**: Daftar menu dibungkus di dalam kontainer ber-scroll mandiri (`lg:max-h-[calc(100vh-235px)] overflow-y-auto custom-scrollbar`), persis seperti tabel pada layar *Menu*. Kotak search bar dan chip kategori diam kokoh di atas tanpa pernah bergeser atau bocor.
+  - **Di Mobile (`< lg`)**: Menggunakan **Sticky Search + Category Chips** dengan pola **Hide on Scroll Down, Show on Scroll Up** (`useScrollDirection`) sehingga membebaskan area pandang layar saat membaca menu dan langsung muncul seketika saat diusap naik.
+- **Kaidah IUM / HCI**:
+  - **Consistency and Standards (Nielsen #4) & Ergonomic Adaptation**: Menghadirkan pola navigasi desktop yang kokoh (*zero-layout-shift*) sekaligus navigasi sentuh ponsel yang fleksibel.
+
+---
+
+### 27. Resolusi Login Username Fleksibel & Sanitasi Karakter Simbol
+- **Masalah Otentikasi**:
+  - Kasir/admin yang login menggunakan nama berkarakter kurung (*misal: `Budi (Admin)`*) gagal login karena karakter `()` merusak sintaks filter PostgREST Supabase.
+- **Tindakan Perbaikan**:
+  - Menambahkan sanitasi string otomatis pada resolusi nama login di `AppContext.tsx`, membersihkan tanda kurung dan simbol sebelum dikueri ke tabel `profiles`, serta mendukung `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` di `supabase.ts`.
+- **Kaidah IUM / HCI & Security**:
+  - **Flexibility and Efficiency of Use (Nielsen #7) & Fault Tolerance**: Pengguna bebas mengetik variasi nama maupun email asli tanpa khawatir terhalang format karakter, dengan verifikasi kata sandi yang tetap 100% terlindungi oleh standar enkripsi bcrypt Supabase.
+
+---
+
+*Terakhir diperbarui: 24 November 2026*
 
