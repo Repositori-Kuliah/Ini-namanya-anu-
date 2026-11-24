@@ -22,7 +22,7 @@ const getEnv = (key: string, fallback: string = ''): string => {
 const url =
   process.env.NEXT_PUBLIC_SUPABASE_URL ||
   getEnv('SUPABASE_URL') ||
-  'https://fmwmvxqdnpbznnjtnnrx.supabase.co';
+  'https://oktednhbuotgzmcvcner.supabase.co';
 
 const key =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
