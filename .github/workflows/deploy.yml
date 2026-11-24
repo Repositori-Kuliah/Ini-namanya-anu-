@@ -33,12 +33,18 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      - name: Validate Supabase config
+        env:
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          [[ "$SUPABASE_URL" =~ ^https://[a-z0-9]+\.supabase\.co$ ]] || { echo "::error::NEXT_PUBLIC_SUPABASE_URL kosong atau formatnya salah"; exit 1; }
+          [[ -n "$SUPABASE_KEY" ]] || { echo "::error::NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY kosong"; exit 1; }
+
       - name: Build Project
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || secrets.VITE_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || secrets.VITE_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_BASE_PATH: /Ini-namanya-anu-
         run: |
           npm run build
