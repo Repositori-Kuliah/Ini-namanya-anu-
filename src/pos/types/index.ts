@@ -112,6 +112,7 @@ export interface StoreSettings {
   enableGuestWifi?: boolean;       // Modular on/off WiFi tamu restoran (default true)
   wifiSsid?: string;               // Nama SSID / username WiFi (default "RawonGusti_VIP")
   wifiPassword?: string;           // Password WiFi tamu (default "rawonenak08")
+  receiptPaperSize?: '58mm' | '80mm'; // Lebar kertas printer termal (default '58mm')
 }
 
 export interface CashierShift {

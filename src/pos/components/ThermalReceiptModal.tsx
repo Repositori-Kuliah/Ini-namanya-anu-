@@ -8,16 +8,18 @@ import {
   loadMonoImage,
   printReceiptWithFallback,
   RECEIPT_DOTS_58MM,
+  RECEIPT_DOTS_80MM,
   RECEIPT_WIDTH_58MM,
+  RECEIPT_WIDTH_80MM,
   type MonoImage,
   type ReceiptCharge,
   type ReceiptData,
   type ReceiptRow,
 } from '../../lib/escpos';
 
-// Lebar logo dalam titik printer (58mm penuh = 384 titik).
-// 96 titik ~ 25% lebar kertas, sebanding dengan contoh struk.
-const LOGO_DOTS = 96;
+// Lebar logo dalam titik printer (~25% lebar kertas, sebanding dengan contoh struk).
+const LOGO_DOTS_58MM = 96;
+const LOGO_DOTS_80MM = 144;
 
 const STORE_NAME = 'RAWON GUSTI';
 const STORE_ADDRESS = [
@@ -37,6 +39,12 @@ export const ThermalReceiptModal: React.FC = () => {
   const { receiptModalData, closeReceiptModal, storeSettings } = useApp();
   const [isPrinting, setIsPrinting] = useState(false);
   const [logo, setLogo] = useState<MonoImage | null>(null);
+  const [logoWidthDots, setLogoWidthDots] = useState<number>(0);
+
+  const is80mm = storeSettings?.receiptPaperSize === '80mm';
+  const receiptWidth = is80mm ? RECEIPT_WIDTH_80MM : RECEIPT_WIDTH_58MM;
+  const receiptDots = is80mm ? RECEIPT_DOTS_80MM : RECEIPT_DOTS_58MM;
+  const targetLogoDots = is80mm ? LOGO_DOTS_80MM : LOGO_DOTS_58MM;
 
   useLockBodyScroll(Boolean(receiptModalData));
 
@@ -50,16 +58,19 @@ export const ThermalReceiptModal: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [receiptModalData, closeReceiptModal]);
 
-  // Logo diubah ke 1-bit (grayscale + dithering) sekali saja;
+  // Logo diubah ke 1-bit (grayscale + dithering) sesuai lebar kertas aktif;
   // hasil yang sama dipakai untuk pratinjau dan cetak raster.
   useEffect(() => {
-    if (!receiptModalData || logo) return;
+    if (!receiptModalData || (logo && logoWidthDots === targetLogoDots)) return;
     let cancelled = false;
     // logo-rawon-struk.png: monogram "g" hitam tanpa latar (transparan), dari logo_big.jpeg.
     // Nama "RAWON GUSTI" sudah dicetak sebagai teks tepat di bawahnya.
-    loadMonoImage(publicAsset('/logo-rawon-struk.png'), { targetWidth: LOGO_DOTS })
+    loadMonoImage(publicAsset('/logo-rawon-struk.png'), { targetWidth: targetLogoDots })
       .then((img) => {
-        if (!cancelled) setLogo(img);
+        if (!cancelled) {
+          setLogo(img);
+          setLogoWidthDots(targetLogoDots);
+        }
       })
       .catch(() => {
         /* Tanpa logo pun struk tetap bisa dicetak. */
@@ -67,7 +78,7 @@ export const ThermalReceiptModal: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [receiptModalData, logo]);
+  }, [receiptModalData, logo, logoWidthDots, targetLogoDots]);
 
   const receiptData = useMemo<ReceiptData | null>(() => {
     const bill = receiptModalData;
@@ -124,8 +135,8 @@ export const ThermalReceiptModal: React.FC = () => {
   }, [receiptModalData, storeSettings]);
 
   const lines = useMemo(
-    () => (receiptData ? buildReceiptLines(receiptData, RECEIPT_WIDTH_58MM) : []),
-    [receiptData],
+    () => (receiptData ? buildReceiptLines(receiptData, receiptWidth) : []),
+    [receiptData, receiptWidth],
   );
 
   if (!receiptModalData || !receiptData) return null;
@@ -136,7 +147,7 @@ export const ThermalReceiptModal: React.FC = () => {
     try {
       const outcome = await printReceiptWithFallback(receiptData, {
         printerUrl: process.env.NEXT_PUBLIC_ESCPOS_PRINTER_URL,
-        width: RECEIPT_WIDTH_58MM,
+        width: receiptWidth,
         logo: logo ?? undefined,
       });
       // Printer belum diset / gagal: cetak pratinjau yang sama lewat browser.
@@ -159,7 +170,7 @@ export const ThermalReceiptModal: React.FC = () => {
         }
       }}
     >
-      <div className="bg-white rounded-2xl max-w-sm w-full max-h-[88vh] p-4 sm:p-5 shadow-2xl border border-[#ebe8e3] flex flex-col my-auto animate-in zoom-in-95 duration-150 cursor-default">
+      <div className={`bg-white rounded-2xl ${is80mm ? 'max-w-md' : 'max-w-sm'} w-full max-h-[88vh] p-4 sm:p-5 shadow-2xl border border-[#ebe8e3] flex flex-col my-auto animate-in zoom-in-95 duration-150 cursor-default`}>
         {/* Header Modal Ringkas */}
         <div className="flex items-center justify-between pb-3 border-b border-[#ebe8e3] shrink-0">
           <div className="flex items-center gap-2">
@@ -168,7 +179,9 @@ export const ThermalReceiptModal: React.FC = () => {
               <h3 id="receipt-modal-title" className="font-serif font-bold text-sm sm:text-base text-[#1c1c19] leading-tight">
                 Pratinjau Struk Kasir
               </h3>
-              <p className="text-[10px] text-[#847374]">Terimakasih</p>
+              <p className="text-[10px] text-[#847374]">
+                Tampilan sesuai hasil cetak printer termal {is80mm ? '80mm' : '58mm'}
+              </p>
             </div>
           </div>
           <button
@@ -184,19 +197,19 @@ export const ThermalReceiptModal: React.FC = () => {
         {/* Meja abu-abu + kertas termal putih (hanya kertas yang ikut tercetak) */}
         <div className="flex-1 overflow-y-auto overscroll-contain my-3 rounded-xl bg-neutral-200 p-3 sm:p-4">
           <div className="printable-receipt-area mx-auto w-fit bg-white text-black px-4 pt-5 pb-6 shadow-md font-mono text-[12px] leading-[1.35]">
-            <div className="w-[32ch] mx-auto">
-              {/* Logo 1-bit: lebarnya proporsional 128/384 titik dari lebar kertas */}
+            <div className="mx-auto" style={{ width: `${receiptWidth}ch` }}>
+              {/* Logo 1-bit: lebarnya proporsional terhadap lebar titik kertas */}
               <div className="flex justify-center mb-1.5">
                 {logo ? (
                   <img
                     src={logo.previewUrl}
                     alt="Logo Rawon Gusti"
-                    style={{ width: `${(logo.width / RECEIPT_DOTS_58MM) * 100}%` }}
+                    style={{ width: `${(logo.width / receiptDots) * 100}%` }}
                     className="block"
                   />
                 ) : (
                   // Tempat kosong seukuran logo supaya struk tidak "melompat" saat logo selesai dimuat.
-                  <div style={{ width: `${(LOGO_DOTS / RECEIPT_DOTS_58MM) * 100}%`, aspectRatio: '400 / 491' }} />
+                  <div style={{ width: `${(targetLogoDots / receiptDots) * 100}%`, aspectRatio: '400 / 491' }} />
                 )}
               </div>
 

@@ -363,6 +363,42 @@ export const PengaturanView: React.FC = () => {
           </form>
         </div>
       </div>
+
+      {/* ================= MODUL 4: PRINTER TERMAL ================= */}
+      <div className="bg-white p-5 rounded-2xl border border-[#ebe8e3] shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="font-bold text-sm text-[#1c1c19]">Ukuran Kertas Printer Termal</h2>
+            <p className="text-[11px] text-[#524344] mt-0.5">
+              Pilih lebar kertas struk kasir sesuai printer termal yang digunakan (58mm atau 80mm).
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {(['58mm', '80mm'] as const).map((size) => {
+              const active = (storeSettings.receiptPaperSize ?? '58mm') === size;
+              return (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => {
+                    updateStoreSettings({ receiptPaperSize: size });
+                    showToast(`Ukuran kertas printer diatur ke ${size}`, 'success');
+                  }}
+                  aria-pressed={active}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                    active
+                      ? 'bg-[#3d1018] text-white border-[#3d1018] shadow-xs'
+                      : 'bg-[#fcf9f4] text-[#524344] border-[#ebe8e3] hover:bg-[#f0ede9]'
+                  }`}
+                >
+                  {size} ({size === '58mm' ? '32 kolom' : '48 kolom'})
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

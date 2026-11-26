@@ -280,6 +280,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           enableGuestWifi: parsed.enableGuestWifi ?? true,
           wifiSsid: parsed.wifiSsid || 'RawonGusti_VIP',
           wifiPassword: parsed.wifiPassword || 'rawonenak08',
+          receiptPaperSize: parsed.receiptPaperSize || '58mm',
         };
       }
     } catch {}
@@ -304,6 +305,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       enableGuestWifi: true,
       wifiSsid: 'RawonGusti_VIP',
       wifiPassword: 'rawonenak08',
+      receiptPaperSize: '58mm',
     };
   });
 
@@ -346,6 +348,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           sound_enabled: updated.soundEnabled,
           sound_station: updated.soundStation,
           rounding_rule: updated.roundingRule,
+          receipt_paper_size: updated.receiptPaperSize,
           updated_at: new Date().toISOString(),
         })
         .eq('setting_id', 1)
@@ -506,6 +509,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           soundEnabled: st.sound_enabled ?? prev.soundEnabled,
           soundStation: st.sound_station || prev.soundStation,
           roundingRule: st.rounding_rule || prev.roundingRule,
+          receiptPaperSize: st.receipt_paper_size || prev.receiptPaperSize,
         }));
       }
 
