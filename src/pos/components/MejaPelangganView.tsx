@@ -29,7 +29,7 @@ const MejaPelangganViewInner: React.FC = () => {
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'terisi' | 'tersedia'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'terisi' | 'tersedia' | 'qr'>('all');
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<OrderItemSummary | null>(null);
@@ -54,6 +54,7 @@ const MejaPelangganViewInner: React.FC = () => {
     if (filterStatus === 'all') return true;
     if (filterStatus === 'tersedia') return table.status === 'kosong';
     if (filterStatus === 'terisi') return table.status !== 'kosong';
+    if (filterStatus === 'qr') return pendingQrOrders.some((p) => p.tableNumber === table.number);
     return true;
   });
 
@@ -134,29 +135,59 @@ const MejaPelangganViewInner: React.FC = () => {
           )}
         </div>
 
-        {/* Clean Segmented Control: 3 Status Saja (Semua Meja, Terisi, Tersedia) */}
-        <div className="inline-flex items-center bg-white p-1 rounded-xl border border-[#ebe8e3] shadow-xs overflow-x-auto no-scrollbar">
-          {[
-            { id: 'all', label: 'Semua Meja', count: dineInTables.length },
-            { id: 'terisi', label: 'Terisi', count: occupiedCount },
-            { id: 'tersedia', label: 'Tersedia', count: emptyCount },
-          ].map((item) => {
-            const active = filterStatus === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setFilterStatus(item.id as any)}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                  active
-                    ? 'bg-[#3d1018] text-white shadow-xs'
-                    : 'text-[#524344] hover:text-[#1c1c19] hover:bg-[#f6f3ee]'
+        {/* Option C: Filter Chips + Conditional QR Masuk Pill */}
+        <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
+          <div className="grid grid-cols-3 flex-1 sm:flex-initial sm:inline-flex items-stretch bg-white rounded-xl border border-[#ebe8e3] shadow-xs overflow-hidden divide-x divide-[#ebe8e3]">
+            {[
+              { id: 'all', label: 'Semua', count: dineInTables.length },
+              { id: 'terisi', label: 'Terisi', count: occupiedCount },
+              { id: 'tersedia', label: 'Tersedia', count: emptyCount },
+            ].map((item) => {
+              const active = filterStatus === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setFilterStatus(item.id as any)}
+                  className={`flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-2 text-[11px] sm:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap min-w-0 ${
+                    active
+                      ? 'bg-[#3d1018] text-white'
+                      : 'text-[#524344] hover:text-[#1c1c19] hover:bg-[#f6f3ee]'
+                  }`}
+                >
+                  <span className="truncate">{item.label}</span>
+                  <span
+                    className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold tabular-nums leading-none shrink-0 ${
+                      active ? 'bg-white/20 text-white' : 'bg-[#f0ede9] text-[#524344]'
+                    }`}
+                  >
+                    {item.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {pendingQrOrders.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setFilterStatus(filterStatus === 'qr' ? 'all' : 'qr')}
+              className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer shrink-0 ${
+                filterStatus === 'qr'
+                  ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                  : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
+              }`}
+            >
+              <span>QR Masuk</span>
+              <span
+                className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold tabular-nums leading-none ${
+                  filterStatus === 'qr' ? 'bg-white/20 text-white' : 'bg-amber-200/80 text-amber-900'
                 }`}
               >
-                {item.label} ({item.count})
-              </button>
-            );
-          })}
+                {pendingQrOrders.length}
+              </span>
+            </button>
+          )}
         </div>
       </div>
 

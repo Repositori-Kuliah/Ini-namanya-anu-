@@ -33,8 +33,10 @@ export const PesananBaruView: React.FC = () => {
   } = useApp();
 
   const [activeCategory, setActiveCategory] = useState<string>('Semua');
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [isConfirmingReset, setIsConfirmingReset] = useState(false);
   const [isSuccessSent, setIsSuccessSent] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [showMultiTableSelector, setShowMultiTableSelector] = useState(false);
@@ -228,10 +230,45 @@ export const PesananBaruView: React.FC = () => {
 
       {/* Daftar Menu Yang Dipilih Dalam Keranjang */}
       <div className="flex-1 min-h-[140px]">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-2 gap-2">
           <span className="text-[11px] font-bold uppercase tracking-wider text-[#524344]">
             Daftar Pesanan ({totalItemCount} item)
           </span>
+
+          {cartItems.length > 0 && (
+            isConfirmingReset ? (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmingReset(false)}
+                  className="px-2 py-1 rounded-md text-[11px] font-bold text-[#524344] bg-[#f0ede9] hover:bg-[#e0dcd8] cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    cartItems.forEach((ci) => removeFromCart(ci.menuItem.id));
+                    setKitchenGeneralNote('');
+                    setIsConfirmingReset(false);
+                  }}
+                  className="px-2 py-1 rounded-md text-[11px] font-bold text-white bg-[#ba1a1a] hover:bg-red-700 cursor-pointer"
+                >
+                  Ya, Reset
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsConfirmingReset(true)}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold text-[#ba1a1a] hover:bg-red-50 transition-colors cursor-pointer"
+                title="Kosongkan semua pesanan"
+              >
+                <span className="material-symbols-outlined text-[14px]">delete_sweep</span>
+                <span>Kosongkan</span>
+              </button>
+            )
+          )}
         </div>
 
         {cartItems.length === 0 ? (
@@ -435,53 +472,84 @@ export const PesananBaruView: React.FC = () => {
               )}
             </div>
 
-            {/* Filter Kategori Horizontal dengan scroll Mouse Wheel */}
-            <div
-              onWheel={(e) => {
-                if (e.deltaY !== 0) {
-                  e.currentTarget.scrollLeft += e.deltaY;
-                }
-              }}
-              className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 cursor-grab"
+            {/* Toggle Kategori Mobile (Search-first + Collapsible Bento) */}
+            <button
+              type="button"
+              onClick={() => setIsCategoryOpen((prev) => !prev)}
+              className="sm:hidden w-full h-9 px-3 rounded-xl bg-[#f0ede9] text-[#524344] text-xs font-bold flex items-center justify-between cursor-pointer active:scale-[0.99] transition-transform"
+              aria-expanded={isCategoryOpen}
             >
-              <button
-                type="button"
-                onClick={() => setActiveCategory('Semua')}
-                className={`h-8 px-3 rounded-lg text-xs font-bold transition-all shrink-0 inline-flex items-center justify-center cursor-pointer ${
-                  activeCategory === 'Semua'
-                    ? 'bg-[#3d1018] text-white shadow-2xs'
-                    : 'bg-[#f0ede9] text-[#524344] hover:bg-[#e0dcd8]'
+              <span className="flex items-center gap-1.5 truncate ">
+                <span className="material-symbols-outlined text-[16px] text-[#3d1018] ">restaurant_menu</span>
+                <span className='ml-2'>Kategori:</span>
+                <span className="text-[#3d1018]">{activeCategory}</span>
+              </span>
+              <span
+                className={`material-symbols-outlined text-[18px] shrink-0 transition-transform duration-200 ease-out ${
+                  isCategoryOpen ? 'rotate-1 80' : ''
                 }`}
               >
-                Semua ({menuItems.length})
-              </button>
+                expand_more
+              </span>
+            </button>
 
-              <button
-                type="button"
-                onClick={() => setActiveCategory('Favorit')}
-                className={`h-8 px-3 rounded-lg text-xs font-bold transition-all shrink-0 inline-flex items-center justify-center cursor-pointer ${
-                  activeCategory === 'Favorit'
-                    ? 'bg-[#3d1018] text-white shadow-2xs'
-                    : 'bg-[#f0ede9] text-[#524344] hover:bg-[#e0dcd8]'
-                }`}
-              >
-                Favorit
-              </button>
+            {/* Filter Kategori: Collapsible Bento grid di mobile (smooth), flex wrap di desktop */}
+            <div
+              className={`grid sm:block transition-[grid-template-rows,opacity] duration-200 ease-out ${
+                isCategoryOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 sm:opacity-100'
+              }`}
+            >
+              <div className="overflow-hidden sm:overflow-visible">
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-1.5 py-0.5 pt-1 sm:pt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveCategory('Semua');
+                      setIsCategoryOpen(false);
+                    }}
+                    className={`col-span-2 sm:col-span-1 h-10 sm:h-8 px-3 rounded-xl sm:rounded-lg text-xs font-bold transition-all inline-flex items-center justify-center cursor-pointer ${
+                      activeCategory === 'Semua'
+                        ? 'bg-[#3d1018] text-white shadow-2xs'
+                        : 'bg-[#f0ede9] text-[#524344] hover:bg-[#e0dcd8]'
+                    }`}
+                  >
+                    Semua ({menuItems.length})
+                  </button>
 
-              {menuCategories.map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setActiveCategory(cat)}
-                  className={`h-8 px-3 rounded-lg text-xs font-bold transition-all shrink-0 inline-flex items-center justify-center cursor-pointer ${
-                    activeCategory === cat
-                      ? 'bg-[#3d1018] text-white shadow-2xs'
-                      : 'bg-[#f0ede9] text-[#524344] hover:bg-[#e0dcd8]'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveCategory('Favorit');
+                      setIsCategoryOpen(false);
+                    }}
+                    className={`h-10 sm:h-8 px-3 rounded-xl sm:rounded-lg text-xs font-bold transition-all inline-flex items-center justify-center cursor-pointer ${
+                      activeCategory === 'Favorit'
+                        ? 'bg-[#3d1018] text-white shadow-2xs'
+                        : 'bg-[#f0ede9] text-[#524344] hover:bg-[#e0dcd8]'
+                    }`}
+                  >
+                    Favorit
+                  </button>
+
+                  {menuCategories.map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => {
+                        setActiveCategory(cat);
+                        setIsCategoryOpen(false);
+                      }}
+                      className={`h-10 sm:h-8 px-3 rounded-xl sm:rounded-lg text-xs font-bold transition-all inline-flex items-center justify-center text-center truncate cursor-pointer ${
+                        activeCategory === cat
+                          ? 'bg-[#3d1018] text-white shadow-2xs'
+                          : 'bg-[#f0ede9] text-[#524344] hover:bg-[#e0dcd8]'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -501,8 +569,18 @@ export const PesananBaruView: React.FC = () => {
                 return (
                   <div
                     key={item.id}
-                    className={`p-3 sm:px-4 flex items-center justify-between gap-3 hover:bg-[#fcf9f4] transition-colors ${
-                      isOut ? 'opacity-70 bg-[#fbf9f8]' : ''
+                    onClick={() => {
+                      if (isOut) return;
+                      if (quantity > 0) {
+                        updateCartQuantity(item.id, 1);
+                      } else {
+                        addToCart(item, 1);
+                      }
+                    }}
+                    className={`p-3 sm:px-4 flex items-center justify-between gap-3 transition-colors ${
+                      isOut
+                        ? 'opacity-70 bg-[#fbf9f8] cursor-not-allowed'
+                        : 'hover:bg-[#fcf9f4] cursor-pointer'
                     }`}
                   >
                     {/* Info Menu Kiri (Nama + Kategori) */}
@@ -534,46 +612,48 @@ export const PesananBaruView: React.FC = () => {
                         Rp {item.price.toLocaleString('id-ID')}
                       </span>
 
-                      {isOut ? (
-                        <button
-                          type="button"
-                          disabled
-                          className="px-2.5 py-1.5 rounded-lg bg-[#f0ede9] text-[#847374] font-bold text-xs cursor-not-allowed"
-                        >
-                          Kosong
-                        </button>
-                      ) : quantity > 0 ? (
-                        <div className="flex items-center bg-[#f0ede9] rounded-lg p-0.5 border border-[#e0dcd8]">
+                      <div onClick={(e) => e.stopPropagation()}>
+                        {isOut ? (
                           <button
                             type="button"
-                            onClick={() => updateCartQuantity(item.id, -1)}
-                            className="w-8 h-8 sm:w-7 sm:h-7 rounded bg-white text-[#1c1c19] flex items-center justify-center font-bold text-xs hover:bg-[#ebe8e3] cursor-pointer"
-                            aria-label={`Kurangi ${item.name}`}
+                            disabled
+                            className="px-2.5 py-1.5 rounded-lg bg-[#f0ede9] text-[#847374] font-bold text-xs cursor-not-allowed"
                           >
-                            <span className="material-symbols-outlined text-[15px] sm:text-[14px]">remove</span>
+                            Kosong
                           </button>
-                          <span className="w-8 sm:w-7 text-center font-bold text-xs text-[#1c1c19] tabular-nums">
-                            {quantity}
-                          </span>
+                        ) : quantity > 0 ? (
+                          <div className="h-9 sm:h-8 flex items-center bg-[#f0ede9] rounded-lg p-0.5 border border-[#e0dcd8]">
+                            <button
+                              type="button"
+                              onClick={() => updateCartQuantity(item.id, -1)}
+                              className="w-8 h-full sm:w-7 rounded bg-white text-[#1c1c19] flex items-center justify-center font-bold text-xs hover:bg-[#ebe8e3] cursor-pointer"
+                              aria-label={`Kurangi ${item.name}`}
+                            >
+                              <span className="material-symbols-outlined text-[16px] sm:text-[14px]">remove</span>
+                            </button>
+                            <span className="w-8 sm:w-7 text-center font-bold text-xs text-[#1c1c19] tabular-nums">
+                              {quantity}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => updateCartQuantity(item.id, 1)}
+                              className="w-8 h-full sm:w-7 rounded bg-[#3d1018] text-white flex items-center justify-center font-bold text-xs hover:bg-[#58252c] cursor-pointer"
+                              aria-label={`Tambah ${item.name}`}
+                            >
+                              <span className="material-symbols-outlined text-[16px] sm:text-[14px]">add</span>
+                            </button>
+                          </div>
+                        ) : (
                           <button
                             type="button"
-                            onClick={() => updateCartQuantity(item.id, 1)}
-                            className="w-8 h-8 sm:w-7 sm:h-7 rounded bg-[#3d1018] text-white flex items-center justify-center font-bold text-xs hover:bg-[#58252c] cursor-pointer"
-                            aria-label={`Tambah ${item.name}`}
+                            onClick={() => addToCart(item, 1)}
+                            className="w-9 h-9 sm:w-8 sm:h-8 rounded-lg bg-[#3d1018] hover:bg-[#58252c] text-white flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
+                            aria-label={`Tambahkan ${item.name}`}
                           >
-                            <span className="material-symbols-outlined text-[15px] sm:text-[14px]">add</span>
+                            <span className="material-symbols-outlined text-[20px] sm:text-[18px]">add</span>
                           </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => addToCart(item, 1)}
-                          className="w-9 h-9 sm:w-8 sm:h-8 rounded-lg bg-[#3d1018] hover:bg-[#58252c] text-white flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
-                          aria-label={`Tambahkan ${item.name}`}
-                        >
-                          <span className="material-symbols-outlined text-[20px] sm:text-[18px]">add</span>
-                        </button>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </div>
                 );

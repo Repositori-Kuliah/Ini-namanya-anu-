@@ -365,9 +365,9 @@ export const LaporanView: React.FC = () => {
         </div>
 
         {/* Inputs */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 items-end text-xs pt-1 border-t border-[#ebe8e3]">
-          <div>
-            <label className="block text-[11px] font-semibold text-[#524344] mb-1">Tanggal Mulai</label>
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-2.5 items-end text-xs pt-1 border-t border-[#ebe8e3]">
+          <div className="min-w-0">
+            <label className="block text-[11px] font-semibold text-[#524344] mb-1 truncate">Tanggal Mulai</label>
             <CustomDatePicker
               id="laporan-date-start"
               value={startDate}
@@ -376,8 +376,8 @@ export const LaporanView: React.FC = () => {
             />
           </div>
 
-          <div>
-            <label className="block text-[11px] font-semibold text-[#524344] mb-1">Tanggal Akhir</label>
+          <div className="min-w-0">
+            <label className="block text-[11px] font-semibold text-[#524344] mb-1 truncate">Tanggal Akhir</label>
             <CustomDatePicker
               id="laporan-date-end"
               value={endDate}
@@ -387,8 +387,8 @@ export const LaporanView: React.FC = () => {
             />
           </div>
 
-          <div>
-            <label className="block text-[11px] font-semibold text-[#524344] mb-1">Metode Pembayaran</label>
+          <div className="col-span-2 sm:col-span-1 min-w-0">
+            <label className="block text-[11px] font-semibold text-[#524344] mb-1 truncate">Metode Pembayaran</label>
             <select
               value={methodFilter}
               onChange={(e) => setMethodFilter(e.target.value)}
@@ -401,8 +401,8 @@ export const LaporanView: React.FC = () => {
             </select>
           </div>
 
-          <div>
-            <label className="block text-[11px] font-semibold text-[#524344] mb-1">Tipe Pesanan</label>
+          <div className="col-span-2 sm:col-span-1 min-w-0">
+            <label className="block text-[11px] font-semibold text-[#524344] mb-1 truncate">Tipe Pesanan</label>
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
@@ -414,7 +414,7 @@ export const LaporanView: React.FC = () => {
             </select>
           </div>
 
-          <div>
+          <div className="col-span-2 lg:col-span-1">
             <button
               type="button"
               disabled={isLoading}
@@ -540,7 +540,7 @@ export const LaporanView: React.FC = () => {
             <div className="w-full h-2.5 flex rounded-full overflow-hidden mt-3 bg-[#f0ede9]">
               <div className="bg-[#58252c] h-full" style={{ width: `${tunaiPct}%` }} />
               <div className="bg-[#fc934f] h-full" style={{ width: `${qrisPct}%` }} />
-              <div className="bg-[#0284c7] h-full" style={{ width: `${debitPct}%` }} />
+              <div className="bg-[#994703] h-full" style={{ width: `${debitPct}%` }} />
             </div>
 
             <div className="mt-3.5 space-y-2.5 text-xs">

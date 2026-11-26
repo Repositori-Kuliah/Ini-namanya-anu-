@@ -348,11 +348,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           sound_enabled: updated.soundEnabled,
           sound_station: updated.soundStation,
           rounding_rule: updated.roundingRule,
-          receipt_paper_size: updated.receiptPaperSize,
           updated_at: new Date().toISOString(),
         })
         .eq('setting_id', 1)
         .then(() => {});
+
+      // Sinkronisasi terpisah agar pengaturan lain tetap tersimpan bila kolom belum dimigrasi
+      if ('receiptPaperSize' in partial) {
+        supabase
+          .from('store_settings')
+          .update({ receipt_paper_size: updated.receiptPaperSize })
+          .eq('setting_id', 1)
+          .then(() => {});
+      }
 
       return updated;
     });

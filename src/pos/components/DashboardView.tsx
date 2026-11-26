@@ -316,9 +316,9 @@ export const DashboardView: React.FC = () => {
       <div className="flex flex-wrap items-center justify-end gap-2">
 
         {/* Unified Date & Period Selector (1 Hari, 1 Minggu, 1 Bulan, 1 Tahun + 1 Unified Date Picker) */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="w-full sm:w-auto flex flex-wrap items-center gap-2">
           {/* Quick Presets */}
-          <div className="inline-flex items-center bg-white p-1 rounded-xl border border-[#ebe8e3] shadow-xs">
+          <div className="grid grid-cols-4 w-full sm:w-auto sm:inline-flex items-stretch bg-white rounded-md border border-[#ebe8e3] shadow-xs overflow-hidden divide-x divide-[#ebe8e3]">
             {(
               [
                 { id: '1hari', label: '1 Hari' },
@@ -332,9 +332,9 @@ export const DashboardView: React.FC = () => {
                 <button
                   key={p.id}
                   onClick={() => handlePeriodChange(p.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  className={`px-1.5 sm:px-3 py-2 sm:py-1.5 text-[11px] sm:text-xs font-bold transition-all cursor-pointer whitespace-nowrap text-center truncate ${
                     active
-                      ? 'bg-[#3d1018] text-white shadow-xs'
+                      ? 'bg-[#3d1018] text-white'
                       : 'text-[#524344] hover:text-[#1c1c19] hover:bg-[#f6f3ee]'
                   }`}
                 >
@@ -349,6 +349,7 @@ export const DashboardView: React.FC = () => {
             value={dateFrom}
             max={todayStr}
             align="right"
+            className="w-full sm:w-auto"
             onChange={(iso) => {
               setDateFrom(iso);
               setDateTo(iso);
