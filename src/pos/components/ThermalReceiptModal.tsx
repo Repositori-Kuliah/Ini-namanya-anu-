@@ -1,10 +1,42 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import { publicAsset } from '../../lib/publicAsset';
+import {
+  buildReceiptLines,
+  formatReceiptDate,
+  loadMonoImage,
+  printReceiptWithFallback,
+  RECEIPT_DOTS_58MM,
+  RECEIPT_WIDTH_58MM,
+  type MonoImage,
+  type ReceiptCharge,
+  type ReceiptData,
+  type ReceiptRow,
+} from '../../lib/escpos';
+
+// Lebar logo dalam titik printer (58mm penuh = 384 titik).
+// 96 titik ~ 25% lebar kertas, sebanding dengan contoh struk.
+const LOGO_DOTS = 96;
+
+const STORE_NAME = 'RAWON GUSTI';
+const STORE_ADDRESS = [
+  'Ruko Sentra',
+  'Jl. Taman Internasional No. A5',
+  'Sambikerep, Surabaya',
+  'Telp: +62 812-4890-7556',
+];
+const PAYMENT_LABEL: Record<string, string> = {
+  tunai: 'TUNAI',
+  qris: 'QRIS',
+  debit: 'DEBIT',
+  split: 'SPLIT',
+};
 
 export const ThermalReceiptModal: React.FC = () => {
   const { receiptModalData, closeReceiptModal, storeSettings } = useApp();
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [logo, setLogo] = useState<MonoImage | null>(null);
 
   useLockBodyScroll(Boolean(receiptModalData));
 
@@ -18,12 +50,100 @@ export const ThermalReceiptModal: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [receiptModalData, closeReceiptModal]);
 
-  if (!receiptModalData) return null;
+  // Logo diubah ke 1-bit (grayscale + dithering) sekali saja;
+  // hasil yang sama dipakai untuk pratinjau dan cetak raster.
+  useEffect(() => {
+    if (!receiptModalData || logo) return;
+    let cancelled = false;
+    // logo-rawon-struk.png: monogram "g" hitam tanpa latar (transparan), dari logo_big.jpeg.
+    // Nama "RAWON GUSTI" sudah dicetak sebagai teks tepat di bawahnya.
+    loadMonoImage(publicAsset('/logo-rawon-struk.png'), { targetWidth: LOGO_DOTS })
+      .then((img) => {
+        if (!cancelled) setLogo(img);
+      })
+      .catch(() => {
+        /* Tanpa logo pun struk tetap bisa dicetak. */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [receiptModalData, logo]);
 
-  const bill = receiptModalData;
+  const receiptData = useMemo<ReceiptData | null>(() => {
+    const bill = receiptModalData;
+    if (!bill) return null;
 
-  const handlePrint = () => {
-    window.print();
+    const tableDigits = String(bill.tableNumber).replace(/[^0-9]/g, '');
+    const infoRows: ReceiptRow[] = [
+      { label: 'Waktu', value: bill.paidAtTime || formatReceiptDate(new Date()) },
+      { label: 'No. Bill', value: bill.billNumber },
+    ];
+    if (bill.isTakeaway) {
+      infoRows.push(
+        { label: 'Layanan', value: 'BAWA PULANG' },
+        { label: 'No. Antrean', value: String(bill.takeawayQueue || bill.tableNumber) },
+      );
+    } else {
+      infoRows.push({ label: 'Meja', value: tableDigits ? tableDigits.padStart(2, '0') : String(bill.tableNumber) });
+    }
+    infoRows.push({ label: 'Pelanggan', value: bill.customerName || 'Tamu' });
+
+    const charges: ReceiptCharge[] = [];
+    if (bill.serviceFee > 0) {
+      charges.push({
+        label: `${storeSettings?.serviceChargeName || 'Layanan'} ${storeSettings?.serviceChargeRate ?? 5}%`,
+        amount: bill.serviceFee,
+      });
+    }
+    if (bill.tax > 0) {
+      charges.push({
+        label: `${storeSettings?.taxName || 'PB1'} ${storeSettings?.taxRate ?? 10}%`,
+        amount: bill.tax,
+      });
+    }
+
+    return {
+      storeName: STORE_NAME,
+      addressLines: STORE_ADDRESS,
+      infoRows,
+      items: bill.items.map((item) => ({
+        name: item.name,
+        quantity: item.quantity,
+        unitPrice: item.price,
+        subtotal: item.price * item.quantity,
+        notes: item.notes || undefined,
+      })),
+      subtotal: bill.subtotal,
+      charges,
+      total: bill.total,
+      paymentLabel: PAYMENT_LABEL[bill.paymentMethod || 'tunai'] || 'TUNAI',
+      amountPaid: bill.cashTendered || bill.total,
+      changeAmount: bill.changeAmount || 0,
+      footerLines: ['Terima kasih!', 'Atas kunjungan Anda'],
+    };
+  }, [receiptModalData, storeSettings]);
+
+  const lines = useMemo(
+    () => (receiptData ? buildReceiptLines(receiptData, RECEIPT_WIDTH_58MM) : []),
+    [receiptData],
+  );
+
+  if (!receiptModalData || !receiptData) return null;
+
+  const handlePrint = async () => {
+    if (isPrinting) return;
+    setIsPrinting(true);
+    try {
+      const outcome = await printReceiptWithFallback(receiptData, {
+        printerUrl: process.env.NEXT_PUBLIC_ESCPOS_PRINTER_URL,
+        width: RECEIPT_WIDTH_58MM,
+        logo: logo ?? undefined,
+      });
+      // Printer belum diset / gagal: cetak pratinjau yang sama lewat browser.
+      if (!outcome.delivered) window.print();
+    } finally {
+      setIsPrinting(false);
+    }
   };
 
   return (
@@ -48,7 +168,7 @@ export const ThermalReceiptModal: React.FC = () => {
               <h3 id="receipt-modal-title" className="font-serif font-bold text-sm sm:text-base text-[#1c1c19] leading-tight">
                 Pratinjau Struk Kasir
               </h3>
-              <p className="text-[10px] text-[#847374]">Format cetak printer termal 58mm/80mm</p>
+              <p className="text-[10px] text-[#847374]">Terimakasih</p>
             </div>
           </div>
           <button
@@ -61,128 +181,32 @@ export const ThermalReceiptModal: React.FC = () => {
           </button>
         </div>
 
-        {/* Thermal Paper Simulation Container (Scrollable Preview dengan boundary overscroll-contain) */}
-        <div className="printable-receipt-area w-full flex-1 overflow-y-auto overscroll-contain my-3 p-3.5 sm:p-4 bg-[#faf9f6] rounded-xl border border-dashed border-stone-300 font-mono text-[11px] text-black flex flex-col">
-          {/* Header Toko (Tanpa Logo) */}
-          <div className="flex flex-col items-center text-center pb-2">
-            <h4 className="font-bold text-sm tracking-widest text-black uppercase">
-              RAWON GUSTI
-            </h4>
-            <p className="text-[10px] leading-tight text-black mt-0.5">Ruko Sentra</p>
-            <p className="text-[10px] leading-tight text-black">Jl. Taman Internasional No. A5</p>
-            <p className="text-[10px] leading-tight text-black">Sambikerep, Surabaya</p>
-            <p className="text-[10px] leading-tight text-black">Telp: +62 812-4890-7556</p>
-          </div>
-
-          {/* Garis Putus-Putus */}
-          <div className="border-b border-dashed border-black my-1.5" />
-
-          {/* Judul Struk */}
-          <div className="text-center font-bold text-[11px] tracking-wider uppercase py-0.5">
-            STRUK PEMBAYARAN
-          </div>
-
-          {/* Garis Putus-Putus */}
-          <div className="border-b border-dashed border-black my-1.5" />
-
-          {/* Meta Info Transaksi */}
-          <div className="flex flex-col gap-0.5 text-[10px] py-1">
-            <div className="flex justify-between">
-              <span>Waktu</span>
-              <span>{bill.paidAtTime || new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) + ', ' + new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/:/g, '.')}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>No. Bill</span>
-              <span className="font-mono">{bill.billNumber}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Layanan</span>
-              <span className="font-bold">{bill.isTakeaway ? 'BAWA PULANG' : 'SANTAP DI TEMPAT'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>{bill.isTakeaway ? 'No. Antrean' : 'Meja'}</span>
-              <span>{bill.isTakeaway ? (bill.takeawayQueue || bill.tableNumber) : (String(bill.tableNumber).replace(/[^0-9]/g, '').padStart(2, '0') || bill.tableNumber)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Pelanggan</span>
-              <span>{bill.customerName || (bill.isTakeaway ? 'Pesanan Bawa Pulang' : `Tamu Meja ${bill.tableNumber}`)}</span>
-            </div>
-          </div>
-
-          {/* Garis Putus-Putus */}
-          <div className="border-b border-dashed border-black my-1.5" />
-
-          {/* Rincian Item (Format 2 Baris Presisi) */}
-          <div className="flex flex-col gap-1.5 py-1">
-            {bill.items.map((item, idx) => (
-              <div key={idx} className="flex flex-col text-[10px]">
-                <div className="text-left font-normal">{item.name}</div>
-                <div className="flex justify-between font-mono">
-                  <span>{item.quantity} x {item.price.toLocaleString('id-ID')}</span>
-                  <span>{(item.price * item.quantity).toLocaleString('id-ID')}</span>
-                </div>
-                {item.notes && (
-                  <span className="text-[9px] text-stone-700 italic">
-                    *{item.notes}
-                  </span>
+        {/* Meja abu-abu + kertas termal putih (hanya kertas yang ikut tercetak) */}
+        <div className="flex-1 overflow-y-auto overscroll-contain my-3 rounded-xl bg-neutral-200 p-3 sm:p-4">
+          <div className="printable-receipt-area mx-auto w-fit bg-white text-black px-4 pt-5 pb-6 shadow-md font-mono text-[12px] leading-[1.35]">
+            <div className="w-[32ch] mx-auto">
+              {/* Logo 1-bit: lebarnya proporsional 128/384 titik dari lebar kertas */}
+              <div className="flex justify-center mb-1.5">
+                {logo ? (
+                  <img
+                    src={logo.previewUrl}
+                    alt="Logo Rawon Gusti"
+                    style={{ width: `${(logo.width / RECEIPT_DOTS_58MM) * 100}%` }}
+                    className="block"
+                  />
+                ) : (
+                  // Tempat kosong seukuran logo supaya struk tidak "melompat" saat logo selesai dimuat.
+                  <div style={{ width: `${(LOGO_DOTS / RECEIPT_DOTS_58MM) * 100}%`, aspectRatio: '400 / 491' }} />
                 )}
               </div>
-            ))}
-          </div>
 
-          {/* Garis Putus-Putus */}
-          <div className="border-b border-dashed border-black my-1.5" />
-
-          {/* Subtotal & Pajak */}
-          <div className="flex flex-col gap-0.5 text-[10px] py-1">
-            <div className="flex justify-between">
-              <span>Subtotal</span>
-              <span className="font-mono">{bill.subtotal.toLocaleString('id-ID')}</span>
+              {/* Baris struk: sama persis dengan yang dikirim ke printer */}
+              {lines.map((line, idx) => (
+                <div key={idx} className={`whitespace-pre ${line.bold ? 'font-bold' : ''}`}>
+                  {line.text || '\u00A0'}
+                </div>
+              ))}
             </div>
-            {bill.serviceFee > 0 && (
-              <div className="flex justify-between">
-                <span>{storeSettings?.serviceChargeName || 'Layanan'} {storeSettings?.serviceChargeRate ? `${storeSettings.serviceChargeRate}%` : '5%'}</span>
-                <span className="font-mono">{bill.serviceFee.toLocaleString('id-ID')}</span>
-              </div>
-            )}
-            {bill.tax > 0 && (
-              <div className="flex justify-between">
-                <span>{storeSettings?.taxName || 'PB1'} {storeSettings?.taxRate ? `${storeSettings.taxRate}%` : '10%'}</span>
-                <span className="font-mono">{bill.tax.toLocaleString('id-ID')}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Garis Putus-Putus */}
-          <div className="border-b border-dashed border-black my-1.5" />
-
-          {/* Total & Rincian Pembayaran */}
-          <div className="flex flex-col gap-0.5 text-[10px] py-1">
-            <div className="flex justify-between font-bold text-[11px] pt-0.5">
-              <span>TOTAL</span>
-              <span className="font-mono text-xs">{bill.total.toLocaleString('id-ID')}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>{(bill.paymentMethod || 'TUNAI').toUpperCase()}</span>
-              <span className="font-bold">LUNAS</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Dibayar</span>
-              <span className="font-mono">{(bill.cashTendered || bill.total).toLocaleString('id-ID')}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Kembalian</span>
-              <span className="font-mono">{(bill.changeAmount || 0).toLocaleString('id-ID')}</span>
-            </div>
-          </div>
-
-          {/* Garis Putus-Putus */}
-          <div className="border-b border-dashed border-black my-1.5" />
-
-          {/* Footer Ucapan Terima Kasih */}
-          <div className="flex flex-col items-center text-center pt-2 pb-1 text-[10px] text-black">
-            <p className="font-normal">Terima kasih!</p>
-            <p className="font-normal">Atas kunjungan Anda</p>
           </div>
         </div>
 
@@ -198,10 +222,11 @@ export const ThermalReceiptModal: React.FC = () => {
           <button
             type="button"
             onClick={handlePrint}
-            className="flex-1 py-2.5 rounded-xl bg-[#3d1018] hover:bg-[#58252c] text-white text-xs font-bold shadow-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+            disabled={isPrinting}
+            className="flex-1 py-2.5 rounded-xl bg-[#3d1018] hover:bg-[#58252c] disabled:opacity-60 disabled:cursor-wait text-white text-xs font-bold shadow-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
           >
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">print</span>
-            <span>Cetak Struk</span>
+            <span>{isPrinting ? 'Mencetak...' : 'Cetak Struk'}</span>
           </button>
         </div>
       </div>
