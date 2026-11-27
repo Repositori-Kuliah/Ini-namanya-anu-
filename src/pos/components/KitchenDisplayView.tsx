@@ -53,7 +53,7 @@ export const KitchenDisplayView: React.FC = () => {
         : 'Suara bel pesanan disenyapkan di perangkat ini',
       'info'
     );
-  };
+  };  
 
   const lastChimeTimeRef = useRef<number>(0);
 
@@ -266,12 +266,12 @@ export const KitchenDisplayView: React.FC = () => {
   return (
     <div className="flex flex-col w-full h-[calc(100dvh-7.5rem)] md:h-[calc(100vh-4.5rem)] max-w-[1720px] mx-auto px-4 sm:px-6 pt-3 overflow-hidden">
       {/* Top Bar: Pemilih Stasiun Dapur (Tetap di atas, tidak ikut ter-scroll) */}
-      <div className="flex items-center justify-between pb-2 gap-3 shrink-0">
+      <div className="flex items-center justify-between pb-2 gap-2 sm:gap-3 shrink-0">
         {/* Tombol Toggle Audio Chime Dapur Independen Per-Perangkat */}
         <button
           type="button"
           onClick={toggleSound}
-          className={`h-9 px-3 rounded-xl border flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer shadow-2xs ${
+          className={`h-9 px-2.5 sm:px-3 rounded-xl border flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer shadow-2xs shrink-0 ${
             soundEnabled
               ? 'bg-white border-[#ebe8e3] text-[#3d1018] hover:bg-[#f0ede9]'
               : 'bg-[#f0ede9] border-[#ebe8e3] text-[#847374] hover:text-[#1c1c19]'
@@ -284,21 +284,21 @@ export const KitchenDisplayView: React.FC = () => {
           <span className="hidden sm:inline">{soundEnabled ? 'Suara Bel: Aktif' : 'Suara Bel: Senyap'}</span>
         </button>
 
-        {/* Tab Pemilih Stasiun Dapur */}
-        <div className="flex items-center gap-1.5 bg-[#f0ede9] p-1 rounded-xl">
+        {/* Tab Pemilih Stasiun Dapur (Option B: Single-Row Compact Tabs) */}
+        <div className="grid grid-cols-3 flex-1 sm:flex-initial sm:inline-flex items-stretch bg-white rounded-xl border border-[#ebe8e3] shadow-xs overflow-hidden divide-x divide-[#ebe8e3]">
           {[
-            { id: 'Semua Bagian', label: 'Semua Bagian' },
-            { id: 'Dapur Utama (Makanan)', label: 'Dapur Makanan' },
-            { id: 'Bar Minuman', label: 'Bar Minuman' },
+            { id: 'Semua Bagian', label: 'Semua' },
+            { id: 'Dapur Utama (Makanan)', label: 'Dapur' },
+            { id: 'Bar Minuman', label: 'Bar' },
           ].map((st) => (
             <button
               key={st.id}
               type="button"
               onClick={() => handleStationChange(st.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              className={`px-2 sm:px-3.5 py-2 text-[11px] sm:text-xs font-bold transition-all cursor-pointer whitespace-nowrap text-center truncate ${
                 stationFilter === st.id
-                  ? 'bg-[#3d1018] text-white shadow-xs'
-                  : 'text-[#524344] hover:text-[#1c1c19]'
+                  ? 'bg-[#3d1018] text-white'
+                  : 'text-[#524344] hover:text-[#1c1c19] hover:bg-[#f6f3ee]'
               }`}
             >
               <span>{st.label}</span>
