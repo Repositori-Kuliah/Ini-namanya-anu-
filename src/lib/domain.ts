@@ -30,12 +30,6 @@ export const bill = (subtotal: number, opts: BillOptions = {}) => {
   else if (opts.roundingRule === '1000') total = Math.ceil(total / 1000) * 1000;
   return { subtotal, service, tax, total };
 };
-/** Jumlahkan tagihan per pesanan (sama dengan cara server mencatat payments per pesanan). */
-export const billOfOrders = (subtotals: number[], opts: BillOptions = {}) =>
-  subtotals.map((s) => bill(s, opts)).reduce(
-    (a, b) => ({ subtotal: a.subtotal + b.subtotal, service: a.service + b.service, tax: a.tax + b.tax, total: a.total + b.total }),
-    { subtotal: 0, service: 0, tax: 0, total: 0 },
-  );
 /**
  * Pecah sisa pembayaran (biaya) menjadi layanan + pajak.
  * Dipakai untuk menyusun ulang struk riwayat: tabel `payments` hanya menyimpan

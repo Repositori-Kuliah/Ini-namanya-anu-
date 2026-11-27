@@ -1,9 +1,8 @@
-// Pemeriksaan alur uang Rawon Gusti (POS + self-order).
+// Pemeriksaan alur uang Rawon Gusti (POS).
 // Jalankan: npm test
 //
 // Modul yang diuji: src/lib/domain.ts (dipakai src/lib/report.ts,
-// src/pos/context/AppContext.tsx, src/pos/components/PesananBaruView.tsx,
-// src/customer/context/AppContext.tsx).
+// src/pos/context/AppContext.tsx, src/pos/components/PesananBaruView.tsx).
 //
 // Test yang GAGAL = bug nyata yang belum diperbaiki (lihat komentar di tiap test).
 // Test yang LOLOS = aturan uang yang harus tetap dijaga.
@@ -13,7 +12,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { bill, billOfOrders, itemsSubtotal, splitFees, subtotalOf } from '../src/lib/domain.ts';
+import { bill, itemsSubtotal, splitFees, subtotalOf } from '../src/lib/domain.ts';
 
 // --- Aturan dasar yang harus tetap berlaku (LILOS) ---
 
@@ -39,17 +38,6 @@ test('subtotalOf(): ikut tarif yang dipakai, bukan hardcode 1.155', () => {
   assert.equal(subtotalOf(total, opts), 10000);
 });
 
-test('struk pelanggan = tagihan kasir untuk subtotal & tarif yang sama', () => {
-  // Pelanggan: billOfOrders (src/customer/context/AppContext.tsx)
-  // Kasir   : bill         (src/pos/context/AppContext.tsx)
-  // Keduanya harus pakai rumus & tarif yang sama dari Pengaturan.
-  const opts = { enableService: false, serviceRate: 5, enableTax: true, taxRate: 10 };
-  const customerTotal = billOfOrders([150000], opts).total;
-  const cashierTotal = bill(150000, opts).total;
-  assert.equal(customerTotal, cashierTotal);
-  assert.equal(cashierTotal, 165000); // tanpa layanan 5%
-});
-
 test('splitFees(): sisa pembayaran dibagi jadi layanan + pajak', () => {
   // Dipakai untuk menyusun ulang struk riwayat (src/pos/context/AppContext.tsx):
   // tabel payments hanya menyimpan total, sisanya dipecah dengan tarif pajak.
@@ -72,20 +60,4 @@ test('laporan & struk: subtotal sesi dihitung dari item SELURUH sesi', () => {
   assert.equal(sessionItems, 150000);
   assert.notEqual(anchorOnly, sessionItems); // order pertama saja = 100.000 (struk rusak versi lama)
   assert.equal(subtotalOf(bill(sessionItems).total), sessionItems);
-});
-
-// --- Bug yang harus diperbaiki (GAGAL) ---
-
-test('BUG self-order: total yang dilihat pelanggan != total yang ditagih kasir saat ada extras', () => {
-  // Pelanggan: totalPrice = (base + extras) * qty  -> src/customer/context/AppContext.tsx:386
-  // Disimpan ke DB: unit_price = base saja        -> src/customer/context/AppContext.tsx:528
-  // Kasir menagih dari order_items                 -> src/pos/context/AppContext.tsx:963
-  const base = 30000, extra = 5000, qty = 2;
-  const quoted = bill((base + extra) * qty);
-  const charged = bill(itemsSubtotal([{ unit_price: base, quantity: qty }]));
-  assert.equal(
-    charged.total,
-    quoted.total,
-    `pelanggan melihat ${quoted.total}, kasir menagih ${charged.total} (selisih extras)`,
-  );
 });

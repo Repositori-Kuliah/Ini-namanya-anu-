@@ -5,7 +5,7 @@ import {
   StoreSettings, CashierShift, SplitPaymentDetail,
 } from '../types';
 import { supabase } from '../../lib/supabase';
-import { bill, billOfOrders, itemsSubtotal, splitFees, subtotalOf, today, type BillOptions } from '../../lib/domain';
+import { bill, itemsSubtotal, splitFees, subtotalOf, today, type BillOptions } from '../../lib/domain';
 import { placeholderImage, isPlaceholder } from '../../lib/placeholder';
 
 export type AppView =
