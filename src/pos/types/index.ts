@@ -44,7 +44,6 @@ export interface CurrentOrder {
 export interface TableItem {
   id: string;
   dbId?: number;
-  qrToken?: string;
   sessionId?: number;
   number: string;
   name?: string;
@@ -56,8 +55,6 @@ export interface TableItem {
   totalRaw?: number;
   billId?: string;
   infoSubtitle?: string;
-  qrCodeId: string;
-  qrUrl: string;
   area: string;
   items?: OrderItemSummary[];
 }
@@ -92,7 +89,6 @@ export interface SplitPaymentDetail {
 }
 
 export interface StoreSettings {
-  selfOrderEnabled: boolean;       // Sistem pembayaran / order mandiri (jika off: panggil pelayan manual)
   soundEnabled: boolean;           // Suara aktif / notif ding pesanan & panggilan
   soundStation?: string;           // Filter area stasiun suara (Semua Bagian / Dapur Utama / Bar Minuman)
   openHour: string;                // Format "08:00"

@@ -23,8 +23,6 @@ import { LaporanView } from './components/LaporanView';
 import { StaffManagementView } from './components/StaffManagementView';
 import { PengaturanView } from './components/PengaturanView';
 import { ThermalReceiptModal } from './components/ThermalReceiptModal';
-import { QrCodeModal } from './components/QrCodeModal';
-import { SelfOrderVerificationModal } from './components/SelfOrderVerificationModal';
 import { supabaseConfigured } from '../lib/supabase';
 import { SetupNotice } from '../lib/SetupNotice';
 
@@ -130,12 +128,6 @@ const AppContent: React.FC = () => {
 
       {/* Global Thermal Receipt Modal */}
       <ThermalReceiptModal />
-
-      {/* Global QR Code Stand Modal */}
-      <QrCodeModal />
-
-      {/* Global Self-Order Verification Modal (Anti-Order Fiktif) */}
-      <SelfOrderVerificationModal />
     </div>
   );
 };

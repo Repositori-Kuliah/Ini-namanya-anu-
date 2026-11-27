@@ -236,40 +236,6 @@ export const PengaturanView: React.FC = () => {
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 gap-4">
-          {/* Modul: Pemesanan Mandiri Tamu */}
-          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-[#ebe8e3] shadow-xs flex items-center justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <h3 className="font-bold text-sm text-[#1c1c19] leading-snug">
-                Pemesanan Mandiri Tamu (QR Meja)
-              </h3>
-              <p className="text-[11px] sm:text-xs text-[#524344] mt-0.5">
-                Akses menu dan order mandiri dari meja tamu
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                const next = !storeSettings.selfOrderEnabled;
-                updateStoreSettings({ selfOrderEnabled: next });
-                showToast(`Self ordering ${next ? 'diaktifkan' : 'dinonaktifkan (mode panggil pelayan)'}`, 'info');
-              }}
-              className={`w-12 h-6 shrink-0 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
-                storeSettings.selfOrderEnabled ? 'bg-[#3d1018]' : 'bg-[#e0dcd8]'
-              }`}
-              aria-pressed={storeSettings.selfOrderEnabled}
-              aria-label="Toggle Pemesanan Mandiri Tamu"
-            >
-              <div
-                className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
-                  storeSettings.selfOrderEnabled ? 'translate-x-6' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
-        </div>
-
         {/* Modul 3: WiFi Tamu Restoran */}
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-[#ebe8e3] shadow-xs">
           <form onSubmit={handleSaveWifi} className="space-y-3 lg:space-y-0 lg:flex lg:items-center lg:justify-between lg:gap-4">

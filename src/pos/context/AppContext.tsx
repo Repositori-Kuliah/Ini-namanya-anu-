@@ -4,7 +4,7 @@ import {
   TransactionRecord, KitchenTicket, RawIngredient, OrderItemSummary,
   StoreSettings, CashierShift, SplitPaymentDetail,
 } from '../types';
-import { supabase, tableUrl } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import { bill, billOfOrders, itemsSubtotal, splitFees, subtotalOf, today, type BillOptions } from '../../lib/domain';
 import { placeholderImage, isPlaceholder } from '../../lib/placeholder';
 
@@ -41,7 +41,6 @@ interface AppContextType {
   updateTable: (table: TableItem, newStatus?: TableStatus) => Promise<boolean>;
   addTable: (tableNumber: number, capacity: number, area: string) => Promise<boolean>;
   deleteTable: (tableId: number) => Promise<boolean>;
-  rotateTableQr: (tableId: number) => Promise<TableItem | null>;
   clearTableSession: (tableNumberOrSessionId: string | number) => Promise<void>;
   voidOrderItem: (tableNumberOrSessionId: string | number, item: OrderItemSummary, reason?: string, qtyToVoid?: number) => Promise<void>;
   voidTableOrder: (tableNumberOrSessionId: string | number, reason?: string) => Promise<void>;
@@ -97,18 +96,6 @@ interface AppContextType {
   kitchenTickets: KitchenTicket[];
   advanceTicketStatus: (ticketId: string) => void;
   completeKitchenTicket: (ticketId: string) => void;
-  confirmCustomerOrder: (ticketId: string) => void;
-  rejectCustomerOrder: (orderId: string) => void;
-  pendingQrOrders: Array<{
-    orderId: string;
-    orderNumber: string;
-    tableNumber: string;
-    customerName: string;
-    total: number;
-    items: any[];
-    createdAt: string;
-    note?: string;
-  }>;
 
   transactions: TransactionRecord[];
   recentReceipts: BillItem[];
@@ -118,12 +105,6 @@ interface AppContextType {
   receiptModalData: BillItem | null;
   openReceiptModal: (bill: BillItem) => void;
   closeReceiptModal: () => void;
-  qrModalTable: TableItem | null;
-  openQrModal: (table: TableItem) => void;
-  closeQrModal: () => void;
-  isVerificationModalOpen: boolean;
-  openVerificationModal: () => void;
-  closeVerificationModal: () => void;
 
   desktopSidebarOpen: boolean;
   setDesktopSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -240,10 +221,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [dismissStockWarning, setDismissStockWarning] = useState(false);
   const [toast, setToast] = useState<ToastNotification | null>(null);
   const [receiptModalData, setReceiptModalData] = useState<BillItem | null>(null);
-  const [qrModalTable, setQrModalTable] = useState<TableItem | null>(null);
-  const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
-  const openVerificationModal = () => setIsVerificationModalOpen(true);
-  const closeVerificationModal = () => setIsVerificationModalOpen(false);
 
   // Penomoran antrean bungkus mandiri otomatis (Antrean 01, Antrean 02, dst.)
   const takeawayNextQueue = useMemo(() => {
@@ -260,7 +237,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (saved) {
         const parsed = JSON.parse(saved);
         return {
-          selfOrderEnabled: parsed.selfOrderEnabled ?? true,
           soundEnabled: parsed.soundEnabled ?? true,
           soundStation: parsed.soundStation || 'Semua Bagian',
           openHour: parsed.openHour || '08:00',
@@ -285,7 +261,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     } catch {}
     return {
-      selfOrderEnabled: true,
       soundEnabled: true,
       soundStation: 'Semua Bagian',
       openHour: '08:00',
@@ -458,7 +433,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const rawTablesRef = useRef<any[]>([]);
   rawTablesRef.current = rawTables;
   const seenRequests = useRef<Set<number> | null>(null);
-  const seenPendingOrders = useRef<Set<string> | null>(null);
   const roleRef = useRef<UserRole>('kasir');
   const currentUserRef = useRef<StaffUser>(GUEST_USER);
   currentUserRef.current = currentUser;
@@ -570,30 +544,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
       seenRequests.current = new Set(reqData.map((r: any) => r.request_id));
-
-      // Notifikasi suara & toast jika ada pesanan QR mandiri baru yang butuh verifikasi kasir
-      const pendingOrders = (ses.data || []).flatMap((s: any) => {
-        const t = tblData.find((x: any) => x.table_id === s.table_id);
-        return (s.orders || [])
-          .filter((o: any) => o.order_source === 'qr' && (o.order_status === 'pending' || o.order_status === 'pending_confirmation'))
-          .map((o: any) => ({
-            orderId: String(o.order_id),
-            tableNumber: pad(t?.table_number ?? '?'),
-            itemsCount: (o.order_items || []).reduce((acc: number, it: any) => acc + (it.quantity || 1), 0),
-          }));
-      });
-
-      const prevPending = seenPendingOrders.current;
-      if (prevPending && role !== 'kitchen') {
-        const newPending = pendingOrders.filter((p: any) => !prevPending.has(p.orderId));
-        if (newPending.length > 0) {
-          playDingSoundRef.current();
-          newPending.forEach((p: any) => {
-            showToastRef.current(`🔔 Pesanan QR Baru dari Meja ${p.tableNumber} (${p.itemsCount} item) - Menunggu Verifikasi!`, 'warning');
-          });
-        }
-      }
-      seenPendingOrders.current = new Set(pendingOrders.map((p: any) => p.orderId));
       setDataReady(true);
     } catch (e) {
       console.warn('[supabase dynamic refresh error]', e);
@@ -813,7 +763,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } catch {}
     }
     seenRequests.current = null;
-    seenPendingOrders.current = null;
     setSessions([]);
     setPayments([]);
     showToast('Sesi berakhir. Sampai jumpa!');
@@ -931,9 +880,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return uniqueRawTables.map((t) => {
       const s = sessions.find((x) => x.table_id === t.table_id);
       const base: TableItem = {
-        id: `tbl-${pad(t.table_number)}`, dbId: t.table_id, qrToken: t.qr_token, number: pad(t.table_number),
+        id: `tbl-${pad(t.table_number)}`, dbId: t.table_id, number: pad(t.table_number),
         capacity: 4, area: 'Ruang Restoran', status: 'kosong', statusLabel: 'Tersedia',
-        qrCodeId: `RG-M${pad(t.table_number)}`, qrUrl: tableUrl(t.qr_token),
       };
       if (!s) return base;
       const live = (s.orders || []).filter((o: any) => o.order_status !== 'draft' && o.order_status !== 'cancelled');
@@ -1117,30 +1065,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   }).sort((a, b) => b.elapsedSeconds - a.elapsedSeconds), [sessions, rawTables, productCategory, now]);
 
-  // Pesanan QR yang menunggu konfirmasi staf sebelum masuk dapur.
-  // Status 'pending' adalah nilai resmi DB (migrasi 0004); filter sumber 'qr' untuk
-  // memastikan hanya pesanan customer yang perlu konfirmasi, bukan draft staf.
-  const pendingQrOrders = useMemo(() => {
-    return sessions.flatMap((s) => {
-      const tbl = rawTables.find((t) => t.table_id === s.table_id);
-      return (s.orders || [])
-        .filter((o: any) =>
-          o.order_source === 'qr' &&
-          (o.order_status === 'pending' || o.order_status === 'pending_confirmation')
-        )
-        .map((o: any) => ({
-          orderId: String(o.order_id),
-          orderNumber: o.order_number,
-          tableNumber: pad(tbl?.table_number ?? '?'),
-          customerName: s.customer_name || 'Tamu QR',
-          total: Number(o.total),
-          items: o.order_items || [],
-          createdAt: o.created_at,
-          note: o.note,
-        }));
-    });
-  }, [sessions, rawTables]);
-
   const transactions: TransactionRecord[] = useMemo(() => payments.map((p) => {
     const total = Number(p.amount);
     // Satu pembayaran = satu sesi meja: SEMUA order di sesi itu ikut dibayar.
@@ -1312,60 +1236,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       supabase.from('tables').delete().eq('table_id', tableId),
       'Meja berhasil dihapus'
     );
-  };
-  const rotateTableQr = async (tableId: number): Promise<TableItem | null> => {
-    // Generate token kriptografis 16-hex (64-bit entropy, konsisten dengan schema DB tables.qr_token)
-    const bytes = new Uint8Array(8);
-    crypto.getRandomValues(bytes);
-    const newToken = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-
-    const { error } = await supabase
-      .from('tables')
-      .update({ qr_token: newToken })
-      .eq('table_id', tableId);
-
-    if (error) {
-      showToast(error.message || 'Gagal generate ulang QR meja di database', 'warning');
-      return null;
-    }
-
-    const newUrl = tableUrl(newToken);
-
-    // 1. Update rawTables seketika agar seluruh komponen UI & tabel langsung render token baru
-    setRawTables((prev) =>
-      prev.map((t) => (t.table_id === tableId ? { ...t, qr_token: newToken } : t))
-    );
-
-    // 2. Buat objek data meja yang sudah diperbarui
-    const existing = tables.find((t) => t.dbId === tableId);
-    const updatedItem: TableItem = existing
-      ? {
-          ...existing,
-          qrToken: newToken,
-          qrCodeId: `RG-M${existing.number}`,
-          qrUrl: newUrl,
-        }
-      : {
-          id: `tbl-${tableId}`,
-          dbId: tableId,
-          number: String(tableId),
-          capacity: 4,
-          status: 'kosong',
-          statusLabel: 'Tersedia',
-          area: 'Ruang Restoran',
-          qrCodeId: `RG-M${tableId}`,
-          qrToken: newToken,
-          qrUrl: newUrl,
-        };
-
-    // 3. Jika modal QR sedang aktif menampilkan meja ini, update secara reaktif
-    setQrModalTable((current) => (current && current.dbId === tableId ? updatedItem : current));
-
-    // 4. Refresh master data di database
-    loadMasterData();
-
-    showToast(`QR Code Meja ${updatedItem.number} berhasil diperbarui!`, 'success');
-    return updatedItem;
   };
   const clearTableSession = async (tableNumberOrSessionId: string | number) => {
     const target = tables.find((t) => t.number === String(tableNumberOrSessionId) || t.sessionId === Number(tableNumberOrSessionId));
@@ -1823,48 +1693,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const confirmCustomerOrder = async (ticketId: string) => {
-    const rawOrderId = Number(ticketId.replace('-food', '').replace('-drink', ''));
-    if (!rawOrderId) return;
-
-    try {
-      const { error } = await supabase
-        .from('orders')
-        .update({ order_status: 'submitted' })
-        .eq('order_id', rawOrderId);
-
-      if (error) {
-        showToast('Gagal konfirmasi pesanan di database: ' + error.message, 'warning');
-        return;
-      }
-      await refreshDynamic();
-      showToast('Pesanan pelanggan berhasil dikonfirmasi dan dikirim ke dapur!', 'success');
-    } catch (e) {
-      showToast('Koneksi bermasalah, coba lagi', 'warning');
-    }
-  };
-
-  const rejectCustomerOrder = async (orderId: string) => {
-    const rawOrderId = Number(orderId.replace('-food', '').replace('-drink', ''));
-    if (!rawOrderId) return;
-
-    try {
-      const { error } = await supabase
-        .from('orders')
-        .update({ order_status: 'cancelled' })
-        .eq('order_id', rawOrderId);
-
-      if (error) {
-        showToast('Gagal tolak pesanan di database: ' + error.message, 'warning');
-        return;
-      }
-      await refreshDynamic();
-      showToast('Pesanan self-order berhasil dibatalkan', 'info');
-    } catch (e) {
-      showToast('Koneksi bermasalah, coba lagi', 'warning');
-    }
-  };
-
   // ---------- aksi: menu ----------
   const categoryId = async (name: string) => {
     const found = categories.find((c) => c.name === name);
@@ -1935,7 +1763,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AppContext.Provider value={{
       currentUser, currentRole, setCurrentRole, updateCurrentUserName, isLoggedIn, authLoading, dataReady, login, logout,
       activeView, setActiveView, viewportMode, setViewportMode, outletName, setOutletName,
-      tables, selectedTableId, setSelectedTableId, updateTable, addTable, deleteTable, rotateTableQr, clearTableSession, voidOrderItem, voidTableOrder,
+      tables, selectedTableId, setSelectedTableId, updateTable, addTable, deleteTable, clearTableSession, voidOrderItem, voidTableOrder,
       cartItems, orderType, setOrderType, takeawayNextQueue, orderTableNumber, setOrderTableNumber, orderSecondaryTables, setOrderSecondaryTables,
       orderCustomerName, setOrderCustomerName, orderGuestCount, setOrderGuestCount,
       kitchenGeneralNote, setKitchenGeneralNote, addToCart, removeFromCart, updateCartQuantity, updateCartItemNotes, clearCart,
@@ -1944,10 +1772,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       menuItems, menuCategories, updateMenuItem, addMenuItem, deleteMenuItem, toggleMenuItemAvailability,
       rawIngredients, lowStockIngredients, updateIngredientStock, restockIngredient, updateIngredientMinimum, addRawIngredient, deleteRawIngredient,
       dismissStockWarning, setDismissStockWarning,
-      kitchenTickets, advanceTicketStatus, completeKitchenTicket, confirmCustomerOrder, rejectCustomerOrder, pendingQrOrders, transactions, recentReceipts,
+      kitchenTickets, advanceTicketStatus, completeKitchenTicket, transactions, recentReceipts,
       toast, showToast, receiptModalData, openReceiptModal: setReceiptModalData, closeReceiptModal: () => setReceiptModalData(null),
-      qrModalTable, openQrModal: setQrModalTable, closeQrModal: () => setQrModalTable(null),
-      isVerificationModalOpen, openVerificationModal, closeVerificationModal,
       desktopSidebarOpen, setDesktopSidebarOpen, toggleDesktopSidebar,
       storeSettings, updateStoreSettings,
       cashierShift, openCashierShift, closeCashierShift,

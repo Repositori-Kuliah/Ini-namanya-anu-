@@ -17,9 +17,6 @@ export const CheckoutView: React.FC = () => {
     recentReceipts,
     refresh,
     playDingSound,
-    confirmCustomerOrder,
-    rejectCustomerOrder,
-    pendingQrOrders,
     storeSettings,
   } = useApp();
 

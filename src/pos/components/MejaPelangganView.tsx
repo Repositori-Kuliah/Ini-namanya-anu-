@@ -21,23 +21,18 @@ const MejaPelangganViewInner: React.FC = () => {
     voidTableOrder,
     bills,
     showToast,
-    pendingQrOrders,
-    confirmCustomerOrder,
-    rejectCustomerOrder,
-    openVerificationModal,
     kitchenTickets,
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'terisi' | 'tersedia' | 'qr'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'terisi' | 'tersedia'>('all');
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<OrderItemSummary | null>(null);
   const [deleteQty, setDeleteQty] = useState<number>(1);
   const [isCancelTableModalOpen, setIsCancelTableModalOpen] = useState(false);
 
   // Kunci scroll halaman belakang saat modal detail meja / konfirmasi terbuka
-  useLockBodyScroll(mobileDrawerOpen || showConfirmModal || Boolean(itemToDelete) || isCancelTableModalOpen);
+  useLockBodyScroll(mobileDrawerOpen || Boolean(itemToDelete) || isCancelTableModalOpen);
 
   // Filtered tables (Hanya 3 status: Semua Meja, Terisi, Tersedia)
   // Kecualikan Meja 00 (Takeaway) dari grid meja makan fisik di restoran
@@ -54,7 +49,6 @@ const MejaPelangganViewInner: React.FC = () => {
     if (filterStatus === 'all') return true;
     if (filterStatus === 'tersedia') return table.status === 'kosong';
     if (filterStatus === 'terisi') return table.status !== 'kosong';
-    if (filterStatus === 'qr') return pendingQrOrders.some((p) => p.tableNumber === table.number);
     return true;
   });
 
@@ -63,11 +57,6 @@ const MejaPelangganViewInner: React.FC = () => {
     dineInTables.find((t) => t.status !== 'kosong') ||
     dineInTables[0] ||
     tables[0];
-
-  // HANYA ada nilai jika meja ini memiliki pesanan dari self-order yang menunggu verifikasi kasir
-  const pendingOrderForSelectedTable = selectedTable
-    ? pendingQrOrders.find((ord) => ord.tableNumber === selectedTable.number)
-    : null;
 
   const handleSelectTable = (table: TableItem) => {
     setSelectedTableId(table.number);
@@ -135,7 +124,7 @@ const MejaPelangganViewInner: React.FC = () => {
           )}
         </div>
 
-        {/* Option C: Filter Chips + Conditional QR Masuk Pill */}
+        {/* Filter Chips */}
         <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
           <div className="grid grid-cols-3 flex-1 sm:flex-initial sm:inline-flex items-stretch bg-white rounded-xl border border-[#ebe8e3] shadow-xs overflow-hidden divide-x divide-[#ebe8e3]">
             {[
@@ -167,27 +156,6 @@ const MejaPelangganViewInner: React.FC = () => {
               );
             })}
           </div>
-
-          {pendingQrOrders.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setFilterStatus(filterStatus === 'qr' ? 'all' : 'qr')}
-              className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer shrink-0 ${
-                filterStatus === 'qr'
-                  ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
-                  : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
-              }`}
-            >
-              <span>QR Masuk</span>
-              <span
-                className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold tabular-nums leading-none ${
-                  filterStatus === 'qr' ? 'bg-white/20 text-white' : 'bg-amber-200/80 text-amber-900'
-                }`}
-              >
-                {pendingQrOrders.length}
-              </span>
-            </button>
-          )}
         </div>
       </div>
 
@@ -210,7 +178,6 @@ const MejaPelangganViewInner: React.FC = () => {
               {filteredTables.map((table) => {
                 const isSelected = selectedTable?.number === table.number;
                 const isKosong = table.status === 'kosong';
-                const hasPendingQr = pendingQrOrders.some((p) => p.tableNumber === table.number);
 
                 return (
                   <div
@@ -511,107 +478,6 @@ const MejaPelangganViewInner: React.FC = () => {
                 </button>
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* Pop-up Modal Konfirmasi Pesanan Self-Order (Tolak vs Terima) */}
-      {showConfirmModal && pendingOrderForSelectedTable && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
-        >
-          <div className="bg-white rounded-2xl shadow-2xl p-5 border border-[#ebe8e3] max-w-md w-full animate-in zoom-in-95 duration-150 flex flex-col gap-4">
-            {/* Header Pop-up */}
-            <div className="flex items-start justify-between pb-3 border-b border-[#ebe8e3]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#15803d] border border-emerald-200 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-2xl">qr_code_scanner</span>
-                </div>
-                <div>
-                  <h3 className="font-serif text-lg font-bold text-[#1c1c19] leading-tight">
-                    Konfirmasi Pesanan Self-Order
-                  </h3>
-                  <span className="text-xs text-[#524344]">
-                    Meja {pendingOrderForSelectedTable.tableNumber} • {pendingOrderForSelectedTable.customerName}
-                  </span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowConfirmModal(false)}
-                className="w-8 h-8 rounded-lg hover:bg-stone-100 text-stone-500 flex items-center justify-center transition-colors cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            </div>
-
-            {/* Rincian Pesanan Masuk Dari Pelanggan */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-[11px] font-bold text-[#524344] uppercase tracking-wider">
-                <span>Rincian Menu</span>
-                <span>{pendingOrderForSelectedTable.items.length} Item</span>
-              </div>
-              <div className="max-h-52 overflow-y-auto divide-y divide-[#ebe8e3] rounded-xl bg-[#fcf9f4] p-3 border border-[#ebe8e3] text-xs">
-                {pendingOrderForSelectedTable.items.map((it: any, idx: number) => (
-                  <div key={idx} className="py-2 flex justify-between items-start gap-2">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-extrabold text-[#3d1018]">{it.quantity}×</span>
-                        <span className="font-semibold text-[#1c1c19] truncate">{it.product_name}</span>
-                      </div>
-                      {it.note && (
-                        <p className="text-[11px] text-[#994703] mt-0.5 italic">Catatan: {it.note}</p>
-                      )}
-                    </div>
-                    <span className="font-mono font-bold text-[#1c1c19] shrink-0">
-                      Rp {((it.unit_price || 0) * (it.quantity || 1)).toLocaleString('id-ID')}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              {pendingOrderForSelectedTable.note && (
-                <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900">
-                  <span className="font-bold">Catatan Meja: </span>
-                  {pendingOrderForSelectedTable.note}
-                </div>
-              )}
-
-              <div className="flex justify-between items-baseline pt-2">
-                <span className="text-xs font-bold text-[#524344] uppercase tracking-wider">Total Tagihan</span>
-                <span className="font-serif text-xl font-bold text-[#3d1018]">
-                  Rp {pendingOrderForSelectedTable.total.toLocaleString('id-ID')}
-                </span>
-              </div>
-            </div>
-
-            {/* Tombol Tolak vs Terima */}
-            <div className="grid grid-cols-2 gap-3 pt-3 border-t border-[#ebe8e3]">
-              <button
-                type="button"
-                onClick={async () => {
-                  await rejectCustomerOrder(pendingOrderForSelectedTable.orderId);
-                  setShowConfirmModal(false);
-                }}
-                className="h-11 rounded-xl bg-[#ffdadc]/40 hover:bg-[#ffdadc]/70 text-[#ba1a1a] border border-[#ba1a1a]/30 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer active:scale-95"
-              >
-                <span className="material-symbols-outlined text-[18px]">cancel</span>
-                <span>Tolak Pesanan</span>
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  await confirmCustomerOrder(pendingOrderForSelectedTable.orderId);
-                  setShowConfirmModal(false);
-                }}
-                className="h-11 rounded-xl bg-[#15803d] hover:bg-[#166534] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer active:scale-95"
-              >
-                <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                <span>Terima &amp; Masak</span>
-              </button>
-            </div>
           </div>
         </div>
       )}

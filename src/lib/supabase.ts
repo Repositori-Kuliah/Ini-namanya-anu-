@@ -52,17 +52,4 @@ export const resetToRealSupabase = () => {
 };
 
 /** Alamat dasar untuk URL QR meja (resilien terhadap SSR dan client-side rendering). */
-export const appBaseUrl = () => {
-  const configured = getEnv('APP_URL');
-  if (configured) return configured.replace(/\/$/, '');
-  if (typeof window !== 'undefined' && window.location?.origin) {
-    const basePath = (
-      process.env.NEXT_PUBLIC_BASE_PATH ||
-      (process.env.NODE_ENV === 'production' ? '/Ini-namanya-anu-' : '')
-    ).replace(/\/$/, '');
-    return `${window.location.origin}${basePath}`;
-  }
-  return 'http://localhost:3000';
-};
 
-export const tableUrl = (qrToken: string) => `${appBaseUrl()}/pesan?meja=${encodeURIComponent(qrToken)}`;

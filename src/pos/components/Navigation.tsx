@@ -92,8 +92,7 @@ export const HelpModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
 };
 
 export const MobileHeader: React.FC = () => {
-  const { activeView, logout, currentRole, pendingQrOrders, openVerificationModal } = useApp();
-  const pendingCount = pendingQrOrders.length;
+  const { activeView, logout, currentRole } = useApp();
 
   const getPageTitleBadge = () => {
     switch (activeView) {
@@ -127,28 +126,6 @@ export const MobileHeader: React.FC = () => {
     <>
       <header className="fixed top-0 inset-x-0 z-40 bg-[#3d1018] text-white pt-safe border-b border-white/10 shadow-sm">
         <div className="h-16 px-4 flex items-center justify-between gap-2 max-w-[1720px] mx-auto relative">
-          {/* Left: Tombol Verifikasi Pesanan di Header Mobile */}
-          <div className="flex items-center shrink-0 z-10">
-            {currentRole !== 'owner' ? (
-              <button
-                type="button"
-                onClick={openVerificationModal}
-                className="relative h-8 px-2.5 rounded-lg flex items-center justify-center transition-all cursor-pointer bg-[#58252c] text-white text-xs font-bold border border-white/10"
-                title="Verifikasi Pesanan"
-                aria-label="Verifikasi Pesanan"
-              >
-                <span>Verifikasi</span>
-                {pendingCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-[#ba1a1a] text-white text-[10px] font-bold rounded-full min-w-[18px] h-4.5 px-1 flex items-center justify-center shadow-xs border-2 border-[#3d1018]">
-                    {pendingCount}
-                  </span>
-                )}
-              </button>
-            ) : (
-              <div className="w-8" />
-            )}
-          </div>
-
           {/* Center: Rawon Gusti & Surabaya di Tengah */}
           <div className="absolute inset-x-0 flex flex-col items-center justify-center text-center pointer-events-none px-16">
             <div className="flex items-center justify-center gap-1.5 max-w-full">
@@ -344,7 +321,7 @@ export const MobileBottomNav: React.FC = () => {
 };
 
 export const DesktopSidebar: React.FC = () => {
-  const { activeView, setActiveView, logout, currentUser, currentRole, desktopSidebarOpen, storeSettings, pendingQrOrders, setSelectedBillId } = useApp();
+  const { activeView, setActiveView, logout, currentUser, currentRole, desktopSidebarOpen, storeSettings, setSelectedBillId } = useApp();
 
   // Kelompok A: Navigasi Operasional (Hanya Kasir, Dapur, dan Admin - Owner TIDAK ada operasional)
   const getOperationalNav = () => {
@@ -504,9 +481,8 @@ export const DesktopSidebar: React.FC = () => {
 };
 
 export const DesktopHeader: React.FC = () => {
-  const { activeView, desktopSidebarOpen, toggleDesktopSidebar, pendingQrOrders, openVerificationModal } = useApp();
-  const [helpOpen, setHelpOpen] = useState(false);
-  const pendingCount = pendingQrOrders.length;
+  const { activeView, desktopSidebarOpen, toggleDesktopSidebar } = useApp();
+
 
   const getViewTitle = () => {
     switch (activeView) {
@@ -551,23 +527,6 @@ export const DesktopHeader: React.FC = () => {
               <span className="material-symbols-outlined text-[20px]">
                 {desktopSidebarOpen ? 'menu_open' : 'menu'}
               </span>
-            </button>
-          </div>
-
-          {/* Right Action: Tombol Verifikasi Pesanan */}
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={openVerificationModal}
-              className="relative h-9 px-4 rounded-xl font-bold text-xs bg-[#3d1018] hover:bg-[#58252c] text-white transition-all cursor-pointer shadow-xs active:scale-95 flex items-center justify-center border border-white/10"
-              title="Verifikasi Pesanan"
-            >
-              <span>Verifikasi Pesanan</span>
-              {pendingCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-[#ba1a1a] text-white text-[10px] font-bold rounded-full min-w-[20px] h-5 px-1 flex items-center justify-center shadow-xs border-2 border-[#fcf9f4]">
-                  {pendingCount}
-                </span>
-              )}
             </button>
           </div>
         </div>

@@ -2,14 +2,13 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { TableItem, TableStatus } from '../types';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
-import { exportTableQrs, QrExportFormat } from '../lib/qrExport';
 import { useScrollDirection } from '../../lib/useScrollDirection';
 
 const MAX_BATCH_TABLES = 50;
 
 const KelolaMejaViewInner: React.FC = () => {
   const isHeaderVisible = useScrollDirection();
-  const { tables, updateTable, addTable, deleteTable, rotateTableQr, openQrModal, showToast } = useApp();
+  const { tables, updateTable, addTable, deleteTable, showToast } = useApp();
 
   const [filterMode, setFilterMode] = useState<'Semua' | 'Terisi' | 'Kosong'>('Semua');
   const [searchQuery, setSearchQuery] = useState('');
@@ -28,21 +27,14 @@ const KelolaMejaViewInner: React.FC = () => {
   const [editNumber, setEditNumber] = useState('');
   const [editStatus, setEditStatus] = useState<TableStatus>('kosong');
   const [editError, setEditError] = useState('');
-  const [isRegeneratingQr, setIsRegeneratingQr] = useState(false);
 
   // Action dropdown & Delete confirm modal state
   const [openTableActionId, setOpenTableActionId] = useState<string | null>(null);
   const [deleteTableConfirm, setDeleteTableConfirm] = useState<TableItem | null>(null);
 
-  // Modal Unduh QR Massal
-  const [showQrExportModal, setShowQrExportModal] = useState(false);
-  const [qrExportFormat, setQrExportFormat] = useState<QrExportFormat>('pdf');
-  const [isExportingQr, setIsExportingQr] = useState(false);
-  const [qrExportProgress, setQrExportProgress] = useState<{ done: number; total: number } | null>(null);
-
   // Kunci scroll background saat modal apa pun terbuka
   useLockBodyScroll(
-    Boolean(showAddModal || editingTable || deleteTableConfirm || showQrExportModal)
+    Boolean(showAddModal || editingTable || deleteTableConfirm)
   );
 
   const openEditModal = (tbl: TableItem) => {
@@ -179,33 +171,10 @@ const KelolaMejaViewInner: React.FC = () => {
     setDeleteTableConfirm(null);
   };
 
-  const handleExportQrs = async () => {
-    if (isExportingQr || !tables.length) return;
-    setIsExportingQr(true);
-    setQrExportProgress({ done: 0, total: tables.length });
-    try {
-      await exportTableQrs(tables, qrExportFormat, setQrExportProgress);
-      showToast(
-        qrExportFormat === 'pdf'
-          ? `${tables.length} stand QR diunduh sebagai 1 file PDF`
-          : `${tables.length} QR meja diunduh sebagai ${qrExportFormat.toUpperCase()} (ZIP)`,
-        'success'
-      );
-      setShowQrExportModal(false);
-    } catch (error) {
-      console.error(error);
-      showToast('Gagal menyiapkan file QR. Silakan coba lagi.', 'warning');
-    } finally {
-      setIsExportingQr(false);
-      setQrExportProgress(null);
-    }
-  };
-
   // Filter Meja
   const filtered = tables.filter((t) => {
     const matchSearch =
       t.number.includes(searchQuery) ||
-      t.qrCodeId.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (t.area && t.area.toLowerCase().includes(searchQuery.toLowerCase()));
     if (!matchSearch) return false;
     if (filterMode === 'Semua') return true;
@@ -243,7 +212,7 @@ const KelolaMejaViewInner: React.FC = () => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Cari nomor meja atau kode QR..."
+            placeholder="Cari nomor meja..."
             className="w-full pl-9 pr-3 py-1.5 bg-[#fcf9f4] rounded-lg text-xs text-[#1c1c19] outline-none border border-[#ebe8e3] focus:border-[#3d1018]"
             aria-label="Cari meja"
           />
@@ -277,13 +246,12 @@ const KelolaMejaViewInner: React.FC = () => {
               <tr>
                 <th className="py-2.5 px-4 w-24">No. Meja</th>
                 <th className="py-2.5 px-4 w-32">Status Meja</th>
-                <th className="py-2.5 px-4">URL Meja</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#ebe8e3]">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="py-8 text-center text-xs text-[#847374]">
+                  <td colSpan={2} className="py-8 text-center text-xs text-[#847374]">
                     {searchQuery ? `Tidak ada meja yang cocok dengan pencarian ${searchQuery}.` : 'Tidak ada meja yang cocok.'}
                   </td>
                 </tr>
@@ -305,11 +273,6 @@ const KelolaMejaViewInner: React.FC = () => {
                       <td className="py-2.5 px-4">
                         <span className={`font-semibold text-xs ${isOccupied ? 'text-[#3d1018]' : 'text-[#847374]'}`}>
                           {isOccupied ? 'Terisi' : 'Tersedia'}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-4">
-                        <span className="text-xs text-[#524344] break-all block">
-                          {tbl.qrUrl}
                         </span>
                       </td>
                     </tr>
@@ -347,9 +310,6 @@ const KelolaMejaViewInner: React.FC = () => {
                       <span className={`font-semibold text-xs ${isOccupied ? 'text-[#3d1018]' : 'text-[#847374]'}`}>
                         {isOccupied ? 'Terisi' : 'Tersedia'}
                       </span>
-                    </div>
-                    <div className="text-xs text-[#524344] break-all pt-0.5">
-                      {tbl.qrUrl}
                     </div>
                   </div>
                 );
@@ -488,49 +448,6 @@ const KelolaMejaViewInner: React.FC = () => {
                 </select>
               </div>
 
-              <div className="pt-1 space-y-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const tbl = editingTable;
-                    setEditingTable(null);
-                    openQrModal(tbl);
-                  }}
-                  className="w-full py-2.5 px-3 rounded-xl bg-white hover:bg-[#f0ede9] border border-[#ebe8e3] text-xs font-bold text-[#3d1018] flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
-                >
-                  <span className="material-symbols-outlined text-[16px]">download</span>
-                  <span>Unduh &amp; Cetak QR Meja {editingTable.number}</span>
-                </button>
-
-                <div>
-                  <button
-                    type="button"
-                    disabled={isRegeneratingQr}
-                    onClick={async () => {
-                      if (!editingTable.dbId || isRegeneratingQr) return;
-                      setIsRegeneratingQr(true);
-                      try {
-                        const updated = await rotateTableQr(editingTable.dbId);
-                        if (updated) {
-                          setEditingTable(updated);
-                          openQrModal(updated);
-                        }
-                      } finally {
-                        setIsRegeneratingQr(false);
-                      }
-                    }}
-                    className="w-full py-2.5 px-3 rounded-xl bg-[#f0ede9] hover:bg-[#ebe8e3] text-xs font-semibold text-[#3d1018] flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-[#ebe8e3] disabled:opacity-50"
-                  >
-                    <span className={`material-symbols-outlined text-[16px] text-[#994703] ${isRegeneratingQr ? 'animate-spin' : ''}`}>
-                      sync
-                    </span>
-                    <span>{isRegeneratingQr ? 'Sedang Mereset QR…' : 'Generate Ulang Kode QR'}</span>
-                  </button>
-                  <p className="text-[10px] text-[#847374] text-center mt-1">
-                    Mereset token keamanan QR di database. Link lama otomatis hangus.
-                  </p>
-                </div>
-              </div>
             </div>
 
             <div className="flex items-center justify-between pt-2 border-t border-[#ebe8e3]">
@@ -593,110 +510,6 @@ const KelolaMejaViewInner: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Unduh QR Massal */}
-      {showQrExportModal && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="qr-export-title"
-          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
-        >
-          <div className="bg-white rounded-2xl p-5 w-full max-w-md shadow-2xl border border-[#ebe8e3] flex flex-col gap-4">
-            <div className="flex items-center justify-between pb-2 border-b border-[#ebe8e3]">
-              <div>
-                <h3 id="qr-export-title" className="font-bold text-base text-[#1c1c19]">
-                  Unduh QR Meja
-                </h3>
-                <p className="text-[11px] text-[#847374] mt-0.5">
-                  {tables.length} stand QR siap diekspor sekaligus.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowQrExportModal(false)}
-                disabled={isExportingQr}
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-[#524344] hover:bg-[#f0ede9] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                aria-label="Tutup modal"
-              >
-                <span className="material-symbols-outlined text-[18px]">close</span>
-              </button>
-            </div>
-
-            <fieldset className="space-y-2">
-              <legend className="sr-only">Format unduhan</legend>
-              {(
-                [
-                  {
-                    value: 'pdf',
-                    label: 'PDF — 1 file, 1 meja per halaman',
-                    hint: 'A4, stand di kiri atas dengan margin aman 12 mm. Paling praktis untuk dicetak.',
-                  },
-                  {
-                    value: 'png',
-                    label: 'PNG — ZIP berisi banyak gambar',
-                    hint: 'Satu PNG per meja, resolusi tinggi, latar penuh.',
-                  },
-                  {
-                    value: 'jpeg',
-                    label: 'JPEG — ZIP berisi banyak gambar',
-                    hint: 'Satu JPEG per meja, ukuran file lebih kecil.',
-                  },
-                ] as const
-              ).map((option) => {
-                const selected = qrExportFormat === option.value;
-                return (
-                  <label
-                    key={option.value}
-                    className={`flex items-start gap-2.5 p-3 rounded-xl border transition-colors cursor-pointer ${
-                      selected
-                        ? 'border-[#3d1018] bg-[#fcf9f4]'
-                        : 'border-[#ebe8e3] hover:bg-[#fcf9f4]'
-                    } ${isExportingQr ? 'pointer-events-none opacity-60' : ''}`}
-                  >
-                    <input
-                      type="radio"
-                      name="qr-export-format"
-                      value={option.value}
-                      checked={selected}
-                      onChange={() => setQrExportFormat(option.value)}
-                      className="mt-0.5 accent-[#3d1018]"
-                    />
-                    <span className="min-w-0">
-                      <span className="block text-xs font-bold text-[#1c1c19]">{option.label}</span>
-                      <span className="block text-[11px] text-[#847374] leading-relaxed mt-0.5">
-                        {option.hint}
-                      </span>
-                    </span>
-                  </label>
-                );
-              })}
-            </fieldset>
-
-            <div className="flex gap-2 pt-2 border-t border-[#ebe8e3]">
-              <button
-                type="button"
-                onClick={() => setShowQrExportModal(false)}
-                disabled={isExportingQr}
-                className="flex-1 py-2 rounded-lg bg-[#f0ede9] text-[#1c1c19] text-xs font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handleExportQrs}
-                disabled={isExportingQr || !tables.length}
-                className="flex-1 py-2 rounded-lg bg-[#3d1018] text-white text-xs font-bold hover:bg-[#58252c] cursor-pointer shadow-xs disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {isExportingQr && qrExportProgress
-                  ? `Menyiapkan ${qrExportProgress.done}/${qrExportProgress.total}…`
-                  : qrExportFormat === 'pdf'
-                  ? 'Unduh PDF'
-                  : `Unduh ${qrExportFormat.toUpperCase()}`}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
