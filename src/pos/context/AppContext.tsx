@@ -541,7 +541,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           .is('closed_at', null),
         supabase.from('service_requests').select('*').eq('status', 'pending'),
         canSeeMoney
-          ? supabase.from('payments').select('payment_id,transaction_code,method,amount,cash_received,change_amount,paid_at,orders(order_id,order_number,order_source,total,created_at,table_sessions(session_id,customer_name,guest_count,tables(table_number)),order_items(order_item_id,product_name,unit_price,quantity,note))')
+          ? supabase.from('payments').select('payment_id,transaction_code,method,amount,cash_received,change_amount,paid_at,orders(order_id,order_number,order_source,total,created_at,table_sessions(session_id,customer_name,guest_count,tables(table_number),orders(order_id,order_number,total,order_items(order_item_id,product_name,unit_price,quantity,note))),order_items(order_item_id,product_name,unit_price,quantity,note))')
               .eq('status', 'paid').gte('paid_at', today() + 'T00:00:00+07:00').order('paid_at', { ascending: false })
           : Promise.resolve({ data: [] }),
       ]);
@@ -1143,12 +1143,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const transactions: TransactionRecord[] = useMemo(() => payments.map((p) => {
     const total = Number(p.amount);
-    const orderItems: OrderItemSummary[] = (p.orders?.order_items || []).map((i: any) => ({
-      name: i.product_name,
-      quantity: i.quantity,
-      price: Number(i.unit_price),
-      notes: i.note || undefined,
-    }));
+    // Satu pembayaran = satu sesi meja: SEMUA order di sesi itu ikut dibayar.
+    // Jadi struk dibangun dari seluruh order sesi, bukan hanya order yang
+    // menempel di baris payments (order_id).
+    const sessionOrders: any[] = p.orders?.table_sessions?.orders ?? [];
+    const sourceOrders: any[] = sessionOrders.length ? sessionOrders : (p.orders ? [p.orders] : []);
+    const orderItems: OrderItemSummary[] = sourceOrders.flatMap((o: any) =>
+      (o.order_items || []).map((i: any) => ({
+        name: i.product_name,
+        quantity: i.quantity,
+        price: Number(i.unit_price),
+        notes: i.note || undefined,
+      })),
+    );
     const calcSubtotal = orderItems.reduce((acc, i) => acc + (i.price * i.quantity), 0);
     const subtotal = calcSubtotal > 0 ? calcSubtotal : subtotalOf(total, billOpts);
     // Biaya (layanan + pajak) = sisa pembayaran, lalu dibagi pakai tarif pajak
@@ -1189,7 +1196,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     return {
       id: `trx-${p.payment_id}`,
-      code: `#${p.orders?.order_number || p.transaction_code || p.payment_id}`,
+      code: `#${sourceOrders.map((o: any) => o.order_number).filter(Boolean).join(' + ') || p.transaction_code || p.payment_id}`,
       time: hhmmColon(p.paid_at),
       at: p.paid_at,
       typeMeja: isTakeaway ? 'Bawa Pulang (Take Away)' : `Meja ${tableNum}`,
