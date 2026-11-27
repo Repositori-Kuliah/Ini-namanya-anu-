@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --env-file=.env supabase/tests/security_and_lifecycle.test.js"
+    "test": "node --test tests/"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
