@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { MenuItem } from '../types';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import { useScrollDirection } from '../../lib/useScrollDirection';
+import { bill } from '../../lib/domain';
 
 export const PesananBaruView: React.FC = () => {
   const isHeaderVisible = useScrollDirection();
@@ -98,21 +99,20 @@ export const PesananBaruView: React.FC = () => {
   });
 
   // Kalkulasi total biaya pesanan (Modular Pajak, Layanan, & Pembulatan)
-  const subtotal = cartItems.reduce((acc, curr) => acc + curr.menuItem.price * curr.quantity, 0);
   const totalItemCount = cartItems.reduce((acc, curr) => acc + curr.quantity, 0);
 
   const enableService = storeSettings?.enableServiceCharge ?? true;
-  const serviceRate = enableService ? (storeSettings?.serviceChargeRate ?? 5) / 100 : 0;
-  const serviceCharge = Math.round(subtotal * serviceRate);
-
   const enableTax = storeSettings?.enableTax ?? true;
-  const taxRate = enableTax ? (storeSettings?.taxRate ?? 10) / 100 : 0;
-  const pb1Tax = Math.round((subtotal + serviceCharge) * taxRate);
-
-  let grandTotal = subtotal + serviceCharge + pb1Tax;
-  if (storeSettings?.roundingRule === '100') grandTotal = Math.ceil(grandTotal / 100) * 100;
-  else if (storeSettings?.roundingRule === '500') grandTotal = Math.round(grandTotal / 500) * 500;
-  else if (storeSettings?.roundingRule === '1000') grandTotal = Math.ceil(grandTotal / 1000) * 1000;
+  const { subtotal, service: serviceCharge, tax: pb1Tax, total: grandTotal } = bill(
+    cartItems.reduce((acc, curr) => acc + curr.menuItem.price * curr.quantity, 0),
+    {
+      enableService,
+      serviceRate: storeSettings?.serviceChargeRate ?? 5,
+      enableTax,
+      taxRate: storeSettings?.taxRate ?? 10,
+      roundingRule: storeSettings?.roundingRule,
+    },
+  );
 
   const handleKirimKitchen = async () => {
     if (cartItems.length === 0 || isSending) return;

@@ -11,6 +11,7 @@ export const StatusScreen: React.FC = () => {
     navigate,
     formatRupiah,
     orderType,
+    feeSettings,
   } = useApp();
 
   // Konsolidasi/gabungkan item dengan nama menu yang sama agar ringkas seperti pada POS
@@ -156,7 +157,7 @@ export const StatusScreen: React.FC = () => {
             </div>
             {activeOrder.serviceFee > 0 && (
               <div className="flex justify-between text-[#524344]">
-                <span>Biaya Layanan (5%)</span>
+                <span>{feeSettings.serviceName} ({feeSettings.serviceRate}%)</span>
                 <span className="font-medium text-[#1c1c19] tabular-nums font-serif">
                   {formatRupiah(activeOrder.serviceFee)}
                 </span>
@@ -164,7 +165,7 @@ export const StatusScreen: React.FC = () => {
             )}
             {activeOrder.tax > 0 && (
               <div className="flex justify-between text-[#524344]">
-                <span>Pajak Restoran PB1 (10%)</span>
+                <span>{feeSettings.taxName} ({feeSettings.taxRate}%)</span>
                 <span className="font-medium text-[#1c1c19] tabular-nums font-serif">
                   {formatRupiah(activeOrder.tax)}
                 </span>

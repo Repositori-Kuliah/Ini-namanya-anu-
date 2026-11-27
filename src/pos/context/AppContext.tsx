@@ -5,7 +5,7 @@ import {
   StoreSettings, CashierShift, SplitPaymentDetail,
 } from '../types';
 import { supabase, tableUrl } from '../../lib/supabase';
-import { billOfOrders, itemsSubtotal, today } from '../../lib/domain';
+import { bill, billOfOrders, itemsSubtotal, splitFees, subtotalOf, today, type BillOptions } from '../../lib/domain';
 import { placeholderImage, isPlaceholder } from '../../lib/placeholder';
 
 export type AppView =
@@ -908,6 +908,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }), [products]);
   const menuCategories = useMemo(() => categories.map((c) => c.name as string), [categories]);
 
+  // Tagihan memakai tarif dari Pengaturan (bisa mematikan layanan 5% / PB1).
+  const billOpts = useMemo<BillOptions>(() => ({
+    enableService: storeSettings.enableServiceCharge ?? true,
+    serviceRate: storeSettings.serviceChargeRate ?? 5,
+    enableTax: storeSettings.enableTax ?? true,
+    taxRate: storeSettings.taxRate ?? 10,
+    roundingRule: storeSettings.roundingRule,
+  }), [storeSettings]);
+
   // ---------- turunan: meja, tagihan, tiket dapur ----------
   const tables: TableItem[] = useMemo(() => {
     // Deduplikasi rawTables berdasarkan table_number agar tidak ada baris ganda
@@ -960,15 +969,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
     if (!live.length) return [];
     const t = rawTables.find((x) => x.table_id === s.table_id);
-    const subtotal = live.map((o: any) => itemsSubtotal(o.order_items)).reduce((acc: number, val: number) => acc + val, 0);
-    const sRate = (storeSettings.enableServiceCharge ?? true) ? ((storeSettings.serviceChargeRate ?? 5) / 100) : 0;
-    const tRate = (storeSettings.enableTax ?? true) ? ((storeSettings.taxRate ?? 10) / 100) : 0;
-    const serviceFee = Math.round(subtotal * sRate);
-    const tax = Math.round((subtotal + serviceFee) * tRate);
-    let total = subtotal + serviceFee + tax;
-    if (storeSettings.roundingRule === '100') total = Math.ceil(total / 100) * 100;
-    else if (storeSettings.roundingRule === '500') total = Math.round(total / 500) * 500;
-    else if (storeSettings.roundingRule === '1000') total = Math.ceil(total / 1000) * 1000;
+    const { subtotal, service: serviceFee, tax, total } = bill(
+      live.map((o: any) => itemsSubtotal(o.order_items)).reduce((acc: number, val: number) => acc + val, 0),
+      billOpts,
+    );
 
     const req = requests.find((r) => r.table_id === s.table_id && r.kind === 'checkout');
     const rawItems: OrderItemSummary[] = live.flatMap((o: any) => (o.order_items || []).map((i: any) => ({
@@ -1036,7 +1040,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       takeawayQueue: s.takeaway_queue || (isTakeaway ? displayTableNumber : undefined),
       orderType: isTakeaway ? 'takeaway' : 'dine_in',
     } as BillItem];
-  }).sort((a, b) => (a.status === b.status ? 0 : a.status === 'minta_checkout' ? -1 : 1)), [sessions, rawTables, requests, storeSettings]);
+  }).sort((a, b) => (a.status === b.status ? 0 : a.status === 'minta_checkout' ? -1 : 1)), [sessions, rawTables, requests, billOpts]);
   const selectedBill = bills.find((b) => b.id === selectedBillId) || bills[0];
 
   // Deteksi stasiun item: Dapur Utama (Makanan) vs Bar Minuman
@@ -1146,20 +1150,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       notes: i.note || undefined,
     }));
     const calcSubtotal = orderItems.reduce((acc, i) => acc + (i.price * i.quantity), 0);
-    const subtotal = calcSubtotal > 0 ? calcSubtotal : Math.round(total / 1.155);
-    const diff = Math.max(0, total - subtotal);
-    let serviceFee = 0;
-    let tax = 0;
-    if (diff > 0) {
-      // Jika diff mendekati 15% atau lebih dari subtotal, berarti mencakup service fee (5%) dan PB1 (10%)
-      if (diff >= Math.round(subtotal * 0.12)) {
-        serviceFee = Math.round(subtotal * 0.05);
-        tax = diff - serviceFee;
-      } else {
-        tax = diff;
-        serviceFee = 0;
-      }
-    }
+    const subtotal = calcSubtotal > 0 ? calcSubtotal : subtotalOf(total, billOpts);
+    // Biaya (layanan + pajak) = sisa pembayaran, lalu dibagi pakai tarif pajak
+    // yang berlaku. Tidak lagi menebak "sisa = pajak".
+    const { service: serviceFee, tax } = splitFees(total, subtotal, billOpts);
     const tableNum = pad(p.orders?.table_sessions?.tables?.table_number ?? '?');
     const custName = p.orders?.table_sessions?.customer_name || 'Pelanggan';
     const guestCount = p.orders?.table_sessions?.guest_count || 1;
@@ -1488,15 +1482,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return false;
     }
 
-    const subtotal = cartItems.reduce((acc, c) => acc + c.menuItem.price * c.quantity, 0);
-    const sRate = (storeSettings.enableServiceCharge ?? true) ? ((storeSettings.serviceChargeRate ?? 5) / 100) : 0;
-    const tRate = (storeSettings.enableTax ?? true) ? ((storeSettings.taxRate ?? 10) / 100) : 0;
-    const serviceFee = Math.round(subtotal * sRate);
-    const tax = Math.round((subtotal + serviceFee) * tRate);
-    let total = subtotal + serviceFee + tax;
-    if (storeSettings.roundingRule === '100') total = Math.ceil(total / 100) * 100;
-    else if (storeSettings.roundingRule === '500') total = Math.round(total / 500) * 500;
-    else if (storeSettings.roundingRule === '1000') total = Math.ceil(total / 1000) * 1000;
+    const { total } = bill(
+      cartItems.reduce((acc, c) => acc + c.menuItem.price * c.quantity, 0),
+      billOpts,
+    );
 
     const queueLabel = takeawayNextQueue;
     const targetCustomerName = orderCustomerName.trim() || (isTakeaway ? 'Pelanggan Bungkus' : 'Tamu');

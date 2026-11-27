@@ -83,7 +83,12 @@ export const LaporanView: React.FC = () => {
           : methodFilter === 'Kartu Debit'
           ? 'debit'
           : 'all';
-      const rows = await fetchPaid(startDate, endDate, dbMethod);
+      const rows = await fetchPaid(startDate, endDate, dbMethod, {
+        enableService: storeSettings?.enableServiceCharge ?? true,
+        serviceRate: storeSettings?.serviceChargeRate ?? 5,
+        enableTax: storeSettings?.enableTax ?? true,
+        taxRate: storeSettings?.taxRate ?? 10,
+      });
       if (rows && rows.length > 0) {
         const mapped: TransactionRecord[] = rows.map((r, idx) => {
           const hhmm = new Date(r.at)

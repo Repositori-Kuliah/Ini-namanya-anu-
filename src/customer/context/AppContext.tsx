@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { CartItem, CustomizationSelection, MenuItem, ActiveOrder, ScreenType, ExtraOption } from '../types';
 import { supabase } from '../../lib/supabase';
-import { billOfOrders } from '../../lib/domain';
+import { billOfOrders, type BillOptions } from '../../lib/domain';
 import { placeholderImage } from '../../lib/placeholder';
 
 interface ToastState {
@@ -32,6 +32,16 @@ interface AppContextType {
   cartServiceFee: number;
   cartTax: number;
   cartTotal: number;
+  /** Tarif/biaya dari tabel store_settings (dipakai untuk menghitung tagihan pelanggan). */
+  feeSettings: {
+    enableService: boolean;
+    serviceRate: number;
+    serviceName: string;
+    enableTax: boolean;
+    taxRate: number;
+    taxName: string;
+    roundingRule: 'none' | '100' | '500' | '1000';
+  };
   selectedMenuItem: MenuItem;
   setSelectedMenuItem: (item: MenuItem) => void;
   editingCartItem: CartItem | null;
@@ -135,6 +145,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [menuCategories, setMenuCategories] = useState<MenuCategory[]>([]);
   const [extraOptions, setExtraOptions] = useState<ExtraOption[]>([]);
+  //Tarif layanan & pajak diambil dari store_settings supaya struk pelanggan
+  // sama dengan yang ditagih kasir (Pengaturan bisa mematikan layanan 5%).
+  const [feeSettings, setFeeSettings] = useState<AppContextType['feeSettings']>({
+    enableService: true, serviceRate: 5, serviceName: 'Biaya Layanan',
+    enableTax: true, taxRate: 10, taxName: 'PB1',
+    roundingRule: 'none',
+  });
+  const billOpts = useMemo<BillOptions>(() => ({
+    enableService: feeSettings.enableService,
+    serviceRate: feeSettings.serviceRate,
+    enableTax: feeSettings.enableTax,
+    taxRate: feeSettings.taxRate,
+    roundingRule: feeSettings.roundingRule,
+  }), [feeSettings]);
   const extraIds = useRef<Record<string, number>>({});
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
     try { return JSON.parse(localStorage.getItem(cartKey) ?? '[]'); } catch { return []; }
@@ -190,13 +214,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     (async () => {
       try {
-        const [cats, prods, ex, allTbls] = await Promise.all([
+        const [cats, prods, ex, allTbls, feeRes] = await Promise.all([
           supabase.from('categories').select('*').order('category_id'),
           supabase.from('products').select('*, categories(name)').order('product_id'),
           supabase.from('extras').select('*').eq('is_available', true).order('extra_id'),
           supabase.from('tables').select('*').eq('is_active', true).order('table_number'),
+          supabase.from('store_settings')
+            .select('tax_name,tax_rate,enable_tax,service_charge_name,service_charge_rate,enable_service_charge,rounding_rule')
+            .limit(1),
         ]);
         if (prods.error) { setTableState('error'); return; }
+
+        const feeRow = feeRes.data?.[0];
+        if (feeRow) {
+          setFeeSettings({
+            enableService: feeRow.enable_service_charge ?? true,
+            serviceRate: Number(feeRow.service_charge_rate ?? 5),
+            serviceName: feeRow.service_charge_name || 'Biaya Layanan',
+            enableTax: feeRow.enable_tax ?? true,
+            taxRate: Number(feeRow.tax_rate ?? 10),
+            taxName: feeRow.tax_name || 'PB1',
+            roundingRule: (feeRow.rounding_rule || 'none') as AppContextType['feeSettings']['roundingRule'],
+          });
+        }
 
         const tablesList = allTbls.data || [];
         const row = tablesList.find((m: any) =>
@@ -282,7 +322,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         })));
 
         const subtotal = allItems.reduce((acc, it) => acc + it.totalPrice, 0);
-        const b = billOfOrders([subtotal]);
+        const b = billOfOrders([subtotal], billOpts);
         const isPaid = activeOrders.some((o) => (o.payments || []).some((p: any) => p.status === 'paid'));
 
         const next: ActiveOrder = {
@@ -314,7 +354,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {
       console.warn('loadOrders error:', e);
     }
-  }, [currentTableDbId, selectedTable, tableArea, menuItems]);
+  }, [currentTableDbId, selectedTable, tableArea, menuItems, billOpts]);
 
   useEffect(() => {
     if (tableState !== 'ok') return;
@@ -418,7 +458,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const removeCartItem = (id: string) => { setCartItems((p) => p.filter((i) => i.cartItemId !== id)); showToast('Menu dihapus dari keranjang', 'delete'); };
 
   const cartCount = cartItems.reduce((a, i) => a + i.quantity, 0);
-  const b = billOfOrders(cartItems.length ? [cartItems.reduce((a, i) => a + i.totalPrice, 0)] : []);
+  const b = billOfOrders(cartItems.length ? [cartItems.reduce((a, i) => a + i.totalPrice, 0)] : [], billOpts);
   const cartSubtotal = b.subtotal, cartServiceFee = b.service, cartTax = b.tax, cartTotal = b.total;
 
   const submitOrder = async (_paymentMethod: 'qris' | 'cashier', notes: string): Promise<boolean> => {
@@ -580,6 +620,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       currentScreen, navigate, tableState, selectedTable, tableArea, guestsCount, isTableModalOpen,
       openTableModal: () => setIsTableModalOpen(true), closeTableModal: () => setIsTableModalOpen(false), setGuests,
       menuItems, menuCategories, extraOptions, cartItems, cartCount, cartSubtotal, cartServiceFee, cartTax, cartTotal,
+      feeSettings,
       selectedMenuItem, setSelectedMenuItem, editingCartItem, openDetail, editCartItem, clearEditingCartItem,
       addToCart, updateCartItemDetails, updateCartItemQty, removeCartItem, quickAddToCart,
       updateCartQuantity: updateCartItemQty, removeFromCart: removeCartItem,

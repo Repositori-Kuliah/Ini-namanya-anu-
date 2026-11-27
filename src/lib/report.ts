@@ -1,10 +1,10 @@
 // Dari Fokus_Backend/lib/report.ts: ambil pembayaran lunas pada rentang tanggal (zona Asia/Jakarta).
 import { supabase } from './supabase';
-import { subtotalOf } from './domain';
+import { subtotalOf, type BillOptions } from './domain';
 
 export type PaidRow = { no: string; at: string; table: number | null; src: string; method: string; total: number; subtotal: number };
 
-export const fetchPaid = async (from: string, to: string, method = 'all'): Promise<PaidRow[]> => {
+export const fetchPaid = async (from: string, to: string, method = 'all', opts: BillOptions = {}): Promise<PaidRow[]> => {
   let q = supabase
     .from('payments')
     .select('method,amount,paid_at,orders(order_number,order_source,table_sessions(tables(table_number)))')
@@ -22,6 +22,6 @@ export const fetchPaid = async (from: string, to: string, method = 'all'): Promi
     src: p.orders?.order_source || 'staff',
     method: p.method,
     total: Number(p.amount),
-    subtotal: subtotalOf(Number(p.amount)),
+    subtotal: subtotalOf(Number(p.amount), opts),
   }));
 };
