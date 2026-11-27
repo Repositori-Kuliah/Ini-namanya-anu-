@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Temuan 1 — Satu Sesi, Satu Baris payments</title>
+<style>
+  :root {
+    --paper: #f6f3ee;
+    --card: #ffffff;
+    --ink: #1c1c19;
+    --muted: #6b5a5b;
+    --line: #ebe8e3;
+    --brand: #3d1018;
+    --bad: #ba1a1a;
+    --bad-soft: #fdecec;
+    --ok: #2f6b3a;
+    --ok-soft: #eef6ef;
+    --warn: #994703;
+    --warn-soft: #fdf3e7;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 40px 20px 80px; }
+  header { border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 32px; }
+  .kicker {
+    font: 700 11px/1 var(--mono); letter-spacing: .16em; text-transform: uppercase;
+    color: var(--bad); margin-bottom: 12px;
+  }
+  h1 { margin: 0 0 10px; font-size: 32px; line-height: 1.15; letter-spacing: -.02em; }
+  h1 .num { color: var(--bad); }
+  .sub { color: var(--muted); max-width: 74ch; margin: 0; }
+  h2 {
+    font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+    margin: 44px 0 16px; font-weight: 700;
+  }
+  h3 { font-size: 15px; margin: 0 0 8px; }
+  code, .mono { font-family: var(--mono); font-size: 12.5px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px;
+  }
+  .grid { display: grid; gap: 16px; }
+  @media (min-width: 860px) { .g2 { grid-template-columns: 1fr 1fr; } .g3 { grid-template-columns: repeat(3, 1fr); } }
+
+  /* ---------- diagram ---------- */
+  .flow { display: grid; gap: 0; }
+  .node {
+    border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: var(--card);
+  }
+  .node .label { font: 700 10.5px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .node .val { font: 700 15px/1.3 var(--mono); margin-top: 6px; }
+  .node.bad { border-color: var(--bad); background: var(--bad-soft); }
+  .node.bad .val, .node.bad .label { color: var(--bad); }
+  .node.ok { border-color: #b9d7bf; background: var(--ok-soft); }
+  .arrow { text-align: center; color: var(--muted); font: 700 18px/1 var(--mono); padding: 10px 0; }
+  .arrow span { font-size: 11px; display: block; color: var(--muted); font-weight: 500; margin-top: 4px; letter-spacing: .02em; }
+
+  /* ---------- tabel ---------- */
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+  th { font: 700 10.5px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  td.num, th.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: 0; }
+  td.bad { color: var(--bad); font-weight: 700; }
+  td.ok { color: var(--ok); font-weight: 700; }
+  .rowbad td { background: var(--bad-soft); }
+  .rowok td { background: var(--ok-soft); }
+
+  .pill {
+    display: inline-block; font: 700 10px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase;
+    padding: 5px 8px; border-radius: 999px; border: 1px solid currentColor;
+  }
+  .pill.bad { color: var(--bad); }
+  .pill.warn { color: var(--warn); }
+  .pill.ok { color: var(--ok); }
+
+  pre {
+    background: #221a1a; color: #f3ece7; padding: 16px 18px; border-radius: 12px; overflow-x: auto;
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.6; margin: 0;
+  }
+  pre .c { color: #b9a9a3; }
+  pre .k { color: #fc934f; }
+  pre .bad { color: #ff9b9b; }
+  pre .ok { color: #9ad8a6; }
+  .file { font: 700 12px/1.4 var(--mono); color: var(--brand); }
+  .note { color: var(--muted); font-size: 13.5px; margin: 10px 0 0; }
+  ul.tight { margin: 8px 0 0; padding-left: 18px; }
+  ul.tight li { margin: 4px 0; }
+  .big { font: 700 26px/1 var(--mono); }
+  .small { font-size: 12.5px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="kicker">Rawon Gusti · Audit alur uang · Temuan 1 <span class="pill ok" style="margin-left:8px">Sudah Diperbaiki</span></div>
+  <h1><span class="num">#1</span> — Satu sesi dibayar dengan <em>satu</em> baris <code>payments</code></h1>
+  <p class="sub">
+    Satu sesi meja dengan lebih dari satu pesanan menghasilkan tepat satu baris di tabel <code>payments</code>.
+    Baris itu menempel ke order <strong>pertama saja</strong>, tapi <code>amount</code>-nya berisi <strong>total seluruh sesi</strong>.
+    Efeknya: struk riwayat (setelah reload) kehilangan item dan salah menghitung pajak, sementara laporan menghitung subtotal yang berbeda.
+  </p>
+</header>
+
+<h2>Skenario — Meja 3, dua pesanan</h2>
+<div class="card">
+  <table>
+    <thead>
+      <tr><th>Order</th><th>Item</th><th class="num">Subtotal</th><th class="num">Layanan 5%</th><th class="num">PB1 10%</th><th class="num">Total</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="mono">A</td><td>Rawon Gudeg ×1 · Es Kelapa Muda ×1</td>
+        <td class="num">100.000</td><td class="num">5.000</td><td class="num">10.500</td><td class="num">115.500</td>
+      </tr>
+      <tr>
+        <td class="mono">B</td><td>Nasi Goreng ×1</td>
+        <td class="num">50.000</td><td class="num">2.500</td><td class="num">5.250</td><td class="num">57.750</td>
+      </tr>
+      <tr class="rowbad">
+        <td colspan="2"><strong>Total sesi</strong></td>
+        <td class="num"><strong>150.000</strong></td>
+        <td class="num"><strong>7.500</strong></td>
+        <td class="num"><strong>15.750</strong></td>
+        <td class="num"><strong>173.250</strong></td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="note">Layanan 5% + PB1 10% dihitung dari subtotal sesi (<code>src/lib/domain.ts:7</code>).</p>
+</div>
+
+<h2>Alur data yang terjadi</h2>
+<div class="grid g2">
+  <div class="card">
+    <div class="flow">
+      <div class="node">
+        <div class="label">table_sessions</div>
+        <div class="val">session_id 42 · Meja 3</div>
+      </div>
+      <div class="arrow">↓ <span>1 sesi, 2 order</span></div>
+      <div class="node">
+        <div class="label">orders</div>
+        <div class="val">#A 115.500 &nbsp;·&nbsp; #B 57.750</div>
+      </div>
+      <div class="arrow">↓ <span>bill dihitung per order, dijumlah</span></div>
+      <div class="node ok">
+        <div class="label">tagihan kasir (benar)</div>
+        <div class="val">total 173.250</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="flow">
+      <div class="node">
+        <div class="label">payments</div>
+        <div class="val">1 baris</div>
+      </div>
+      <div class="arrow">↓ <span>order_id = A (yang pertama)</span></div>
+      <div class="node bad">
+        <div class="label">baris tersimpan</div>
+        <div class="val">order_id A · amount 173.250</div>
+      </div>
+      <div class="arrow">↓ <span>struk &amp; laporan baca baris ini</span></div>
+      <div class="node bad">
+        <div class="label">hasil</div>
+        <div class="val">struk ≠ laporan</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h2>Akibat: total benar, rinciannya salah</h2>
+<div class="grid g2">
+  <div class="card">
+    <h3><span class="pill bad">Struk riwayat</span> setelah reload</h3>
+    <table>
+      <tbody>
+        <tr><td>Rawon Gudeg ×1</td><td class="num">55.000</td></tr>
+        <tr><td>Es Kelapa Muda ×1</td><td class="num">45.000</td></tr>
+        <tr class="rowbad"><td><strong>Nasi Goreng ×1</strong> <span class="pill bad">HILANG</span></td><td class="num">—</td></tr>
+        <tr><td>Subtotal</td><td class="num">100.000</td></tr>
+        <tr><td>Layanan 5%</td><td class="num">5.000</td></tr>
+        <tr class="rowbad"><td>PB1 (dihitung <em>sisa</em>)</td><td class="num bad">68.250</td></tr>
+        <tr class="rowok"><td><strong>Total</strong></td><td class="num ok"><strong>173.250</strong></td></tr>
+      </tbody>
+    </table>
+    <p class="note">Subtotal dan PB1 dihitung ulang dari item order A saja, lalu <code>tax = sisa</code>. Totalnya kebetulan cocok, jadi struk terlihat “meyakinkan” — padahal isinya kurang dan pajaknya bukan PB1.</p>
+  </div>
+
+  <div class="card">
+    <h3><span class="pill warn">Laporan</span> dari tabel yang sama</h3>
+    <table>
+      <tbody>
+        <tr><td>Subtotal</td><td class="num">150.000</td></tr>
+        <tr><td>Layanan + PB1</td><td class="num">23.250</td></tr>
+        <tr class="rowok"><td><strong>Total</strong></td><td class="num ok"><strong>173.250</strong></td></tr>
+      </tbody>
+    </table>
+    <p class="note">Laporan tidak melihat item, hanya <code>amount</code> lalu membalik dengan <code>total / 1.155</code> (<code>src/lib/report.ts:25</code>).</p>
+    <div style="margin-top:14px;padding:12px 14px;border:1px dashed var(--bad);border-radius:10px;background:var(--bad-soft)">
+      <strong>Kontradiksi:</strong> struk bilang subtotal <strong>100.000</strong>, laporan bilang <strong>150.000</strong> — untuk transaksi yang sama.
+    </div>
+  </div>
+</div>
+
+<h2>Penyebabnya</h2>
+<div class="card">
+  <div class="file">src/pos/context/AppContext.tsx:1676-1699</div>
+<pre><span class="c">// 1 baris payments untuk SELURUH sesi, menempel ke order pertama</span>
+<span class="k">const</span> validOrder = sessObj?.orders?.find((o: any) =&gt; o.order_status !== <span class="bad">'draft'</span>) || sessObj?.orders?.[0];
+
+<span class="k">await</span> supabase.from(<span class="bad">'payments'</span>).insert({
+  transaction_code: trxCode,
+  order_id: validOrder.order_id,   <span class="c">// ← order A saja</span>
+  method: dbMethod,
+  amount: target.total,            <span class="c">// ← total seluruh sesi</span>
+  ...
+});</pre>
+
+  <div class="file" style="margin-top:18px">src/pos/context/AppContext.tsx:1142-1150</div>
+<pre><span class="c">// struk riwayat dihitung dari item order yang menempel di baris payments</span>
+<span class="k">const</span> orderItems = (p.orders?.order_items || []).map(...);
+<span class="k">const</span> calcSubtotal = orderItems.reduce((acc, i) =&gt; acc + (i.price * i.quantity), <span class="bad">0</span>);
+<span class="k">const</span> subtotal = calcSubtotal &gt; <span class="bad">0</span> ? calcSubtotal : Math.round(total / 1.155);
+<span class="k">const</span> diff = Math.max(0, total - subtotal);
+<span class="k">if</span> (diff &gt;= Math.round(subtotal * 0.12)) { serviceFee = Math.round(subtotal * 0.05); tax = diff - serviceFee; }</pre>
+
+  <p class="note">Selama aplikasi belum di-reload, struk yang tampil pakai salinan in-memory (`AppContext.tsx:1221-1224`) yang isinya benar. Setelah reload, yang tampil adalah rekonstruksi di atas.</p>
+</div>
+
+<h2>Yang sudah dikerjakan</h2>
+<div class="grid g3">
+  <div class="card">
+    <h3>1 · Baca seluruh sesi</h3>
+    <p class="note">Query <code>payments</code> sekarang ikut menarik <code>table_sessions → orders → order_items</code>. Struk &amp; laporan memakai item dari <em>semua</em> order sesi, bukan cuma order yang menempel di <code>order_id</code>.</p>
+  </div>
+  <div class="card">
+    <h3>2 · Pecah biaya tanpa menebak</h3>
+    <p class="note">Baris <code>payments</code> hanya menyimpan total. Sisa <code>total − subtotal</code> kini dibagi jadi layanan + pajak memakai tarif pajak yang berlaku (<code>splitFees()</code> di <code>src/lib/domain.ts</code>), bukan asumsi “sisa = pajak”.</p>
+  </div>
+  <div class="card">
+    <h3>3 · Kode transaksi jujur</h3>
+    <p class="note">Kolom “Kode” struk/laporan kini menampilkan semua nomor order sesi (<code>DIN-…-012 + DIN-…-012-2</code>) — pemisah <code>+</code> supaya kolom CSV tidak pecah.</p>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h3>Hasilnya pada data live</h3>
+  <table>
+    <thead>
+      <tr><th>Pembayaran</th><th>Item</th><th class="num">Subtotal</th><th class="num">Layanan</th><th class="num">PB1</th><th class="num">Total</th></tr>
+    </thead>
+    <tbody>
+      <tr class="rowbad">
+        <td>payment 9 <span class="small">(sebelum)</span></td><td>1 dari 2</td>
+        <td class="num">26.000</td><td class="num bad">1.300</td><td class="num bad">29.900</td><td class="num">57.200</td>
+      </tr>
+      <tr class="rowok">
+        <td>payment 9 <span class="small">(sekarang)</span></td><td>2 dari 2</td>
+        <td class="num">52.000</td><td class="num">0</td><td class="num">5.200</td><td class="num">57.200</td>
+      </tr>
+      <tr class="rowbad">
+        <td>payment 10 <span class="small">(sebelum)</span></td><td>1 dari 4</td>
+        <td class="num">78.000</td><td class="num bad">3.900</td><td class="num bad">347.100</td><td class="num">429.000</td>
+      </tr>
+      <tr class="rowok">
+        <td>payment 10 <span class="small">(sekarang)</span></td><td>4 dari 4</td>
+        <td class="num">390.000</td><td class="num">0</td><td class="num">39.000</td><td class="num">429.000</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="note">Total selalu sama; yang diperbaiki adalah isi struk dan pemecahan biayanya. Data contoh diambil langsung dari Supabase.</p>
+</div>
+
+<h2>Bukti otomatis</h2>
+<div class="card">
+  <div class="file">tests/money-flow.test.js — “laporan &amp; struk: subtotal sesi dihitung dari item SELURUH sesi” + “splitFees()”</div>
+<pre><span class="k">const</span> sessionItems = itemsSubtotal([
+  { unit_price: <span class="ok">100000</span>, quantity: 1 },
+  { unit_price: <span class="ok">50000</span>, quantity: 1 },
+]);
+assert.equal(sessionItems, <span class="ok">150000</span>);
+assert.notEqual(anchorOnly, sessionItems); <span class="c">// order pertama saja = 100.000 (struk rusak versi lama)</span>
+
+assert.deepEqual(splitFees(115500, 100000), { service: <span class="ok">5000</span>, tax: <span class="ok">10500</span> });</pre>
+  <p class="note">Dijalankan dengan <code>npm test</code> → hijau.</p>
+</div>
+
+</div>
+</body>
+</html>
