@@ -125,15 +125,12 @@ export const MobileHeader: React.FC = () => {
   return (
     <>
       <header className="fixed top-0 inset-x-0 z-40 bg-[#3d1018] text-white pt-safe border-b border-white/10 shadow-sm">
-        <div className="h-16 px-4 flex items-center justify-between gap-2 max-w-[1720px] mx-auto relative">
-          {/* Center: Rawon Gusti & Surabaya di Tengah */}
-          <div className="absolute inset-x-0 flex flex-col items-center justify-center text-center pointer-events-none px-16">
-            <div className="flex items-center justify-center gap-1.5 max-w-full">
+        <div className="h-16 px-4 flex items-center justify-between gap-3 max-w-[1720px] mx-auto">
+          {/* Left: Brand */}
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-center gap-1.5 min-w-0">
               <span className="font-bold text-sm text-white truncate">
                 Rawon Gusti
-              </span>
-              <span className="px-1.5 py-0.2 rounded bg-[#58252c] text-[#ffdadc] text-[10px] font-semibold truncate hidden xs:inline border border-white/10">
-                {getPageTitleBadge()}
               </span>
             </div>
             <span className="text-[11px] text-[#ffdadc]/70 truncate">
@@ -142,7 +139,7 @@ export const MobileHeader: React.FC = () => {
           </div>
 
           {/* Right: Role & Logout */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 z-10">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#58252c] text-[#ffdadc] border border-white/10 uppercase tracking-wider">
               {currentRole === 'owner' ? 'Owner' : currentRole === 'admin' ? 'Admin' : currentRole === 'kitchen' ? 'Dapur' : 'Kasir'}
             </span>
